@@ -22,8 +22,8 @@ application packages ready to go.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | Manual workflow foundations — prompts, templates, tracker schema | ✅ Complete |
-| 2 | Job discovery and ranking agent — keyword scoring, ranked shortlist | ⏳ Planned |
+| 1 | Manual workflow foundations — pipeline report script and tracker schema | ✅ Complete |
+| 2 | Job ranking and scmantic fit analysis — keyword scoring+Claude API | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON from resume library | ⏳ Planned |
 | 4 | Automated resume generation — tailored .docx output per application | ⏳ Planned |
 | 5 | Networking and intelligence agents — recruiter ID, company briefs, interview prep | ⏳ Planned |
@@ -93,15 +93,20 @@ python scripts/phase2_job_ranking.py
 ```
 Job_search_agent/
 ├── data/
-│   ├── tracker/          # Application tracking spreadsheet (local only)
-│   ├── job_packages/     # Per-job application packages (local only)
+│   ├── tracker/             # Application tracking spreadsheet (local only)
+│   ├── job_packages/        # Per-job application packages (local only)
 │   └── experience_library/  # Structured experience JSON (local only)
-├── resumes/              # Master and tailored resumes (local only)
-├── prompts/              # Reusable LLM prompt templates
-├── scripts/              # All Python automation scripts
-├── templates/            # Networking message templates
-├── outputs/              # Reports and generated content (local only)
-├── .env                  # API keys — never committed (local only)
+├── example_data/            # Fictional example data for reference
+│   ├── jobs.csv             # Sample jobs.csv showing expected format
+│   ├── job_packages/        # Sample job description files
+│   ├── tracker/             # Tracker schema reference and example file
+│   └── outputs/             # Sample script outputs
+├── resumes/                 # Master and tailored resumes (local only)
+├── prompts/                 # Reusable LLM prompt templates
+├── scripts/                 # All Python automation scripts
+├── templates/               # Networking message templates
+├── outputs/                 # Reports and generated content (local only)
+├── .env                     # API keys — never committed (local only)
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -119,7 +124,7 @@ Job_search_agent/
 - REST API integration (Anthropic Claude API)
 - Prompt engineering for structured LLM outputs
 - Agent design and multi-step workflow orchestration
-- Data processing with pandas / openpyxl
+- Data processing with openpyxl
 - Document generation with python-docx
 - Environment variable management and secrets handling
 - Git version control and GitHub portfolio publishing
@@ -128,7 +133,7 @@ Job_search_agent/
 
 ## Author
 
-Todd — Portfolio project, actively developed.  
+R. Todd Drake — Portfolio project, actively developed.  
 Built from scratch as a real-world introduction to Python, API development, 
 and AI agent design.
 
