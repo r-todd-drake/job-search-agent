@@ -1,0 +1,34 @@
+Senior MBSE / Systems Architect
+Naval Tech Solutions — San Diego, CA
+Salary: $160,000 - $240,000
+
+About the Role:
+Naval Tech Solutions seeks a Senior MBSE / Systems Architect to lead
+architecture development for Navy C4ISR modernization programs. The
+successful candidate will bring a combination of MBSE technical depth
+and strategic architecture leadership, working directly with senior
+Navy stakeholders to translate operational vision into implementable
+system architectures.
+
+Required Qualifications:
+- 15+ years of defense systems engineering experience
+- Demonstrated MBSE leadership on large-scale Navy or DoD programs
+- Experience with C4ISR, mission systems, or autonomous platforms
+- Strong DoDAF and systems architecture background
+- Active TS/SCI clearance
+- Proven ability to lead cross-organizational teams and manage
+  stakeholder relationships at senior levels
+
+Preferred Qualifications:
+- Experience with JADC2 or distributed maritime operations programs
+- Familiarity with DRPM or PEO C4I program structures
+- Experience building MBSE teams and establishing modeling standards
+- ConOps and mission thread development experience
+
+Responsibilities:
+- Serve as lead systems architect on Navy C4ISR modernization efforts
+- Translate senior leadership operational vision into MBSE architecture
+- Lead enterprise-wide integration strategy development
+- Navigate cross-organizational stakeholder environments
+- Establish MBSE frameworks and implementation standards
+- Support program office with technical authority and architecture guidance

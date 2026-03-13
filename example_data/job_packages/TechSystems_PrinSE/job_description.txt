@@ -1,0 +1,32 @@
+Principal MBSE Engineer
+TechSystems Inc — San Diego, CA
+Salary: $155,000 - $225,000
+
+About the Role:
+TechSystems Inc is looking for a Principal MBSE Engineer to lead
+model-based systems engineering efforts across multiple defense
+programs. This role requires deep hands-on experience with SysML
+modeling tools and the ability to guide enterprise architecture
+development in a complex DoD environment.
+
+Required Qualifications:
+- 12+ years of systems engineering experience
+- Expert-level proficiency in Cameo Systems Modeler or MagicDraw
+- Strong SysML modeling skills across multiple diagram types
+- Experience developing and maintaining enterprise architecture models
+- Active TS/SCI clearance
+- Experience with DoDAF and government reference architectures
+
+Preferred Qualifications:
+- OCSMP certification
+- Experience with system-of-systems architecture
+- Navy or joint service program experience
+- Teamwork Cloud or similar model repository experience
+
+Responsibilities:
+- Lead MBSE architecture development and implementation
+- Develop SysML models supporting requirements, architecture, and verification
+- Chair architecture working groups and technical interchange meetings
+- Mentor junior MBSE engineers and establish modeling standards
+- Coordinate with systems engineers and program managers across IPTs
+- Ensure model integrity and configuration control

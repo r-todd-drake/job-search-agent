@@ -1,0 +1,58 @@
+# ==============================================
+# PERSONAL DATA - Never upload to GitHub
+# ==============================================
+
+# All job search data - tracker, packages, experience library
+data/
+
+# All resume files (master and tailored versions)
+resumes/
+
+# All script outputs (ranked lists, reports, generated content)
+outputs/
+
+# All project context notes, used to maintain continuity during the development process
+PROJECT_CONTEXT.md
+
+# ==============================================
+# API KEYS AND SECRETS - Critical, never upload
+# ==============================================
+.env
+*.env
+.env.*
+
+# ==============================================
+# WORD DOCUMENTS - Catch any .docx outside resumes/
+# ==============================================
+*.docx
+
+# ==============================================
+# PYTHON - Auto-generated cache files
+# ==============================================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment folders
+venv/
+.venv/
+env/
+
+# ==============================================
+# VS CODE - Editor settings (personal preference)
+# ==============================================
+.vscode/
+
+# ==============================================
+# WINDOWS - System-generated junk files
+# ==============================================
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
