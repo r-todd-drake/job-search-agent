@@ -23,7 +23,7 @@ application packages ready to go.
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Manual workflow foundations — pipeline report script and tracker schema | ✅ Complete |
-| 2 | Job ranking and scmantic fit analysis — keyword scoring+Claude API | ✅ Complete |
+| 2 | Job ranking and semantic fit analysis — keyword scoring + Claude API | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON from resume library | ⏳ Planned |
 | 4 | Automated resume generation — tailored .docx output per application | ⏳ Planned |
 | 5 | Networking and intelligence agents — recruiter ID, company briefs, interview prep | ⏳ Planned |
@@ -37,9 +37,9 @@ Job Sources (LinkedIn, Indeed, ClearanceJobs, company pages)
       ↓
 Discovery Agent  →  jobs.csv
       ↓
-Ranking Agent  →  ranked_jobs.csv  (keyword scoring + fit score)
+Ranking Agent  →  ranked_jobs.csv  (keyword scoring + semantic fit score)
       ↓
-Resume Generator  →  resume_[company]_[role].docx  (LLM-tailored, factual)
+Resume Generator  →  resumes/tailored/[role]/[company]_[role]_Resume.docx
       ↓
 Networking Agent  →  linkedin_message.txt + company_brief.txt
       ↓
@@ -79,11 +79,19 @@ Get your API key at [console.anthropic.com](https://console.anthropic.com/)
 ### 4. Add your data
 - Place your master resume in `resumes/master_resume.docx`
 - Place your application tracker in `data/tracker/job_pipeline.xlsx`
+- Add job descriptions to `data/job_packages/[role]/job_description.txt`
+- Add your experience library to `data/experience_library/experience_library.md`
 
 ### 5. Run scripts
 ```bash
-# Example: generate a ranked job list from jobs.csv
+# Generate pipeline report from tracker
+python scripts/pipeline_report.py
+
+# Score and rank jobs from jobs.csv
 python scripts/phase2_job_ranking.py
+
+# Run semantic fit analysis via Claude API
+python scripts/phase2_semantic_analyzer.py
 ```
 
 ---
@@ -93,28 +101,51 @@ python scripts/phase2_job_ranking.py
 ```
 Job_search_agent/
 ├── data/
-│   ├── tracker/             # Application tracking spreadsheet (local only)
-│   ├── job_packages/        # Per-job application packages (local only)
-│   └── experience_library/  # Structured experience JSON (local only)
-├── example_data/            # Fictional example data for reference
-│   ├── jobs.csv             # Sample jobs.csv showing expected format
-│   ├── job_packages/        # Sample job description files
-│   ├── tracker/             # Tracker schema reference and example file
-│   └── outputs/             # Sample script outputs
-├── resumes/                 # Master and tailored resumes (local only)
-├── prompts/                 # Reusable LLM prompt templates
-├── scripts/                 # All Python automation scripts
-├── templates/               # Networking message templates
-├── outputs/                 # Reports and generated content (local only)
-├── .env                     # API keys — never committed (local only)
+│   ├── tracker/                  # Application tracking spreadsheet (local only)
+│   ├── job_packages/             # Per-job folders, each containing:
+│   │   └── [role]/               #   job_description.txt (local only)
+│   └── experience_library/       # Structured experience knowledge base (local only)
+├── example_data/                 # Fictional example data for reference
+│   ├── jobs.csv                  # Sample jobs.csv showing expected format
+│   ├── job_packages/             # Sample job description files
+│   ├── tracker/                  # Tracker schema reference and example file
+│   └── outputs/                  # Sample script outputs
+├── resumes/
+│   ├── master_resume.docx        # Base resume (local only)
+│   └── tailored/                 # Tailored resumes and cover letters (local only)
+│       └── [role]/               # One subfolder per role, matching job_packages/
+│           ├── [Company]_[Role]_Resume.docx
+│           └── [Company]_[Role]_CoverLetter.docx
+├── prompts/                      # Reusable LLM prompt templates
+├── scripts/                      # All Python automation scripts
+├── templates/                    # Networking message templates
+├── outputs/                      # Reports and generated content (local only)
+├── .env                          # API keys — never committed (local only)
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
 
 > **Privacy note:** All folders marked "local only" are excluded from version 
-> control via `.gitignore`. Only code, prompts, templates, and documentation 
-> are published to GitHub.
+> control via `.gitignore`. Only code, prompts, templates, and example data 
+> are published to GitHub. Personal data, resumes, API keys, and experience
+> library content never leave your local machine.
+
+---
+
+## Resume Tailoring
+
+Phase 4 generates tailored resume and cover letter packages for each role.
+The tailoring workflow uses:
+
+1. `data/job_packages/[role]/job_description.txt` — the job posting
+2. `data/experience_library/experience_library.md` — approved bullet library
+3. `resumes/master_resume.docx` — base resume content
+
+Output is written to `resumes/tailored/[role]/` with one subfolder per
+application, named to match the corresponding `job_packages/` folder.
+This structure allows the ranking agent and resume generator to pair
+job descriptions with tailored outputs automatically.
 
 ---
 

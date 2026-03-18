@@ -13,6 +13,8 @@ outputs/
 
 # All project context notes, used to maintain continuity during the development process
 PROJECT_CONTEXT.md
+project_career_resume.md
+RESUME_TAILORING_CONTEXT.md
 
 # ==============================================
 # API KEYS AND SECRETS - Critical, never upload
