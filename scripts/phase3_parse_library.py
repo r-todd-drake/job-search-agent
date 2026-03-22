@@ -29,7 +29,7 @@ load_dotenv()
 LIBRARY_PATH = "data/experience_library/experience_library.md"
 EMPLOYERS_DIR = "data/experience_library/employers"
 SUMMARIES_PATH = "data/experience_library/summaries.json"
-GENERATE_KEYWORDS = False   # Set False to skip API calls (faster, no keywords)
+GENERATE_KEYWORDS = True   # Set False to skip API calls (faster, no keywords)
 KEYWORD_DELAY = 0.5        # Seconds between API calls to avoid rate limiting
 
 # ==============================================

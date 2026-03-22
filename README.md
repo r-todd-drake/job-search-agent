@@ -22,10 +22,10 @@ application packages ready to go.
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | Manual workflow foundations — pipeline report script and tracker schema | ✅ Complete |
+| 1 | Pipeline report script and tracker schema | ✅ Complete |
 | 2 | Job ranking and semantic fit analysis — keyword scoring + Claude API | ✅ Complete |
-| 3 | Experience knowledge base — structured JSON from resume library | ⏳ Planned |
-| 4 | Automated resume generation — tailored .docx output per application | ⏳ Planned |
+| 3 | Experience knowledge base — structured JSON from resume library | ✅ Complete |
+| 4 | Automated resume generation — tailored .docx output per application | ⏳ In Progress |
 | 5 | Networking and intelligence agents — recruiter ID, company briefs, interview prep | ⏳ Planned |
 
 ---
@@ -92,6 +92,15 @@ python scripts/phase2_job_ranking.py
 
 # Run semantic fit analysis via Claude API
 python scripts/phase2_semantic_analyzer.py
+
+# Parse experience library into structured JSON
+python scripts/phase3_parse_library.py
+
+# Compile employer JSON files into single library
+python scripts/phase3_compile_library.py
+
+# Validate a resume before submitting
+python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 ```
 
 ---
@@ -104,12 +113,16 @@ Job_search_agent/
 │   ├── tracker/                  # Application tracking spreadsheet (local only)
 │   ├── job_packages/             # Per-job folders, each containing:
 │   │   └── [role]/               #   job_description.txt (local only)
-│   └── experience_library/       # Structured experience knowledge base (local only)
+│   └── experience_library/       # Experience knowledge base (local only)
+│       ├── experience_library.md # Human-readable source — edit this
+│       ├── experience_library.json # Compiled library — Phase 4 input
+│       ├── employers/            # Per-employer JSON files
+│       └── archive/              # Previous versions and session notes
 ├── example_data/                 # Fictional example data for reference
-│   ├── jobs.csv                  # Sample jobs.csv showing expected format
-│   ├── job_packages/             # Sample job description files
-│   ├── tracker/                  # Tracker schema reference and example file
-│   └── outputs/                  # Sample script outputs
+│   ├── jobs.csv
+│   ├── job_packages/
+│   ├── tracker/
+│   └── outputs/
 ├── resumes/
 │   ├── master_resume.docx        # Base resume (local only)
 │   └── tailored/                 # Tailored resumes and cover letters (local only)
@@ -117,7 +130,14 @@ Job_search_agent/
 │           ├── [Company]_[Role]_Resume.docx
 │           └── [Company]_[Role]_CoverLetter.docx
 ├── prompts/                      # Reusable LLM prompt templates
-├── scripts/                      # All Python automation scripts
+├── scripts/
+│   ├── pipeline_report.py        # Phase 1 — pipeline metrics from tracker
+│   ├── phase2_job_ranking.py     # Phase 2 — keyword scoring and ranking
+│   ├── phase2_semantic_analyzer.py # Phase 2 — Claude API semantic fit analysis
+│   ├── phase3_parse_library.py   # Phase 3 — parse experience library to JSON
+│   ├── phase3_compile_library.py # Phase 3 — compile employer files to single JSON
+│   ├── check_resume.py           # Pre-submission resume quality validator
+│   └── utils/                    # Diagnostic and maintenance utilities
 ├── templates/                    # Networking message templates
 ├── outputs/                      # Reports and generated content (local only)
 ├── .env                          # API keys — never committed (local only)
@@ -139,13 +159,25 @@ Phase 4 generates tailored resume and cover letter packages for each role.
 The tailoring workflow uses:
 
 1. `data/job_packages/[role]/job_description.txt` — the job posting
-2. `data/experience_library/experience_library.md` — approved bullet library
+2. `data/experience_library/experience_library.json` — compiled experience library
 3. `resumes/master_resume.docx` — base resume content
 
 Output is written to `resumes/tailored/[role]/` with one subfolder per
 application, named to match the corresponding `job_packages/` folder.
-This structure allows the ranking agent and resume generator to pair
-job descriptions with tailored outputs automatically.
+
+---
+
+## Quality Control
+
+`scripts/check_resume.py` validates any `.docx` resume file against a set of
+known rules before submission — catching em dashes, banned metrics, inaccurate
+terminology, and clearance language issues automatically.
+
+```bash
+python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
+```
+
+Returns PASS, REVIEW, or FAIL with specific line-level findings.
 
 ---
 
@@ -157,6 +189,7 @@ job descriptions with tailored outputs automatically.
 - Agent design and multi-step workflow orchestration
 - Data processing with openpyxl
 - Document generation with python-docx
+- JSON data modeling and structured knowledge base design
 - Environment variable management and secrets handling
 - Git version control and GitHub portfolio publishing
 
