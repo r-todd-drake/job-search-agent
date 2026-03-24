@@ -64,13 +64,13 @@ withdrawn = status_counts.get("Withdrawn", 0)
 pending = status_counts.get("Pending", 0)
 offers = status_counts.get("Offer", 0)
 
-# Interview conversion — reached interview stage
+# Interview conversion – reached interview stage
 interviews_reached = sum(
     1 for a in applications
     if a.get("Reject or Interview") == "Interview"
 )
 
-# Response rate — any response received
+# Response rate – any response received
 responses = sum(1 for a in applications if a.get("First Response"))
 
 # Salary data
@@ -101,7 +101,7 @@ active_apps = [
     if (a.get("Status", "") or "").strip() == "Active"
 ]
 
-# Response time analysis — for applications that got a response
+# Response time analysis – for applications that got a response
 response_times = []
 for a in applications:
     applied = a.get("Applied")

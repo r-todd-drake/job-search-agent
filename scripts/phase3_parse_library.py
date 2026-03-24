@@ -1,7 +1,7 @@
 # ==============================================
 # phase3_parse_library.py
 # Parses experience_library.md into structured
-# JSON files — one per employer plus a summaries
+# JSON files – one per employer plus a summaries
 # file. Calls Claude API to generate keywords
 # for each bullet (semantic keyword extraction).
 #
@@ -78,7 +78,7 @@ Bullet: {bullet_text}"""
         keywords = json.loads(raw)
         return [k.lower() for k in keywords if isinstance(k, str)]
     except Exception as e:
-        print(f"    WARNING: Keyword generation failed — {str(e)[:60]}")
+        print(f"    WARNING: Keyword generation failed – {str(e)[:60]}")
         return []
 
 # ==============================================
@@ -107,7 +107,7 @@ def parse_library(filepath):
         stripped = line.strip()
 
         # Skip comment lines and dividers
-        # Must check ## and ### BEFORE single # — otherwise headers get eaten by comment rule
+        # Must check ## and ### BEFORE single # – otherwise headers get eaten by comment rule
         if stripped == '---' or stripped == '':
             i += 1
             continue
@@ -342,7 +342,7 @@ def save_summaries(summaries, filepath):
 # ==============================================
 
 print("=" * 60)
-print("PHASE 3 — EXPERIENCE LIBRARY PARSER")
+print("PHASE 3 – EXPERIENCE LIBRARY PARSER")
 print("=" * 60)
 
 # Check library file exists

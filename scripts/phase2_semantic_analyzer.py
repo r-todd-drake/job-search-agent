@@ -75,7 +75,7 @@ DIFFERENTIATING SKILLS:
   contractor, government, and military stakeholders
 
 CONSTRAINTS:
-- Not a pure hands-on MBSE modeler — best fit is Senior/Lead/Principal level
+- Not a pure hands-on MBSE modeler – best fit is Senior/Lead/Principal level
   roles where architecture, strategy, and stakeholder management are primary
 - No aircraft certification (FAA/DO-178) experience
 - No formal INCOSE certification
@@ -202,7 +202,7 @@ TOP 3 GAPS OR RISKS:
 2. [Specific gap or risk]
 3. [Specific gap or risk]
 
-RECOMMENDATION: [PURSUE / CONSIDER / SKIP] — [2-3 sentence rationale]
+RECOMMENDATION: [PURSUE / CONSIDER / SKIP] – [2-3 sentence rationale]
 
 INTERVIEW ANGLE: [If pursuing, what is the strongest narrative to lead with?]
 """

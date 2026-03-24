@@ -1,0 +1,365 @@
+# ==============================================
+# phase3_build_candidate_profile.py
+# Builds a canonical candidate profile from the
+# experience library. Reads each employer section
+# and asks Claude to extract confirmed facts,
+# skills, tools, and explicit gaps. Compiles
+# everything into a single candidate_profile.md
+# for use by Phase 4 resume generator.
+#
+# Run once after library is built or updated.
+# Output: data/experience_library/candidate_profile.md
+#
+# Usage:
+#   python scripts/phase3_build_candidate_profile.py
+# ==============================================
+
+import os
+import json
+import time
+from datetime import datetime
+from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ==============================================
+# CONFIGURATION
+# ==============================================
+
+LIBRARY_JSON = "data/experience_library/experience_library.json"
+EMPLOYERS_DIR = "data/experience_library/employers"
+SUMMARIES_PATH = "data/experience_library/summaries.json"
+OUTPUT_PATH = "data/experience_library/candidate_profile.md"
+API_DELAY = 0.5  # seconds between calls
+
+# Known facts not derivable from bullets alone
+# These supplement the library-derived profile
+KNOWN_FACTS = """
+CONFIRMED FACTS (supplement library data):
+- Name: R. Todd Drake
+- Location: San Diego, CA
+- Phone: (619) 379-5783
+- Email: r_todd_d@msn.com
+- LinkedIn: linkedin.com/in/rtodddrake
+- GitHub: github.com/r-todd-drake
+
+EDUCATION (confirmed):
+- San Diego State University
+- Degree: B.A. Geography, GIS & Remote Sensing
+- Army ROTC — commission pathway to Infantry Officer
+- NOT a Systems Engineering degree
+- NOT a Computer Science degree
+- NOT a STEM degree in the traditional sense
+
+CERTIFICATIONS (confirmed):
+- CompTIA Security+ (held, verify current status)
+- ICAgile Certified Professional
+- NOT INCOSE certified
+- NOT PMP certified
+
+CLEARANCE:
+- Current TS/SCI (granted 2022)
+- Use "Current" when between employers
+- Use "Active" once employed on a program
+
+MILITARY SERVICE (confirmed):
+- U.S. Army Infantryman (MOS 11M) 1991-1994
+- SDSU + Army ROTC 1994-1997
+- Infantry Officer (11A) 1997-2001
+- Military Intelligence Officer (35A) 2001-2004
+- Medically discharged as Captain (O-3)
+- D-TOC OIC at Fort Huachuca — FBCB2, MCS, AFATDS, ASAS
+
+CONFIRMED GAPS (never include on resume):
+- No GitLab experience (GitHub only)
+- No Terraform experience
+- No INCOSE certification
+- No FAA/DO-178 aircraft certification experience
+- No FEA or CFD experience
+- No Cucumber or TDD framework experience
+- No hands-on RF/communications engineering
+- No laser/space payload experience
+- No automotive/semiconductor experience
+- No cloud administration (awareness only — Kubernetes, AWS concepts)
+- Shield AI hazard analysis was SUPPORTING role only — never led FHA/SSA/PSSA
+- Saronic = autonomous MARITIME vessels only — NO aircraft, NO airworthiness
+
+STYLE RULES:
+- En dashes only, never em dashes
+- No unverifiable metrics
+- "Mission-critical" not "safety-critical"
+- "Current TS/SCI" not "Active TS/SCI" when between employers
+"""
+
+SYSTEM_PROMPT = """You are building a canonical candidate profile from resume experience data.
+Your job is to extract ONLY confirmed facts — skills, tools, roles, and scope that are
+explicitly demonstrated in the provided bullets. 
+
+You NEVER invent, infer, or embellish. If a skill is not explicitly demonstrated in the
+bullets, it does not appear in the profile. If something is ambiguous, note it as
+"familiarity" or "exposure" rather than claiming expertise.
+
+Your output will be used to prevent AI hallucinations when generating future resumes.
+Accuracy and explicit gap documentation are more important than completeness."""
+
+# ==============================================
+# LOAD DATA
+# ==============================================
+
+print("=" * 60)
+print("PHASE 3 — BUILD CANDIDATE PROFILE")
+print("=" * 60)
+
+if not os.path.exists(LIBRARY_JSON):
+    print(f"ERROR: {LIBRARY_JSON} not found. Run phase3_compile_library.py first.")
+    exit(1)
+
+with open(LIBRARY_JSON, encoding='utf-8') as f:
+    library = json.load(f)
+
+with open(SUMMARIES_PATH, encoding='utf-8') as f:
+    summaries_data = json.load(f)
+
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+employer_profiles = {}
+
+# ==============================================
+# STEP 1 — EXTRACT PER-EMPLOYER PROFILE
+# ==============================================
+
+print(f"\nStep 1: Extracting confirmed skills per employer...")
+
+for employer in library['employers']:
+    name = employer['name']
+    title = employer.get('title', '')
+    dates = employer.get('dates', '')
+    bullets = [b for b in employer['bullets'] if not b.get('flagged')]
+
+    if not bullets:
+        print(f"  Skipping {name} — no cleared bullets")
+        continue
+
+    print(f"  Processing {name} ({len(bullets)} bullets)...")
+
+    # Build bullet text block
+    bullet_text = "\n".join([f"- {b['text']}" for b in bullets])
+
+    prompt = f"""Analyze these resume bullets for {name} ({title}, {dates}) and extract
+a confirmed skills and capabilities profile.
+
+BULLETS:
+{bullet_text}
+
+Extract and return in this EXACT format:
+
+EMPLOYER: {name}
+TITLE: {title}
+DATES: {dates}
+
+CONFIRMED TOOLS AND TECHNOLOGIES:
+[List only tools explicitly named in the bullets — one per line with brief evidence]
+
+CONFIRMED TECHNICAL SKILLS:
+[List only skills explicitly demonstrated — one per line]
+
+CONFIRMED LEADERSHIP AND SCOPE:
+[Team sizes, program scope, stakeholder levels explicitly mentioned]
+
+CONFIRMED DOMAIN KNOWLEDGE:
+[Mission areas, platforms, programs explicitly referenced]
+
+KEY BULLETS (top 3 most impactful for senior SE roles):
+[Copy the 3 strongest bullets verbatim]
+
+GAPS VISIBLE FROM THIS ROLE:
+[Note any skills commonly expected for this role type that are NOT demonstrated in these bullets]
+
+Be conservative. Only list what is explicitly demonstrated, not what can be inferred."""
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1500,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        employer_profiles[name] = response.content[0].text
+        print(f"    Done.")
+    except Exception as e:
+        print(f"    ERROR: {str(e)[:80]}")
+        employer_profiles[name] = f"ERROR processing {name}: {str(e)}"
+
+    time.sleep(API_DELAY)
+
+# ==============================================
+# STEP 2 — EXTRACT SUMMARY THEMES
+# ==============================================
+
+print(f"\nStep 2: Analyzing summary themes...")
+
+summaries = summaries_data.get('summaries', [])
+summary_themes = []
+for s in summaries:
+    summary_themes.append(f"- {s['theme']}: {s['text'][:150]}...")
+
+summary_block = "\n".join(summary_themes[:20])  # First 20 for context
+
+summary_prompt = f"""Analyze these resume summary themes and identify the consistent
+positioning patterns and core value propositions across all versions.
+
+SUMMARY THEMES:
+{summary_block}
+
+Return:
+CONSISTENT POSITIONING THEMES:
+[3-5 themes that appear consistently across summaries]
+
+STRONGEST VALUE PROPOSITIONS:
+[The 2-3 most powerful and differentiated claims that appear across summaries]
+
+POSITIONING TO AVOID:
+[Any themes that appear overclaimed or inconsistent with a systems engineering background]"""
+
+try:
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=800,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": summary_prompt}]
+    )
+    summary_analysis = response.content[0].text
+    print("  Done.")
+except Exception as e:
+    summary_analysis = f"ERROR: {str(e)}"
+    print(f"  ERROR: {str(e)[:80]}")
+
+# ==============================================
+# STEP 3 — COMPILE MASTER PROFILE
+# ==============================================
+
+print(f"\nStep 3: Compiling master candidate profile...")
+
+# Build compilation input
+employer_summaries = ""
+for name, profile in employer_profiles.items():
+    employer_summaries += f"\n\n{'='*40}\n{profile}\n"
+
+compile_prompt = f"""You are compiling a master canonical candidate profile for use in
+resume generation. This profile will be used to PREVENT hallucinations — it defines
+exactly what the candidate has and has NOT done.
+
+EMPLOYER PROFILES EXTRACTED FROM LIBRARY:
+{employer_summaries}
+
+SUMMARY ANALYSIS:
+{summary_analysis}
+
+CONFIRMED SUPPLEMENTAL FACTS:
+{KNOWN_FACTS}
+
+Compile a comprehensive master profile in this format:
+
+# CANONICAL CANDIDATE PROFILE
+# R. Todd Drake — Compiled from Experience Library
+# Generated: {datetime.now().strftime('%d %b %Y')}
+# PURPOSE: Use this file to ground all resume generation — prevents hallucinations
+
+## IDENTITY & CONTACT
+[name, location, contact, clearance]
+
+## EDUCATION & CERTIFICATIONS
+[confirmed education and certs — include explicit statement of what is NOT held]
+
+## MILITARY SERVICE
+[confirmed service history]
+
+## CAREER SUMMARY
+[2-3 sentence overview grounded in confirmed experience]
+
+## SIGNATURE CREDENTIAL
+[Project Overmatch — confirmed details only]
+
+## CONFIRMED SKILLS BY CATEGORY
+
+### MBSE & Architecture Tools
+[tools confirmed in library — note proficiency level where distinguishable]
+
+### Systems Engineering Skills
+[confirmed SE capabilities]
+
+### Domain Knowledge
+[confirmed mission areas and platforms]
+
+### Leadership & Stakeholder Management
+[confirmed leadership scope]
+
+### Technical Writing & Documentation
+[confirmed documentation capabilities]
+
+## EMPLOYER HISTORY
+[each employer with confirmed title, dates, key capabilities — 3-4 bullets each]
+
+## CONFIRMED GAPS — NEVER INCLUDE ON RESUME
+[explicit list of skills, tools, certifications the candidate does NOT have]
+[This section is critical for preventing hallucinations]
+
+## STYLE RULES
+[formatting and content rules for all resume output]
+
+## CANONICAL BULLETS — HIGHEST IMPACT
+[Top 5-7 bullets across all employers that should be prioritized]
+
+Be thorough on the CONFIRMED GAPS section — it is the most important part of this document."""
+
+try:
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": compile_prompt}]
+    )
+    master_profile = response.content[0].text
+    print("  Done.")
+except Exception as e:
+    master_profile = f"ERROR compiling master profile: {str(e)}"
+    print(f"  ERROR: {str(e)[:80]}")
+
+# ==============================================
+# STEP 4 — SAVE OUTPUT
+# ==============================================
+
+print(f"\nStep 4: Saving candidate profile...")
+
+header = f"""# CANONICAL CANDIDATE PROFILE
+# R. Todd Drake
+# Generated: {datetime.now().strftime('%d %b %Y %H:%M')}
+# Source: experience_library.json ({library['metadata']['total_bullets']} bullets,
+#         {library['metadata']['total_employers']} employers)
+#
+# PURPOSE: Ground all Phase 4 resume generation — prevents hallucinations
+# USAGE: Load this file into CANDIDATE_PROFILE in phase4_resume_generator.py
+#        Replace the hardcoded CANDIDATE_PROFILE constant with the contents of this file
+#
+# HIERARCHY: PROJECT_CONTEXT.md governs over this file where conflicts exist.
+# ==============================================
+
+"""
+
+with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
+    f.write(header)
+    f.write(master_profile)
+
+size_kb = os.path.getsize(OUTPUT_PATH) / 1024
+
+print(f"\n{'=' * 60}")
+print(f"CANDIDATE PROFILE BUILD COMPLETE")
+print(f"  Output: {OUTPUT_PATH}")
+print(f"  File size: {size_kb:.1f} KB")
+print(f"\nNext steps:")
+print(f"  1. Review {OUTPUT_PATH} in VS Code")
+print(f"  2. Update CANDIDATE_PROFILE in phase4_resume_generator.py")
+print(f"     to load from this file instead of the hardcoded constant")
+print(f"  3. Rerun Stage 1 to verify improved hallucination prevention")
+print(f"{'=' * 60}")

@@ -25,7 +25,7 @@ OUTPUT_PATH = "data/experience_library/experience_library.json"
 # ==============================================
 
 print("=" * 60)
-print("PHASE 3 — COMPILE EXPERIENCE LIBRARY")
+print("PHASE 3 – COMPILE EXPERIENCE LIBRARY")
 print("=" * 60)
 
 # Load all employer files

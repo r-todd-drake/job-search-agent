@@ -15,11 +15,11 @@ from docx import Document
 # ==============================================
 # RULES
 # Each rule is a dict with:
-#   name        — short label
-#   type        — "contains" or "exact"
-#   pattern     — string to search for
-#   message     — what to tell the user
-#   severity    — "ERROR" or "WARNING"
+#   name        – short label
+#   type        – "contains" or "exact"
+#   pattern     – string to search for
+#   message     – what to tell the user
+#   severity    – "ERROR" or "WARNING"
 # ==============================================
  
 RULES = [
@@ -29,7 +29,7 @@ RULES = [
         "name": "Em dash",
         "type": "contains",
         "pattern": "\u2014",
-        "message": "Em dash found (\u2014) — replace with en dash (\u2013). Em dashes signal AI-generated content.",
+        "message": "Em dash found (\u2014) – replace with en dash (\u2013). Em dashes signal AI-generated content.",
         "severity": "ERROR"
     },
  
@@ -38,49 +38,49 @@ RULES = [
         "name": "Banned metric: cut rework 15%",
         "type": "contains",
         "pattern": "cut rework by 15",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
     {
         "name": "Banned metric: reduced delays 30%",
         "type": "contains",
         "pattern": "reduced program delays by 30",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
     {
         "name": "Banned metric: test efficiency 30%",
         "type": "contains",
         "pattern": "integration testing efficiency by 30",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
     {
         "name": "Banned metric: interoperability 50%",
         "type": "contains",
         "pattern": "interoperability by 50",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
     {
         "name": "Banned metric: backlog refinement 25%",
         "type": "contains",
         "pattern": "backlog refinement time by 25",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
     {
         "name": "Banned metric: test readiness 3 weeks",
         "type": "contains",
         "pattern": "test readiness by 3 weeks",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
     {
         "name": "Banned metric: delivery predictability 15%",
         "type": "contains",
         "pattern": "delivery predictability by 15",
-        "message": "Banned metric — unverifiable SWAG. Remove entirely.",
+        "message": "Banned metric – unverifiable SWAG. Remove entirely.",
         "severity": "ERROR"
     },
  
@@ -96,77 +96,77 @@ RULES = [
         "name": "Banned term: Plank Holder",
         "type": "contains",
         "pattern": "Plank Holder",
-        "message": "Wrong term — use 'Plank Owner' (two words, capitalized).",
+        "message": "Wrong term – use 'Plank Owner' (two words, capitalized).",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: plank holder lowercase",
         "type": "contains",
         "pattern": "plank holder",
-        "message": "Wrong term — use 'Plank Owner' (two words, capitalized).",
+        "message": "Wrong term – use 'Plank Owner' (two words, capitalized).",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: Plankowner one word",
         "type": "contains",
         "pattern": "Plankowner",
-        "message": "Non-preferred form — use 'Plank Owner' (two words, capitalized).",
+        "message": "Non-preferred form – use 'Plank Owner' (two words, capitalized).",
         "severity": "WARNING"
     },
     {
         "name": "Banned term: conformity analysis",
         "type": "contains",
         "pattern": "conformity analysis",
-        "message": "Inaccurate term for KForce work — use V/V matrix management and requirements harmonization framing.",
+        "message": "Inaccurate term for KForce work – use V/V matrix management and requirements harmonization framing.",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: conformity inspection",
         "type": "contains",
         "pattern": "conformity inspection",
-        "message": "Inaccurate term for KForce work — use V/V matrix management framing.",
+        "message": "Inaccurate term for KForce work – use V/V matrix management framing.",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: safety-critical",
         "type": "contains",
         "pattern": "safety-critical",
-        "message": "Aspirational overreach — use 'mission-critical' instead.",
+        "message": "Aspirational overreach – use 'mission-critical' instead.",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: FEA/CFD",
         "type": "contains",
         "pattern": "FEA/CFD",
-        "message": "Overreach — use 'engineering analysis and simulation environments' instead.",
+        "message": "Overreach – use 'engineering analysis and simulation environments' instead.",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: Terraform",
         "type": "contains",
         "pattern": "Terraform",
-        "message": "No Terraform experience — remove from cloud-native framing.",
+        "message": "No Terraform experience – remove from cloud-native framing.",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: managing technical budgets",
         "type": "contains",
         "pattern": "managing technical budgets",
-        "message": "Inaccurate — Todd managed workforce/staffing resources, not technical dollars. Use 'managing workforce resources'.",
+        "message": "Inaccurate – Todd managed workforce/staffing resources, not technical dollars. Use 'managing workforce resources'.",
         "severity": "ERROR"
     },
     {
         "name": "Banned term: white papers",
         "type": "contains",
         "pattern": "white papers",
-        "message": "G2 OPS work was internal position papers only — use 'internal technical analyses and position papers'.",
+        "message": "G2 OPS work was internal position papers only – use 'internal technical analyses and position papers'.",
         "severity": "WARNING"
     },
     {
         "name": "Banned term: system software architectures",
         "type": "contains",
         "pattern": "system software architectures",
-        "message": "Overreach — use 'software elements within system architecture' instead.",
+        "message": "Overreach – use 'software elements within system architecture' instead.",
         "severity": "ERROR"
     },
  
@@ -184,14 +184,14 @@ RULES = [
         "name": "Shield AI: leading FHA",
         "type": "contains",
         "pattern": "leading FHA",
-        "message": "Shield AI hazard analysis was a supporting role only — do not imply leading FHA/SSA/PSSA.",
+        "message": "Shield AI hazard analysis was a supporting role only – do not imply leading FHA/SSA/PSSA.",
         "severity": "ERROR"
     },
     {
         "name": "Shield AI: led FHA",
         "type": "contains",
         "pattern": "led FHA",
-        "message": "Shield AI hazard analysis was a supporting role only — do not imply leading FHA/SSA/PSSA.",
+        "message": "Shield AI hazard analysis was a supporting role only – do not imply leading FHA/SSA/PSSA.",
         "severity": "ERROR"
     },
 ]
@@ -246,10 +246,10 @@ def check_resume(filepath):
  
     # Print results
     if not errors and not warnings:
-        print("✓ ALL CHECKS PASSED — No issues found.\n")
+        print("✓ ALL CHECKS PASSED – No issues found.\n")
     else:
         if errors:
-            print(f"ERRORS ({len(errors)}) — Must fix before submitting:")
+            print(f"ERRORS ({len(errors)}) – Must fix before submitting:")
             print("-" * 60)
             for e in errors:
                 print(f"\n[ERROR] {e['rule']}")
@@ -257,7 +257,7 @@ def check_resume(filepath):
                 print(f"  Paragraph {e['paragraph']}: {e['context']}")
  
         if warnings:
-            print(f"\nWARNINGS ({len(warnings)}) — Review before submitting:")
+            print(f"\nWARNINGS ({len(warnings)}) – Review before submitting:")
             print("-" * 60)
             for w in warnings:
                 print(f"\n[WARNING] {w['rule']}")
@@ -267,11 +267,11 @@ def check_resume(filepath):
     print(f"\n{'=' * 60}")
     print(f"SUMMARY: {len(errors)} error(s), {len(warnings)} warning(s)")
     if errors:
-        print(f"STATUS: FAIL — Fix errors before submitting")
+        print(f"STATUS: FAIL – Fix errors before submitting")
     elif warnings:
-        print(f"STATUS: REVIEW — Check warnings before submitting")
+        print(f"STATUS: REVIEW – Check warnings before submitting")
     else:
-        print(f"STATUS: PASS — Ready to submit")
+        print(f"STATUS: PASS – Ready to submit")
     print(f"{'=' * 60}\n")
  
     return len(errors), len(warnings)

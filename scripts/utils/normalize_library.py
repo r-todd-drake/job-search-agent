@@ -4,7 +4,7 @@
 # experience_library.md file.
 #
 # Merges all tranche-suffixed employer sections
-# (e.g. "## SHIELD AI — Tranche 4 Additions")
+# (e.g. "## SHIELD AI – Tranche 4 Additions")
 # into clean single employer sections
 # (e.g. "## SHIELD AI").
 #
@@ -43,7 +43,7 @@ EMPLOYER_CANONICAL = {
     "L3 COMMUNICATIONS": "L3 COMMUNICATIONS",
     "U.S. ARMY": "U.S. ARMY",
     "EARLIER CAREER": "U.S. ARMY",
-    "EARLIER CAREER — U.S. ARMY": "U.S. ARMY",
+    "EARLIER CAREER – U.S. ARMY": "U.S. ARMY",
     "BATTELLE TECHNICAL HIGHLIGHTS": "BATTELLE TECHNICAL HIGHLIGHTS",
 }
 
@@ -64,8 +64,8 @@ def get_canonical_employer(raw_name):
     or None if this section should be skipped.
     """
     # Strip tranche suffixes
-    # e.g. "SHIELD AI — Tranche 4 Additions" -> "SHIELD AI"
-    # e.g. "SHIELD AI — Tranche 5 Additions" -> "SHIELD AI"
+    # e.g. "SHIELD AI – Tranche 4 Additions" -> "SHIELD AI"
+    # e.g. "SHIELD AI – Tranche 5 Additions" -> "SHIELD AI"
     cleaned = re.sub(
         r'\s*[–—-]+\s*Tranche\s+\d+.*$',
         '',
