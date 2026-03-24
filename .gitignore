@@ -4,6 +4,7 @@
 
 # All job search data - tracker, packages, experience library
 data/
+scripts/utils/
 
 # All resume files (master and tailored versions)
 resumes/
