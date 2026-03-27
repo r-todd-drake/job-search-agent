@@ -337,7 +337,7 @@ Rules:
 - Mirror JD language where accurate
 - Always include a Clearance & Certifications line last
 - The Clearance & Certifications line must be EXACTLY:
-  "Clearance & Certifications: Current TS/SCI | CompTIA Security+ | ICAgile Certified Professional"
+  "Clearance & Certifications: Current TS/SCI | ICAgile Certified Professional"
 - CRITICAL: The candidate's actual degree is B.A. Geography, GIS & Remote Sensing — NOT Systems Engineering
   Never claim a degree the candidate does not hold
 - Never invent experience, credentials, or education not in the candidate profile
@@ -745,8 +745,8 @@ def build_docx(sections, output_path):
         # Contact line — Normal 10pt
         p3 = add_paragraph('', style='Normal', space_after=6)
         run3 = p3.add_run(
-            "San Diego, CA  |  (619) 379-5783  |  r_todd_d@msn.com  |  "
-            "linkedin.com/in/rtodddrake  |  github.com/r-todd-drake"
+            "San Diego, CA | (619) 379-5783 | r_todd_d@msn.com | "
+            "linkedin.com/in/rtodddrake | github.com/r-todd-drake"
         )
         run3.font.size = Pt(10)
 
@@ -808,7 +808,7 @@ def build_docx(sections, output_path):
     # Education & Certifications
     add_section_heading("Education & Certifications")
     add_normal("San Diego State University – B.A. Geography, GIS & Remote Sensing | Army ROTC")
-    add_normal("CompTIA Security+  |  ICAgile Certified Professional  |  Current TS/SCI")
+    add_normal("ICAgile Certified Professional | Current TS/SCI")
 
     doc.save(output_path)
     print(f"  Document saved: {output_path}")

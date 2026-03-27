@@ -30,21 +30,33 @@ application packages ready to go.
 
 ---
 
-## System Architecture
+## Daily Workflow
 
 ```
-Job Sources (LinkedIn, Indeed, ClearanceJobs, company pages)
-      ↓
-Discovery Agent  →  jobs.csv
-      ↓
-Ranking Agent  →  ranked_jobs.csv  (keyword scoring + semantic fit score)
-      ↓
-Resume Generator  →  resumes/tailored/[role]/[company]_[role]_Resume.docx
-      ↓
-Networking Agent  →  linkedin_message.txt + company_brief.txt
-      ↓
-Interview Prep Agent  →  interview_pack.txt
+1. Add new roles to jobs.csv (blank status)
+2. Run phase2_job_ranking.py
+   → Scores all roles, reports only NEW/PURSUE/CONSIDER
+   → Assign PURSUE / CONSIDER / SKIP to each new role
+3. Run phase2_semantic_analyzer.py
+   → API analysis on PURSUE and CONSIDER roles only
+   → Review combined table, finalize decisions
+4. Run phase4_resume_generator.py for top PURSUE roles
+   → Four-stage async workflow with human review
+5. Submit application, update status to APPLIED
+6. Move APPLIED entries to job_pipeline.xlsx tracker
 ```
+
+---
+
+## Job Status Values
+
+| Status | Meaning |
+|--------|---------|
+| *(blank)* | New — not yet reviewed |
+| PURSUE | Apply next |
+| CONSIDER | On deck, needs more thought |
+| SKIP | Decided against |
+| APPLIED | Submitted — move to tracker |
 
 ---
 
@@ -127,10 +139,10 @@ python scripts/phase3_compile_library.py
 # Generate pipeline report from tracker
 python scripts/pipeline_report.py
 
-# Score and rank jobs from jobs.csv
+# Score and rank jobs — shows only NEW/PURSUE/CONSIDER roles
 python scripts/phase2_job_ranking.py
 
-# Run semantic fit analysis via Claude API
+# Run semantic fit analysis — PURSUE and CONSIDER roles only
 python scripts/phase2_semantic_analyzer.py
 
 # Generate tailored resume — Stage 1 (bullet selection + competencies)
@@ -154,6 +166,7 @@ python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 Job_search_agent/
 ├── data/
 │   ├── tracker/                  # Application tracking spreadsheet (local only)
+│   ├── jobs.csv                  # Job pipeline with status tracking
 │   ├── job_packages/             # Per-job folders, each containing:
 │   │   └── [role]/               #   job_description.txt  (local only)
 │   │                             #   stage1_draft.txt     (auto-generated)
@@ -167,29 +180,24 @@ Job_search_agent/
 │       ├── employers/            # Per-employer JSON files
 │       └── archive/              # Previous versions and session notes
 ├── example_data/                 # Fictional example data for reference
-│   ├── jobs.csv
-│   ├── job_packages/
-│   ├── tracker/
-│   └── outputs/
 ├── resumes/
 │   ├── master_resume.docx        # Base resume (local only)
-│   └── tailored/                 # Tailored resumes and cover letters (local only)
-│       └── [role]/               # One subfolder per role, matching job_packages/
-│           ├── [Company]_[Role]_Resume.docx
-│           └── [Company]_[Role]_CoverLetter.docx
+│   └── tailored/                 # Tailored resumes (local only)
+│       └── [role]/
+│           └── [Company]_[Role]_Resume.docx
 ├── templates/
 │   └── resume_template.docx      # Blank styled Word document (local only)
 ├── prompts/                      # Reusable LLM prompt templates
 ├── scripts/
 │   ├── pipeline_report.py        # Phase 1 — pipeline metrics from tracker
-│   ├── phase2_job_ranking.py     # Phase 2 — keyword scoring and ranking
+│   ├── phase2_job_ranking.py     # Phase 2 — keyword scoring, status filtering
 │   ├── phase2_semantic_analyzer.py # Phase 2 — Claude API semantic fit analysis
 │   ├── phase3_parse_library.py   # Phase 3 — parse experience library to JSON
 │   ├── phase3_build_candidate_profile.py # Phase 3 — build canonical candidate profile
 │   ├── phase3_compile_library.py # Phase 3 — compile employer files to single JSON
 │   ├── phase4_resume_generator.py # Phase 4 — four-stage resume generator
 │   ├── check_resume.py           # Pre-submission resume quality validator
-│   └── utils/                    # Diagnostic and maintenance utilities
+│   └── utils/                    # Diagnostic and maintenance utilities (local only)
 ├── outputs/                      # Reports and generated content (local only)
 ├── .env                          # API keys — never committed (local only)
 ├── .gitignore
@@ -206,16 +214,12 @@ Job_search_agent/
 
 ## Resume Tailoring
 
-Phase 4 generates tailored resume and cover letter packages for each role.
-The tailoring workflow uses:
+Phase 4 generates tailored resume packages for each role using:
 
 1. `data/job_packages/[role]/job_description.txt` — the job posting
 2. `data/experience_library/experience_library.json` — compiled experience library
 3. `data/experience_library/candidate_profile.md` — canonical candidate profile
 4. `templates/resume_template.docx` — blank styled Word template
-
-Output is written to `resumes/tailored/[role]/` with one subfolder per
-application, named to match the corresponding `job_packages/` folder.
 
 ---
 
@@ -241,6 +245,7 @@ Returns PASS, REVIEW, or FAIL with specific line-level findings.
 - Hallucination prevention through library-derived candidate profiling
 - Agent design and multi-step workflow orchestration
 - Asynchronous human-in-the-loop workflow design
+- Status-based pipeline management and filtering
 - Data processing with openpyxl
 - Document generation with python-docx
 - JSON data modeling and structured knowledge base design

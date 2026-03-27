@@ -1,14 +1,16 @@
 # ==============================================
 # phase2_semantic_analyzer.py
 # Uses Claude API to perform semantic fit analysis
-# on each job description against your background
-# profile. Produces a nuanced fit score and gap
-# analysis that keyword scoring alone cannot match.
+# on job descriptions against candidate background.
+#
+# Only analyzes PURSUE and CONSIDER roles from
+# jobs.csv — skips SKIP, APPLIED, and blank/NEW.
+# Run phase2_job_ranking.py first and assign
+# PURSUE/CONSIDER status before running this.
 # ==============================================
 
 import os
 import csv
-import json
 from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -23,63 +25,34 @@ JOBS_CSV = "data/jobs.csv"
 PACKAGES_DIR = "data/job_packages"
 OUTPUT_DIR = "outputs"
 RANKED_CSV = os.path.join(OUTPUT_DIR, "ranked_jobs.csv")
+CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
 SEMANTIC_OUTPUT = os.path.join(OUTPUT_DIR, f"semantic_analysis_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
 
+# Only these statuses get semantic analysis — API calls cost money
+ANALYZE_STATUSES = {"PURSUE", "CONSIDER"}
+
 # ==============================================
-# CANDIDATE BACKGROUND PROFILE
-# This is loaded into every API call as context.
-# Keep it factual and concise.
-# Personal details stay in .env / local files only.
+# LOAD CANDIDATE PROFILE
 # ==============================================
 
-CANDIDATE_PROFILE = """
-CANDIDATE BACKGROUND SUMMARY
-
-Current Level: Senior / Principal Systems Engineer
-Clearance: Active TS/SCI
-Location: San Diego, CA
-Years Experience: 20+
-
-SIGNATURE CREDENTIAL:
-Served as the functional MBSE Pillar Lead for Project Overmatch - the CNO's
-second-highest priority program. Built and led an eight-person MBSE team from
-scratch, translating RADM Small and the Chief Engineer's operational vision into
-an implemented MBSE architecture and enterprise-wide integration strategy from
-program inception. Navigated significant cross-organizational resistance from
-contractor, government, and military stakeholders. Operated with flag-level
-visibility in a politically complex environment.
-
-RECENT EXPERIENCE:
-- Saronic Technologies (May-Oct 2025): Senior SE for autonomous maritime surface
-  vessels. System definition, ICD development, integration planning across
-  autonomy, propulsion, communications, and control subsystems.
-- KForce/Leidos/NIWC PAC (Aug 2024-Mar 2025): Senior SE for secure tactical
-  network capabilities. HAIPE architectures, 35 mission threads, RMF/ATO.
-- Shield AI (Nov 2022-Apr 2024): Lead SE for V-BAT / FTUAS program. Cameo/
-  MagicDraw MBSE modeling, 3000+ requirements, Class III UAS, two platform
-  variants through Phases 1 and 2 of Army FTUAS competition.
-
-TECHNICAL STRENGTHS:
-- MBSE: Cameo Systems Modeler (MagicDraw), SysML, Enterprise Architect
-- Frameworks: DoDAF expert, UPDM familiar, Navy MBSE frameworks
-- Domains: Autonomous systems, C4ISR, maritime/naval, secure comms
-- Process: Requirements traceability, verification planning, ICD development,
-  ConOps development, system-of-systems architecture
-
-DIFFERENTIATING SKILLS:
-- Stakeholder needs analysis: translates operational intent and desired effects
-  into performance-based requirements, rather than accepting prescribed solutions
-- Startup-to-acquisition bridge: implements repeatable SE processes in fast-paced
-  environments that lack formal process maturity
-- Organizational leadership: proven track record navigating resistance across
-  contractor, government, and military stakeholders
-
-CONSTRAINTS:
-- Not a pure hands-on MBSE modeler – best fit is Senior/Lead/Principal level
-  roles where architecture, strategy, and stakeholder management are primary
-- No aircraft certification (FAA/DO-178) experience
-- No formal INCOSE certification
+def load_candidate_profile():
+    if os.path.exists(CANDIDATE_PROFILE_PATH):
+        with open(CANDIDATE_PROFILE_PATH, encoding='utf-8') as f:
+            return f.read()
+    else:
+        print(f"WARNING: candidate_profile.md not found at {CANDIDATE_PROFILE_PATH}")
+        print("  Run phase3_build_candidate_profile.py to generate it.")
+        print("  Using fallback minimal profile.")
+        return """
+CANDIDATE: R. Todd Drake
+CLEARANCE: Current TS/SCI
+LOCATION: San Diego, CA
+EXPERIENCE: 20+ years defense systems engineering
+SIGNATURE CREDENTIAL: Functional MBSE Pillar Lead, Project Overmatch (CNO priority)
+CONSTRAINTS: Not a pure modeler, no FAA/DO-178, no INCOSE certification
 """
+
+CANDIDATE_PROFILE = load_candidate_profile()
 
 # ==============================================
 # SYSTEM PROMPT
@@ -103,19 +76,36 @@ You never:
 """
 
 # ==============================================
-# LOAD JOBS
+# LOAD JOBS — FILTER TO PURSUE AND CONSIDER ONLY
 # ==============================================
 
 print("Script started")
 print("Loading jobs...")
 
-jobs = []
+all_jobs = []
 with open(JOBS_CSV, newline='', encoding='utf-8') as f:
     reader = csv.DictReader(f)
     for row in reader:
-        jobs.append(row)
+        all_jobs.append(row)
 
-# Also load keyword scores if ranked_jobs.csv exists
+# Filter to only PURSUE and CONSIDER
+jobs_to_analyze = [
+    j for j in all_jobs
+    if j.get("status", "").strip().upper() in ANALYZE_STATUSES
+]
+
+skipped = len(all_jobs) - len(jobs_to_analyze)
+
+print(f"Total jobs in pipeline: {len(all_jobs)}")
+print(f"Analyzing: {len(jobs_to_analyze)} (PURSUE + CONSIDER)")
+print(f"Skipping: {skipped} (NEW, SKIP, APPLIED)")
+
+if not jobs_to_analyze:
+    print("\nNo PURSUE or CONSIDER roles found.")
+    print("Run phase2_job_ranking.py first and assign PURSUE or CONSIDER status.")
+    exit(0)
+
+# Load keyword scores from ranked_jobs.csv if available
 keyword_scores = {}
 if os.path.exists(RANKED_CSV):
     with open(RANKED_CSV, newline='', encoding='utf-8') as f:
@@ -127,8 +117,6 @@ if os.path.exists(RANKED_CSV):
                 "match_pct": row.get("match_pct", "N/A"),
                 "top_keywords": row.get("top_keywords", "N/A")
             }
-
-print(f"Loaded {len(jobs)} jobs")
 
 # ==============================================
 # ANALYZE EACH JOB
@@ -143,16 +131,18 @@ report_lines.append("=" * 60)
 report_lines.append("      SEMANTIC FIT ANALYSIS REPORT")
 report_lines.append("=" * 60)
 report_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
-report_lines.append(f"Jobs analyzed: {len(jobs)}")
+report_lines.append(f"Roles analyzed: {len(jobs_to_analyze)} (PURSUE + CONSIDER only)")
+report_lines.append(f"Roles skipped: {skipped} (NEW, SKIP, APPLIED)")
 report_lines.append("")
 
-for i, job in enumerate(jobs, 1):
+for i, job in enumerate(jobs_to_analyze, 1):
     company = job.get("company", "")
     title = job.get("title", "")
     package_folder = job.get("package_folder", "").strip()
     salary = job.get("salary_range", "")
+    status = job.get("status", "").strip().upper()
 
-    print(f"Analyzing {i}/{len(jobs)}: {company} | {title}...")
+    print(f"Analyzing {i}/{len(jobs_to_analyze)}: {company} | {title} [{status}]...")
 
     # Load job description
     description_path = os.path.join(PACKAGES_DIR, package_folder, "job_description.txt")
@@ -163,14 +153,14 @@ for i, job in enumerate(jobs, 1):
         print(f"  WARNING: No description found for {package_folder}")
         description = "No description available."
 
-    # Get keyword score if available
+    # Get keyword score
     key = f"{company}_{title}"
     kw_data = keyword_scores.get(key, {})
     kw_score = kw_data.get("score", "N/A")
     kw_pct = kw_data.get("match_pct", "N/A")
     kw_top = kw_data.get("top_keywords", "N/A")
 
-    # Build the analysis prompt
+    # Build analysis prompt
     prompt = f"""Analyze the fit between this candidate and job description.
 
 CANDIDATE PROFILE:
@@ -207,7 +197,6 @@ RECOMMENDATION: [PURSUE / CONSIDER / SKIP] – [2-3 sentence rationale]
 INTERVIEW ANGLE: [If pursuing, what is the strongest narrative to lead with?]
 """
 
-    # Call Claude API
     try:
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -216,23 +205,21 @@ INTERVIEW ANGLE: [If pursuing, what is the strongest narrative to lead with?]
             messages=[{"role": "user", "content": prompt}]
         )
         analysis = response.content[0].text
-
     except Exception as e:
         analysis = f"API error: {str(e)}"
 
-    # Store result
     results.append({
-        "company": company,
-        "title": title,
-        "salary": salary,
+        "company":       company,
+        "title":         title,
+        "salary":        salary,
+        "status":        status,
         "keyword_score": kw_score,
-        "keyword_pct": kw_pct,
-        "analysis": analysis
+        "keyword_pct":   kw_pct,
+        "analysis":      analysis
     })
 
-    # Add to report
-    report_lines.append(f"{'=' * 60}")
-    report_lines.append(f"#{i}  {company} | {title}")
+    report_lines.append("=" * 60)
+    report_lines.append(f"#{i}  [{status}]  {company} | {title}")
     report_lines.append(f"    Salary: {salary} | Keyword Score: {kw_score} ({kw_pct})")
     report_lines.append("")
     report_lines.append(analysis)
@@ -243,7 +230,7 @@ report_lines.append(f"Analysis complete: {datetime.now().strftime('%d %b %Y %H:%
 report_lines.append("=" * 60)
 
 # ==============================================
-# PRINT AND SAVE REPORT
+# SAVE REPORT
 # ==============================================
 
 report_text = "\n".join(report_lines)
@@ -278,59 +265,65 @@ def extract_recommendation(analysis_text):
                 return 'SKIP'
     return 'N/A'
 
+def trunc(text, length):
+    return text if len(text) <= length else text[:length - 2] + ".."
+
 # Build combined table
 table_data = []
 for r in results:
     fit_score = extract_fit_score(r["analysis"])
     recommendation = extract_recommendation(r["analysis"])
-    kw_score = r.get("keyword_score", "N/A")
-    kw_pct = r.get("keyword_pct", "N/A")
     table_data.append({
         "company":        r["company"],
         "title":          r["title"],
         "salary":         r["salary"],
-        "keyword_score":  kw_score,
-        "keyword_pct":    kw_pct,
+        "status":         r["status"],
+        "keyword_score":  r.get("keyword_score", "N/A"),
+        "keyword_pct":    r.get("keyword_pct", "N/A"),
         "fit_score":      fit_score,
         "recommendation": recommendation,
     })
 
 # Sort by fit score descending, then keyword score
-table_data.sort(key=lambda x: (x["fit_score"], int(x["keyword_score"]) if str(x["keyword_score"]).isdigit() else 0), reverse=True)
+table_data.sort(
+    key=lambda x: (x["fit_score"],
+                   int(x["keyword_score"]) if str(x["keyword_score"]).isdigit() else 0),
+    reverse=True
+)
 
-# Truncate title to 28 characters
-def trunc(text, length):
-    return text if len(text) <= length else text[:length - 2] + ".."
-
-# Format table
 table_lines = []
 table_lines.append("")
-table_lines.append("=" * 95)
+table_lines.append("=" * 100)
 table_lines.append("   COMBINED ANALYSIS SUMMARY")
-table_lines.append("=" * 95)
-table_lines.append(f"{'Rank':<5} {'Company':<22} {'Title':<30} {'Keyword':>8}  {'Sem':>5}  {'Action':<8}  {'Salary'}")
-table_lines.append("-" * 95)
+table_lines.append("=" * 100)
+table_lines.append(f"{'Rank':<5} {'St':<8} {'Company':<22} {'Title':<28} {'Keyword':>8}  {'Sem':>5}  {'Action':<8}  {'Salary'}")
+table_lines.append("-" * 100)
 
 for i, r in enumerate(table_data, 1):
     company = trunc(r['company'], 22)
-    title = trunc(r['title'], 30)
+    title = trunc(r['title'], 28)
     kw_pct = r['keyword_pct'] if r['keyword_pct'] != 'N/A' else 'N/A'
     table_lines.append(
-        f"{i:<5} {company:<22} {title:<30} "
+        f"{i:<5} {r['status']:<8} {company:<22} {title:<28} "
         f"{str(r['keyword_score']):>4} ({kw_pct:>5})  "
         f"{str(r['fit_score']) + '/10':>5}  "
         f"{r['recommendation']:<8}  "
         f"{r['salary']}"
     )
 
-table_lines.append("=" * 95)
+table_lines.append("=" * 100)
 table_lines.append("")
+table_lines.append("Next steps:")
+table_lines.append("  1. Review full analysis above for each role")
+table_lines.append("  2. Update status in jobs.csv based on findings")
+table_lines.append("  3. Run phase4_resume_generator.py for top PURSUE roles")
+table_lines.append("  4. Update tracker once applications are submitted")
+table_lines.append("=" * 100)
 
 table_text = "\n".join(table_lines)
 print(table_text)
 
-# Append table to the saved report
 with open(SEMANTIC_OUTPUT, "a", encoding="utf-8") as f:
     f.write(table_text)
 
-print(f"Semantic analysis saved to: {SEMANTIC_OUTPUT}")
+print(f"\nSemantic analysis saved to: {SEMANTIC_OUTPUT}")

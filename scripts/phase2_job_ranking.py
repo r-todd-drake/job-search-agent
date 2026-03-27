@@ -3,11 +3,17 @@
 # Reads jobs.csv and job description text files,
 # scores each role against a weighted keyword
 # profile, and produces a ranked shortlist.
+#
+# Status workflow:
+#   blank   = new, not yet reviewed — appears in report
+#   PURSUE  = apply next — appears in report
+#   CONSIDER = on deck — appears in report
+#   SKIP    = decided against — excluded from report
+#   APPLIED = submitted — excluded from report
 # ==============================================
 
 import csv
 import os
-import json
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -23,10 +29,15 @@ OUTPUT_DIR = "outputs"
 RANKED_OUTPUT = os.path.join(OUTPUT_DIR, "ranked_jobs.csv")
 REPORT_OUTPUT = os.path.join(OUTPUT_DIR, f"ranking_report_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
 
+# Status values that appear in the ranked report
+ACTIONABLE_STATUSES = {"", "PURSUE", "CONSIDER"}
+
+# Status values excluded from the ranked report
+EXCLUDED_STATUSES = {"SKIP", "APPLIED"}
+
 # ==============================================
 # KEYWORD SCORING PROFILE
 # Format: ("keyword", weight, ["aliases"])
-# Aliases are alternative forms of the same keyword
 # ==============================================
 
 KEYWORDS = [
@@ -85,13 +96,12 @@ def score_job(description):
     total_score = 0
 
     for keyword, weight, aliases in KEYWORDS:
-        # Check primary keyword
         all_terms = [keyword.lower()] + [a.lower() for a in aliases]
         for term in all_terms:
             if term in description_lower:
                 matched[keyword] = weight
                 total_score += weight
-                break  # Only count each keyword once
+                break
 
     return total_score, matched
 
@@ -111,67 +121,76 @@ with open(JOBS_CSV, newline='', encoding='utf-8') as f:
 print(f"Loaded {len(jobs)} jobs")
 
 # ==============================================
-# SCORE EACH JOB
+# SCORE ALL JOBS
 # ==============================================
 
 print("Scoring jobs...")
 
-results = []
+all_results = []
 
 for job in jobs:
     package_folder = job.get("package_folder", "").strip()
+    status = job.get("status", "").strip().upper()
     description_path = os.path.join(PACKAGES_DIR, package_folder, "job_description.txt")
 
-    # Load job description text
+    # Load job description
     if os.path.exists(description_path):
         with open(description_path, encoding='utf-8') as f:
             description = f.read()
     else:
-        print(f"  WARNING: No description found for {package_folder} at {description_path}")
+        if status not in EXCLUDED_STATUSES:
+            print(f"  WARNING: No description found for {package_folder}")
         description = ""
 
     # Score the job
     score, matched_keywords = score_job(description)
-
-    # Calculate match percentage against maximum possible score
     max_possible = sum(w for _, w, _ in KEYWORDS)
     match_pct = round((score / max_possible) * 100, 1)
 
-    results.append({
+    all_results.append({
         "company":          job.get("company", ""),
         "title":            job.get("title", ""),
         "location":         job.get("location", ""),
         "salary_range":     job.get("salary_range", ""),
         "url":              job.get("url", ""),
         "date_found":       job.get("date_found", ""),
+        "status":           status,
         "package_folder":   package_folder,
         "score":            score,
         "match_pct":        match_pct,
         "matched_keywords": matched_keywords,
     })
 
-# Sort by score descending
-results.sort(key=lambda x: x["score"], reverse=True)
+# Sort all results by score descending
+all_results.sort(key=lambda x: x["score"], reverse=True)
+
+# Split into actionable and excluded
+actionable = [r for r in all_results if r["status"] in ACTIONABLE_STATUSES]
+excluded = [r for r in all_results if r["status"] in EXCLUDED_STATUSES]
 
 print(f"Scoring complete")
+print(f"  Actionable (blank/PURSUE/CONSIDER): {len(actionable)}")
+print(f"  Excluded (SKIP/APPLIED): {len(excluded)}")
 
 # ==============================================
-# SAVE RANKED CSV
+# SAVE RANKED CSV — actionable roles only
 # ==============================================
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 with open(RANKED_OUTPUT, "w", newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
-    writer.writerow(["rank", "company", "title", "location", "salary_range",
-                     "score", "match_pct", "top_keywords", "url", "package_folder"])
-    for i, r in enumerate(results, 1):
+    writer.writerow(["rank", "status", "company", "title", "location",
+                     "salary_range", "score", "match_pct", "top_keywords",
+                     "url", "package_folder"])
+    for i, r in enumerate(actionable, 1):
         top_keywords = ", ".join(
             f"{k}({v})" for k, v in
             sorted(r["matched_keywords"].items(), key=lambda x: -x[1])[:5]
         )
         writer.writerow([
             i,
+            r["status"] if r["status"] else "NEW",
             r["company"],
             r["title"],
             r["location"],
@@ -194,19 +213,52 @@ report_lines.append("=" * 60)
 report_lines.append("         JOB RANKING REPORT")
 report_lines.append("=" * 60)
 report_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
-report_lines.append(f"Jobs scored: {len(results)}")
+report_lines.append(f"Total jobs in pipeline: {len(all_results)}")
 report_lines.append(f"Max possible score: {sum(w for _, w, _ in KEYWORDS)}")
 report_lines.append("")
 
-for i, r in enumerate(results, 1):
-    report_lines.append(f"#{i}  {r['company']} | {r['title']}")
-    report_lines.append(f"    Location: {r['location']}  |  Salary: {r['salary_range']}")
-    report_lines.append(f"    Score: {r['score']} ({r['match_pct']}% match)")
-    report_lines.append(f"    Matched keywords:")
-    for kw, wt in sorted(r["matched_keywords"].items(), key=lambda x: -x[1]):
-        report_lines.append(f"      + {kw} ({wt})")
-    report_lines.append("")
+# Status summary
+status_counts = {}
+for r in all_results:
+    s = r["status"] if r["status"] else "NEW"
+    status_counts[s] = status_counts.get(s, 0) + 1
 
+report_lines.append("PIPELINE STATUS SUMMARY")
+report_lines.append("-" * 40)
+for status in ["NEW", "PURSUE", "CONSIDER", "APPLIED", "SKIP"]:
+    count = status_counts.get(status, 0)
+    if count > 0:
+        report_lines.append(f"  {status:<10} {count}")
+report_lines.append("")
+
+# Actionable roles — ranked
+report_lines.append(f"ACTIONABLE ROLES ({len(actionable)} roles — NEW, PURSUE, CONSIDER)")
+report_lines.append("=" * 60)
+report_lines.append("")
+
+if not actionable:
+    report_lines.append("  No actionable roles — all roles have been reviewed.")
+    report_lines.append("  Add new roles to jobs.csv to continue.")
+else:
+    for i, r in enumerate(actionable, 1):
+        status_label = r["status"] if r["status"] else "NEW"
+        report_lines.append(f"#{i}  [{status_label}]  {r['company']} | {r['title']}")
+        report_lines.append(f"    Location: {r['location']}  |  Salary: {r['salary_range']}")
+        report_lines.append(f"    Score: {r['score']} ({r['match_pct']}% match)")
+        report_lines.append(f"    Matched keywords:")
+        for kw, wt in sorted(r["matched_keywords"].items(), key=lambda x: -x[1]):
+            report_lines.append(f"      + {kw} ({wt})")
+        report_lines.append("")
+
+report_lines.append("=" * 60)
+report_lines.append("Next steps:")
+report_lines.append("  1. Update status in jobs.csv:")
+report_lines.append("     PURSUE  = apply next")
+report_lines.append("     CONSIDER = needs more thought")
+report_lines.append("     SKIP    = decided against")
+report_lines.append("  2. Run phase2_semantic_analyzer.py for PURSUE and CONSIDER roles")
+report_lines.append("  3. Apply to top roles, update status to APPLIED")
+report_lines.append("  4. Move APPLIED entries to job_pipeline.xlsx tracker")
 report_lines.append("=" * 60)
 
 report_text = "\n".join(report_lines)
