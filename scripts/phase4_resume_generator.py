@@ -34,6 +34,9 @@ import subprocess
 from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.pii_filter import strip_pii
 from docx import Document as DocxDocument
 from docx.shared import Pt
 from docx.oxml.ns import qn
@@ -93,7 +96,8 @@ GAPS: No GitLab, no Terraform, no INCOSE, no FAA/DO-178, no FEA/CFD
 RULES: En dashes only, no unverifiable metrics, Saronic = maritime only
 """
 
-CANDIDATE_PROFILE = load_candidate_profile()
+CANDIDATE_PROFILE = strip_pii(load_candidate_profile())
+print("  Candidate profile loaded and PII stripped.")
 
 # ==============================================
 # ARGUMENT PARSING

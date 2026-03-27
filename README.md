@@ -12,9 +12,9 @@ Most job seekers optimize their resume wording.
 This system optimizes the entire process.
 
 Instead of manually searching, scoring, and tailoring applications one at a time,
-this agent pipeline handles discovery, ranking, resume generation, and networking
-intelligence — producing a daily shortlist of high-fit roles with tailored 
-application packages ready to go.
+this agent pipeline handles discovery, ranking, resume generation, interview prep,
+and networking intelligence — producing tailored application packages and
+interview prep materials for every role in the pipeline.
 
 ---
 
@@ -26,7 +26,8 @@ application packages ready to go.
 | 2 | Job ranking and semantic fit analysis — keyword scoring + Claude API | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON from resume library | ✅ Complete |
 | 4 | Automated resume generation — tailored .docx output per application | 🔧 Prototype |
-| 5 | Networking and intelligence agents — recruiter ID, company briefs, interview prep | ⏳ Planned |
+| 5 | Interview preparation — company brief, story bank, gap prep, salary analysis | 🔧 Prototype |
+| 6 | Networking and discovery agents | ⏳ Planned |
 
 ---
 
@@ -41,9 +42,11 @@ application packages ready to go.
    → API analysis on PURSUE and CONSIDER roles only
    → Review combined table, finalize decisions
 4. Run phase4_resume_generator.py for top PURSUE roles
-   → Four-stage async workflow with human review
-5. Submit application, update status to APPLIED
-6. Move APPLIED entries to job_pipeline.xlsx tracker
+   → Four-stage async workflow with human review at each stage
+5. Run phase5_interview_prep.py when interview is scheduled
+   → Company brief, story bank, gap prep, questions to ask, salary guidance
+6. Submit application, update status to APPLIED
+7. Move APPLIED entries to job_pipeline.xlsx tracker
 ```
 
 ---
@@ -62,9 +65,6 @@ application packages ready to go.
 
 ## Phase 4 — Resume Generation Workflow
 
-Phase 4 uses a four-stage asynchronous workflow that keeps the human in the loop
-at every critical decision point:
-
 ```
 Stage 1 (automated)  →  stage1_draft.txt
                          Keyword + semantic bullet selection
@@ -73,7 +73,6 @@ Stage 1 (automated)  →  stage1_draft.txt
 
 Stage 2 (manual)     →  stage2_approved.txt
                          Review draft, swap bullets, adjust wording
-                         Save approved content before Stage 3
 
 Stage 3 (automated)  →  stage3_review.txt
                          Semantic coherence check
@@ -84,6 +83,24 @@ Stage 4 (automated)  →  [Company]_[Role]_Resume.docx
                          Template-based .docx generation
                          Auto quality check via check_resume.py
 ```
+
+---
+
+## Phase 5 — Interview Prep
+
+Single command generates a complete prep package:
+
+```bash
+python scripts/phase5_interview_prep.py --role [role_folder]
+```
+
+Output saved to `data/job_packages/[role]/interview_prep.txt` containing:
+- Company and role brief with salary range analysis
+- Salary expectations guidance with anchor and floor
+- Role fit assessment and key themes to lead with
+- Five STAR-format interview stories mapped to JD requirements
+- Gap preparation with honest, confident talking points
+- Eight questions to ask organized by category
 
 ---
 
@@ -98,10 +115,22 @@ Stage 4 (automated)  →  [Company]_[Role]_Resume.docx
 
 ---
 
+## Security & Privacy
+
+PII (name, phone, email, LinkedIn, GitHub) is stripped from all API calls
+before any data leaves the local machine. The `pii_filter.py` utility loads
+PII values from `.env` at runtime — no personal data is hardcoded anywhere
+in the published code.
+
+All personal data files (experience library, resumes, job packages, tracker)
+are excluded from version control via `.gitignore`.
+
+---
+
 ## Setup
 
 ### 1. Install Python
-Download from [python.org](https://www.python.org/downloads/) — version 3.10 or higher recommended.
+Download from [python.org](https://www.python.org/downloads/) — version 3.10 or higher.
 
 ### 2. Install dependencies
 ```bash
@@ -109,52 +138,48 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure environment
-Copy `.env.example` to `.env` and add your Anthropic API key:
+Copy `.env.example` to `.env` and add your values:
 ```
 ANTHROPIC_API_KEY=your_key_here
+CANDIDATE_NAME=Your Full Name
+CANDIDATE_PHONE=(xxx) xxx-xxxx
+CANDIDATE_EMAIL=your@email.com
+CANDIDATE_LINKEDIN=linkedin.com/in/yourprofile
+CANDIDATE_GITHUB=github.com/yourusername
 ```
-Get your API key at [console.anthropic.com](https://console.anthropic.com/)
 
 ### 4. Add your data
-- Place your master resume in `resumes/master_resume.docx`
-- Place your application tracker in `data/tracker/job_pipeline.xlsx`
-- Add job descriptions to `data/job_packages/[role]/job_description.txt`
-- Add your experience library to `data/experience_library/experience_library.md`
-- Save a blank styled Word document as `templates/resume_template.docx`
+- Experience library: `data/experience_library/experience_library.md`
+- Resume template: `templates/resume_template.docx`
+- Application tracker: `data/tracker/job_pipeline.xlsx`
 
 ### 5. Build the experience library
 ```bash
-# Parse experience_library.md into structured JSON with keyword generation
 python scripts/phase3_parse_library.py
-
-# Build canonical candidate profile for hallucination prevention
 python scripts/phase3_build_candidate_profile.py
-
-# Compile employer files into single library JSON
 python scripts/phase3_compile_library.py
 ```
 
 ### 6. Run scripts
 ```bash
-# Generate pipeline report from tracker
+# Pipeline report
 python scripts/pipeline_report.py
 
-# Score and rank jobs — shows only NEW/PURSUE/CONSIDER roles
+# Score and rank jobs
 python scripts/phase2_job_ranking.py
 
-# Run semantic fit analysis — PURSUE and CONSIDER roles only
+# Semantic fit analysis (PURSUE/CONSIDER only)
 python scripts/phase2_semantic_analyzer.py
 
-# Generate tailored resume — Stage 1 (bullet selection + competencies)
+# Resume generation
 python scripts/phase4_resume_generator.py --stage 1 --role [role_folder]
-
-# Generate tailored resume — Stage 3 (semantic review)
 python scripts/phase4_resume_generator.py --stage 3 --role [role_folder]
-
-# Generate tailored resume — Stage 4 (document generation)
 python scripts/phase4_resume_generator.py --stage 4 --role [role_folder]
 
-# Validate a resume before submitting
+# Interview prep
+python scripts/phase5_interview_prep.py --role [role_folder]
+
+# Resume quality check
 python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 ```
 
@@ -167,89 +192,52 @@ Job_search_agent/
 ├── data/
 │   ├── tracker/                  # Application tracking spreadsheet (local only)
 │   ├── jobs.csv                  # Job pipeline with status tracking
-│   ├── job_packages/             # Per-job folders, each containing:
-│   │   └── [role]/               #   job_description.txt  (local only)
-│   │                             #   stage1_draft.txt     (auto-generated)
-│   │                             #   stage2_approved.txt  (your review)
-│   │                             #   stage3_review.txt    (auto-generated)
-│   │                             #   stage4_final.txt     (final approved)
+│   ├── job_packages/             # Per-job folders:
+│   │   └── [role]/               #   job_description.txt
+│   │                             #   stage1_draft.txt → stage4_final.txt
+│   │                             #   interview_prep.txt
 │   └── experience_library/       # Experience knowledge base (local only)
 │       ├── experience_library.md # Human-readable source — edit this
-│       ├── experience_library.json # Compiled library — Phase 4 input
-│       ├── candidate_profile.md  # Canonical candidate profile — hallucination prevention
-│       ├── employers/            # Per-employer JSON files
-│       └── archive/              # Previous versions and session notes
-├── example_data/                 # Fictional example data for reference
-├── resumes/
-│   ├── master_resume.docx        # Base resume (local only)
-│   └── tailored/                 # Tailored resumes (local only)
-│       └── [role]/
-│           └── [Company]_[Role]_Resume.docx
+│       ├── experience_library.json
+│       ├── candidate_profile.md  # Canonical profile — hallucination prevention
+│       └── employers/            # Per-employer JSON files
+├── resumes/tailored/             # Generated resumes (local only)
 ├── templates/
-│   └── resume_template.docx      # Blank styled Word document (local only)
-├── prompts/                      # Reusable LLM prompt templates
+│   └── resume_template.docx      # Blank styled Word template (local only)
 ├── scripts/
-│   ├── pipeline_report.py        # Phase 1 — pipeline metrics from tracker
-│   ├── phase2_job_ranking.py     # Phase 2 — keyword scoring, status filtering
-│   ├── phase2_semantic_analyzer.py # Phase 2 — Claude API semantic fit analysis
-│   ├── phase3_parse_library.py   # Phase 3 — parse experience library to JSON
-│   ├── phase3_build_candidate_profile.py # Phase 3 — build canonical candidate profile
-│   ├── phase3_compile_library.py # Phase 3 — compile employer files to single JSON
-│   ├── phase4_resume_generator.py # Phase 4 — four-stage resume generator
-│   ├── check_resume.py           # Pre-submission resume quality validator
-│   └── utils/                    # Diagnostic and maintenance utilities (local only)
-├── outputs/                      # Reports and generated content (local only)
-├── .env                          # API keys — never committed (local only)
+│   ├── pipeline_report.py
+│   ├── phase2_job_ranking.py
+│   ├── phase2_semantic_analyzer.py
+│   ├── phase3_parse_library.py
+│   ├── phase3_build_candidate_profile.py
+│   ├── phase3_compile_library.py
+│   ├── phase4_resume_generator.py
+│   ├── phase5_interview_prep.py
+│   ├── check_resume.py
+│   └── utils/
+│       └── pii_filter.py         # PII stripping utility (no personal data)
+├── example_data/                 # Fictional reference data
+├── .env                          # API keys and PII — never committed
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
 
-> **Privacy note:** All folders marked "local only" are excluded from version 
-> control via `.gitignore`. Only code, prompts, templates, and example data 
-> are published to GitHub. Personal data, resumes, API keys, and experience
-> library content never leave your local machine.
-
----
-
-## Resume Tailoring
-
-Phase 4 generates tailored resume packages for each role using:
-
-1. `data/job_packages/[role]/job_description.txt` — the job posting
-2. `data/experience_library/experience_library.json` — compiled experience library
-3. `data/experience_library/candidate_profile.md` — canonical candidate profile
-4. `templates/resume_template.docx` — blank styled Word template
-
----
-
-## Quality Control
-
-`scripts/check_resume.py` validates any `.docx` resume file against a set of
-known rules before submission — catching em dashes, banned metrics, inaccurate
-terminology, and clearance language issues automatically.
-
-```bash
-python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
-```
-
-Returns PASS, REVIEW, or FAIL with specific line-level findings.
-
 ---
 
 ## Skills Demonstrated
 
-- Python scripting and file I/O
+- Python scripting and automation
 - REST API integration (Anthropic Claude API)
 - Prompt engineering for structured LLM outputs
 - Hallucination prevention through library-derived candidate profiling
+- PII protection with environment variable based filtering
 - Agent design and multi-step workflow orchestration
 - Asynchronous human-in-the-loop workflow design
 - Status-based pipeline management and filtering
-- Data processing with openpyxl
 - Document generation with python-docx
 - JSON data modeling and structured knowledge base design
-- Environment variable management and secrets handling
+- Secrets management and security-conscious development practices
 - Git version control and GitHub portfolio publishing
 
 ---
@@ -257,8 +245,8 @@ Returns PASS, REVIEW, or FAIL with specific line-level findings.
 ## Author
 
 R. Todd Drake — Portfolio project, actively developed.  
-Built from scratch as a real-world introduction to Python, API development, 
-and AI agent design.
+Built from scratch as a real-world introduction to Python, API development,
+and AI agent design — applied directly to an active senior defense SE job search.
 
 ---
 
