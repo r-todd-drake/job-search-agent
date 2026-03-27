@@ -71,9 +71,16 @@ MILITARY SERVICE (confirmed):
 - Medically discharged as Captain (O-3)
 - D-TOC OIC at Fort Huachuca — FBCB2, MCS, AFATDS, ASAS
 
+CONFIRMED SKILLS - PROGRAMMING:
+- Python: self-taught, beginner to intermediate — built multi-phase AI job 
+  search automation system using Anthropic API, openpyxl, python-docx, 
+  python-dotenv. Not a software developer but demonstrates applied capability.
+- Git/GitHub: version control for personal projects
+- No GitLab, no MATLAB, no C++, no Java
+
 CONFIRMED GAPS (never include on resume):
 - No GitLab experience (GitHub only)
-- No Terraform experience
+- No Terraform or infrastructure-as-code experience
 - No INCOSE certification
 - No FAA/DO-178 aircraft certification experience
 - No FEA or CFD experience
