@@ -12,9 +12,9 @@ Most job seekers optimize their resume wording.
 This system optimizes the entire process.
 
 Instead of manually searching, scoring, and tailoring applications one at a time,
-this agent pipeline handles discovery, ranking, resume generation, interview prep,
-and networking intelligence — producing tailored application packages and
-interview prep materials for every role in the pipeline.
+this agent pipeline handles discovery, ranking, resume generation, and interview
+preparation — producing tailored application packages and interview prep materials
+for every role in the pipeline.
 
 ---
 
@@ -23,10 +23,10 @@ interview prep materials for every role in the pipeline.
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Pipeline report script and tracker schema | ✅ Complete |
-| 2 | Job ranking and semantic fit analysis — keyword scoring + Claude API | ✅ Complete |
-| 3 | Experience knowledge base — structured JSON from resume library | ✅ Complete |
-| 4 | Automated resume generation — tailored .docx output per application | 🔧 Prototype |
-| 5 | Interview preparation — company brief, story bank, gap prep, salary analysis | 🔧 Prototype |
+| 2 | Job ranking and semantic fit analysis | ✅ Complete |
+| 3 | Experience knowledge base — structured JSON library | ✅ Complete |
+| 4 | Automated resume generation — tailored .docx per application | 🔧 Prototype |
+| 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
 | 6 | Networking and discovery agents | ⏳ Planned |
 
 ---
@@ -34,19 +34,20 @@ interview prep materials for every role in the pipeline.
 ## Daily Workflow
 
 ```
-1. Add new roles to jobs.csv (blank status)
+1. Add new roles to jobs.csv (blank status, req number if available)
 2. Run phase2_job_ranking.py
    → Scores all roles, reports only NEW/PURSUE/CONSIDER
+   → Flags duplicate requisition numbers
    → Assign PURSUE / CONSIDER / SKIP to each new role
 3. Run phase2_semantic_analyzer.py
-   → API analysis on PURSUE and CONSIDER roles only
-   → Review combined table, finalize decisions
+   → Claude API analysis on PURSUE and CONSIDER roles only
 4. Run phase4_resume_generator.py for top PURSUE roles
    → Four-stage async workflow with human review at each stage
+   → Stage files are source of truth — never edit .docx directly
 5. Run phase5_interview_prep.py when interview is scheduled
-   → Company brief, story bank, gap prep, questions to ask, salary guidance
-6. Submit application, update status to APPLIED
-7. Move APPLIED entries to job_pipeline.xlsx tracker
+   → Generates .txt and .docx prep package
+   → Workshop stories in chat before interview
+6. Submit, update status to APPLIED, move to tracker
 ```
 
 ---
@@ -57,13 +58,13 @@ interview prep materials for every role in the pipeline.
 |--------|---------|
 | *(blank)* | New — not yet reviewed |
 | PURSUE | Apply next |
-| CONSIDER | On deck, needs more thought |
+| CONSIDER | On deck |
 | SKIP | Decided against |
 | APPLIED | Submitted — move to tracker |
 
 ---
 
-## Phase 4 — Resume Generation Workflow
+## Phase 4 — Resume Generation
 
 ```
 Stage 1 (automated)  →  stage1_draft.txt
@@ -94,43 +95,47 @@ Single command generates a complete prep package:
 python scripts/phase5_interview_prep.py --role [role_folder]
 ```
 
-Output saved to `data/job_packages/[role]/interview_prep.txt` containing:
-- Company and role brief with salary range analysis
+Outputs to `data/job_packages/[role]/`:
+- `interview_prep.txt` — for VS Code review and story workshopping
+- `interview_prep.docx` — formatted Word document for reading and printing
+
+Package contains:
+- Company & role brief with current web-searched information
 - Salary expectations guidance with anchor and floor
-- Role fit assessment and key themes to lead with
-- Five STAR-format interview stories mapped to JD requirements
-- Gap preparation with honest, confident talking points
-- Eight questions to ask organized by category
+- Employer-attributed STAR stories grounded in submitted resume bullets
+- Gap preparation with honest/bridge/redirect structure
+- Thoughtful questions to ask organized by category
 
 ---
 
 ## Tech Stack
 
 - **Python 3.x** — core scripting and automation
-- **Anthropic Claude API** — LLM backbone for analysis, tailoring, and generation
-- **openpyxl** — reading and writing the application tracker (.xlsx)
-- **python-docx** — generating tailored resume files (.docx)
-- **VS Code** — development environment
+- **Anthropic Claude API** — LLM backbone including web search tool
+- **openpyxl** — application tracker (.xlsx)
+- **python-docx** — resume and interview prep document generation
+- **VS Code** — development environment (View > Word Wrap for .txt files)
 - **Git / GitHub** — version control and portfolio publishing
 
 ---
 
 ## Security & Privacy
 
-PII (name, phone, email, LinkedIn, GitHub) is stripped from all API calls
-before any data leaves the local machine. The `pii_filter.py` utility loads
-PII values from `.env` at runtime — no personal data is hardcoded anywhere
-in the published code.
+PII is stripped from all API calls before any data leaves the local machine.
+`pii_filter.py` loads PII values from `.env` at runtime — no personal data
+is hardcoded in the published code.
 
-All personal data files (experience library, resumes, job packages, tracker)
-are excluded from version control via `.gitignore`.
+All personal data (experience library, resumes, job packages, tracker) is
+excluded from version control via `.gitignore`.
+
+Anthropic API: inputs are not used for model training under commercial terms.
 
 ---
 
 ## Setup
 
 ### 1. Install Python
-Download from [python.org](https://www.python.org/downloads/) — version 3.10 or higher.
+Version 3.10 or higher from [python.org](https://python.org/downloads/)
 
 ### 2. Install dependencies
 ```bash
@@ -138,7 +143,7 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configure environment
-Copy `.env.example` to `.env` and add your values:
+Copy `.env.example` to `.env`:
 ```
 ANTHROPIC_API_KEY=your_key_here
 CANDIDATE_NAME=Your Full Name
@@ -151,7 +156,7 @@ CANDIDATE_GITHUB=github.com/yourusername
 ### 4. Add your data
 - Experience library: `data/experience_library/experience_library.md`
 - Resume template: `templates/resume_template.docx`
-- Application tracker: `data/tracker/job_pipeline.xlsx`
+- Tracker: `data/tracker/job_pipeline.xlsx`
 
 ### 5. Build the experience library
 ```bash
@@ -162,24 +167,13 @@ python scripts/phase3_compile_library.py
 
 ### 6. Run scripts
 ```bash
-# Pipeline report
 python scripts/pipeline_report.py
-
-# Score and rank jobs
 python scripts/phase2_job_ranking.py
-
-# Semantic fit analysis (PURSUE/CONSIDER only)
 python scripts/phase2_semantic_analyzer.py
-
-# Resume generation
-python scripts/phase4_resume_generator.py --stage 1 --role [role_folder]
-python scripts/phase4_resume_generator.py --stage 3 --role [role_folder]
-python scripts/phase4_resume_generator.py --stage 4 --role [role_folder]
-
-# Interview prep
-python scripts/phase5_interview_prep.py --role [role_folder]
-
-# Resume quality check
+python scripts/phase4_resume_generator.py --stage 1 --role [role]
+python scripts/phase4_resume_generator.py --stage 3 --role [role]
+python scripts/phase4_resume_generator.py --stage 4 --role [role]
+python scripts/phase5_interview_prep.py --role [role]
 python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 ```
 
@@ -190,33 +184,23 @@ python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 ```
 Job_search_agent/
 ├── data/
-│   ├── tracker/                  # Application tracking spreadsheet (local only)
-│   ├── jobs.csv                  # Job pipeline with status tracking
-│   ├── job_packages/             # Per-job folders:
-│   │   └── [role]/               #   job_description.txt
-│   │                             #   stage1_draft.txt → stage4_final.txt
-│   │                             #   interview_prep.txt
-│   └── experience_library/       # Experience knowledge base (local only)
-│       ├── experience_library.md # Human-readable source — edit this
-│       ├── experience_library.json
-│       ├── candidate_profile.md  # Canonical profile — hallucination prevention
-│       └── employers/            # Per-employer JSON files
+│   ├── jobs.csv                  # Pipeline with status + req number tracking
+│   ├── job_packages/[role]/      # JD, stage files, interview prep
+│   └── experience_library/       # Library source, JSON, candidate profile
 ├── resumes/tailored/             # Generated resumes (local only)
-├── templates/
-│   └── resume_template.docx      # Blank styled Word template (local only)
+├── templates/resume_template.docx
 ├── scripts/
-│   ├── pipeline_report.py
-│   ├── phase2_job_ranking.py
+│   ├── pipeline_report.py        # Pipeline metrics + duplicate req detection
+│   ├── phase2_job_ranking.py     # Keyword scoring + req number tracking
 │   ├── phase2_semantic_analyzer.py
 │   ├── phase3_parse_library.py
 │   ├── phase3_build_candidate_profile.py
 │   ├── phase3_compile_library.py
 │   ├── phase4_resume_generator.py
-│   ├── phase5_interview_prep.py
+│   ├── phase5_interview_prep.py  # Web search + resume-grounded stories
 │   ├── check_resume.py
-│   └── utils/
-│       └── pii_filter.py         # PII stripping utility (no personal data)
-├── example_data/                 # Fictional reference data
+│   └── utils/pii_filter.py       # PII stripping — safe for GitHub
+├── example_data/
 ├── .env                          # API keys and PII — never committed
 ├── .gitignore
 ├── requirements.txt
@@ -228,16 +212,16 @@ Job_search_agent/
 ## Skills Demonstrated
 
 - Python scripting and automation
-- REST API integration (Anthropic Claude API)
+- REST API integration (Anthropic Claude API including web search tool)
 - Prompt engineering for structured LLM outputs
 - Hallucination prevention through library-derived candidate profiling
 - PII protection with environment variable based filtering
 - Agent design and multi-step workflow orchestration
 - Asynchronous human-in-the-loop workflow design
-- Status-based pipeline management and filtering
+- Status-based pipeline management with duplicate detection
 - Document generation with python-docx
 - JSON data modeling and structured knowledge base design
-- Secrets management and security-conscious development practices
+- Security-conscious development practices
 - Git version control and GitHub portfolio publishing
 
 ---

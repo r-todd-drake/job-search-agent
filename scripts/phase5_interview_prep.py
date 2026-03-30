@@ -1,15 +1,22 @@
 # ==============================================
 # phase5_interview_prep.py
 # Generates interview preparation materials for
-# a specific job application using the Claude API
-# and candidate experience library.
+# a specific job application.
 #
-# Produces three sections in a single output file:
-#   1. Company & Role Brief
-#   2. Role Analysis, Story Bank & Gap Prep
-#   3. Questions to Ask
+# Improvements over v1:
+#   - Web search via Anthropic API for current
+#     company and role information
+#   - Resume pull from stage4_final.txt to ground
+#     stories in what was actually submitted
+#   - Experience library used for employer-attributed
+#     STAR story building
+#   - PII stripped from all API calls
 #
-# PII is stripped from all API calls via pii_filter.py
+# Outputs to data/job_packages/[role]/interview_prep.txt:
+#   Section 1: Company & Role Brief (web-informed)
+#   Section 2: Story Bank (library-grounded, employer-attributed)
+#   Section 3: Gap Preparation
+#   Section 4: Questions to Ask
 #
 # Usage:
 #   python scripts/phase5_interview_prep.py --role Viasat_SE_IS
@@ -17,11 +24,15 @@
 
 import os
 import sys
+import re
 import json
 import argparse
 from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Add project root to path for utils import
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,85 +45,11 @@ load_dotenv()
 # ==============================================
 
 JOBS_PACKAGES_DIR = "data/job_packages"
+RESUMES_TAILORED_DIR = "resumes/tailored"
 CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
 EXPERIENCE_LIBRARY = "data/experience_library/experience_library.json"
 OUTPUT_FILENAME = "interview_prep.txt"
-
-# ==============================================
-# SALARY EXTRACTION
-# ==============================================
-
-def extract_salary(jd_text):
-    """
-    Extract salary range from JD text and estimate offer midpoint.
-    Returns dict with range, midpoint, and expectations guidance.
-    """
-    import re
-
-    # Common salary patterns
-    patterns = [
-        r'\$\s*([\d,]+(?:\.\d+)?)[kK]?\s*[-–—to]+\s*\$?\s*([\d,]+(?:\.\d+)?)[kK]?',
-        r'([\d,]+(?:\.\d+)?)\s*[-–—to]+\s*([\d,]+(?:\.\d+)?)\s*/\s*(?:year|yr|annually)',
-    ]
-
-    low = None
-    high = None
-
-    for pattern in patterns:
-        matches = re.findall(pattern, jd_text, re.IGNORECASE)
-        if matches:
-            for match in matches:
-                try:
-                    v1 = float(match[0].replace(',', ''))
-                    v2 = float(match[1].replace(',', ''))
-                    # Convert k values
-                    if v1 < 1000:
-                        v1 *= 1000
-                    if v2 < 1000:
-                        v2 *= 1000
-                    # Sanity check — SE salaries 80k-400k range
-                    if 80000 <= v1 <= 400000 and 80000 <= v2 <= 400000:
-                        low = min(v1, v2)
-                        high = max(v1, v2)
-                        break
-                except:
-                    continue
-            if low and high:
-                break
-
-    if not low or not high:
-        return {
-            'found': False,
-            'text': 'Salary range not found in JD — research market rate before interview',
-            'guidance': 'Research Glassdoor, Levels.fyi, and LinkedIn Salary for this role and location.'
-        }
-
-    midpoint = (low + high) / 2
-    # Realistic offer zone — companies typically start at 50-65% of range
-    offer_low = low + (high - low) * 0.45
-    offer_high = low + (high - low) * 0.65
-    # Anchor recommendation — target 70-80% of range
-    anchor = low + (high - low) * 0.72
-
-    return {
-        'found': True,
-        'low': f"${low:,.0f}",
-        'high': f"${high:,.0f}",
-        'midpoint': f"${midpoint:,.0f}",
-        'offer_zone': f"${offer_low:,.0f} – ${offer_high:,.0f}",
-        'anchor': f"${anchor:,.0f}",
-        'text': f"${low:,.0f} – ${high:,.0f} (midpoint ${midpoint:,.0f})",
-        'guidance': (
-            f"Posted range: ${low:,.0f} – ${high:,.0f}\n"
-            f"  Realistic offer zone: ${offer_low:,.0f} – ${offer_high:,.0f} "
-            f"(companies rarely start at the top)\n"
-            f"  Suggested anchor: {f'${anchor:,.0f}'} — positions you above midpoint\n"
-            f"  If asked for expectations: '{f'${anchor:,.0f}'} based on my 20+ years of "
-            f"defense SE experience and current TS/SCI clearance, though I'm open to "
-            f"discussing total compensation.'\n"
-            f"  Floor: Do not accept below ${low + (high-low)*0.35:,.0f} for this role level."
-        )
-    }
+OUTPUT_DOCX_FILENAME = "interview_prep.docx"
 
 # ==============================================
 # ARGUMENT PARSING
@@ -126,20 +63,309 @@ args = parser.parse_args()
 ROLE = args.role
 PACKAGE_DIR = os.path.join(JOBS_PACKAGES_DIR, ROLE)
 JD_PATH = os.path.join(PACKAGE_DIR, "job_description.txt")
+STAGE4_PATH = os.path.join(PACKAGE_DIR, "stage4_final.txt")
+STAGE2_PATH = os.path.join(PACKAGE_DIR, "stage2_approved.txt")
 OUTPUT_PATH = os.path.join(PACKAGE_DIR, OUTPUT_FILENAME)
+OUTPUT_DOCX_PATH = os.path.join(PACKAGE_DIR, OUTPUT_DOCX_FILENAME)
+
+# ==============================================
+# SALARY EXTRACTION
+# ==============================================
+
+def extract_salary(jd_text):
+    """Extract salary range from JD and estimate offer guidance."""
+    patterns = [
+        r'\$\s*([\d,]+(?:\.\d+)?)[kK]?\s*[-\u2013\u2014to]+\s*\$?\s*([\d,]+(?:\.\d+)?)[kK]?',
+        r'([\d,]+(?:\.\d+)?)\s*[-\u2013\u2014to]+\s*([\d,]+(?:\.\d+)?)\s*/\s*(?:year|yr|annually)',
+    ]
+    low = high = None
+    for pattern in patterns:
+        matches = re.findall(pattern, jd_text, re.IGNORECASE)
+        if matches:
+            for match in matches:
+                try:
+                    v1 = float(match[0].replace(',', ''))
+                    v2 = float(match[1].replace(',', ''))
+                    if v1 < 1000:
+                        v1 *= 1000
+                    if v2 < 1000:
+                        v2 *= 1000
+                    if 80000 <= v1 <= 400000 and 80000 <= v2 <= 400000:
+                        low, high = min(v1, v2), max(v1, v2)
+                        break
+                except Exception:
+                    continue
+            if low and high:
+                break
+
+    if not low or not high:
+        return {
+            'found': False,
+            'text': 'Salary range not found in JD',
+            'guidance': 'Research Glassdoor, Levels.fyi, and LinkedIn Salary for this role.'
+        }
+
+    midpoint = (low + high) / 2
+    offer_low = low + (high - low) * 0.45
+    offer_high = low + (high - low) * 0.65
+    anchor = low + (high - low) * 0.72
+    floor = low + (high - low) * 0.35
+    anchor_rounded = round(anchor / 5000) * 5000
+
+    return {
+        'found': True,
+        'text': f"${low:,.0f} – ${high:,.0f} (midpoint ${midpoint:,.0f})",
+        'guidance': (
+            f"Posted range: ${low:,.0f} – ${high:,.0f}\n"
+            f"  Realistic offer zone: ${offer_low:,.0f} – ${offer_high:,.0f} "
+            f"(companies rarely open at the top of range)\n"
+            f"  Suggested anchor: ${anchor_rounded:,.0f} — already rounded for natural delivery\n"
+            f"  If asked: '${anchor_rounded:,.0f} based on my 20+ years of defense SE "
+            f"experience and current TS/SCI clearance, though I am open to "
+            f"discussing total compensation.'\n"
+            f"  Floor: Do not accept below ${floor:,.0f} for this role level."
+        )
+    }
+
+# ==============================================
+# LOAD RESUME BULLETS FROM STAGE FILE
+# ==============================================
+
+def load_resume_bullets(stage4_path, stage2_path):
+    """
+    Extract bullets and summary from stage4_final.txt (or stage2_approved.txt).
+    Stage files are the source of truth — the .docx is presentation only.
+    Returns (resume_data dict, source filename).
+    """
+    path = source = None
+    if os.path.exists(stage4_path):
+        path, source = stage4_path, "stage4_final.txt"
+    elif os.path.exists(stage2_path):
+        path, source = stage2_path, "stage2_approved.txt"
+    else:
+        return None, None
+
+    with open(path, encoding='utf-8') as f:
+        content = f.read()
+
+    resume_data = {'source': source, 'summary': '', 'employers': {}}
+    current_section = None
+    current_employer = None
+
+    for line in content.split('\n'):
+        stripped = line.strip()
+
+        # Skip structural lines
+        if (stripped.startswith('=') or stripped.startswith('STAGE') or
+                stripped.startswith('Role:') or stripped.startswith('Generated:') or
+                stripped.startswith('INSTRUCTIONS') or stripped.startswith('Save as') or
+                stripped.startswith('END OF')):
+            continue
+
+        if stripped == '## PROFESSIONAL SUMMARY':
+            current_section = 'summary'
+            continue
+        elif stripped == '## CORE COMPETENCIES':
+            current_section = 'competencies'
+            continue
+        elif stripped.startswith('## ') and stripped not in [
+                '## PROFESSIONAL SUMMARY', '## CORE COMPETENCIES']:
+            current_employer = stripped[3:].strip()
+            current_section = 'employer'
+            if current_employer not in resume_data['employers']:
+                resume_data['employers'][current_employer] = []
+            continue
+
+        if current_section == 'summary':
+            if stripped and not stripped.startswith('['):
+                resume_data['summary'] += (' ' if resume_data['summary'] else '') + stripped
+
+        elif current_section == 'employer' and current_employer:
+            if stripped.startswith('- ') and not stripped.startswith('['):
+                bullet = stripped[2:].strip()
+                bullet = re.sub(r'\s*\[Source:[^\]]*\]', '', bullet).strip()
+                bullet = re.sub(r'\s*\[Theme:[^\]]*\]', '', bullet).strip()
+                bullet = re.sub(r'\s*\[VERIFY[^\]]*\]', '', bullet).strip()
+                if bullet:
+                    resume_data['employers'][current_employer].append(bullet)
+
+    return resume_data, source
+
+# ==============================================
+# BUILD EMPLOYER-ATTRIBUTED STORY CONTEXT
+# ==============================================
+
+def build_story_context(library, resume_data, jd_lower):
+    """
+    Match resume bullets to library entries to get employer attribution,
+    dates, and additional context for STAR story building.
+    """
+    if not resume_data:
+        return "No resume stage file found — using candidate profile only."
+
+    context_lines = []
+
+    for emp_name, resume_bullets in resume_data['employers'].items():
+        if not resume_bullets:
+            continue
+
+        # Find matching employer in library
+        lib_employer = next(
+            (e for e in library['employers']
+             if e['name'].upper() == emp_name.upper() or
+             emp_name.upper() in e['name'].upper()),
+            None
+        )
+
+        context_lines.append(f"\n{'='*40}")
+        context_lines.append(f"EMPLOYER: {emp_name}")
+
+        if lib_employer:
+            context_lines.append(f"Title: {lib_employer.get('title', '')}")
+            context_lines.append(f"Dates: {lib_employer.get('dates', '')}")
+
+        context_lines.append("Bullets on submitted resume (use these as story basis):")
+        for b in resume_bullets:
+            context_lines.append(f"  - {b}")
+
+        # Add relevant library bullets for story depth
+        if lib_employer:
+            additional = []
+            for lb in lib_employer['bullets']:
+                if lb.get('flagged'):
+                    continue
+                kws = lb.get('keywords', [])
+                if any(k.lower() in jd_lower for k in kws):
+                    if not any(lb['text'][:60] in rb for rb in resume_bullets):
+                        additional.append(
+                            f"  - [{lb['theme']}] {lb['text'][:150]}"
+                        )
+            if additional:
+                context_lines.append(
+                    "Additional library context for story depth (not on resume):"
+                )
+                context_lines.extend(additional[:4])
+
+    return "\n".join(context_lines)
+
+# ==============================================
+# DOCX GENERATION
+# ==============================================
+
+def generate_prep_docx(output_path, role, resume_source,
+                        section1, section2, section3, section4,
+                        salary_data):
+    """
+    Generate a clean formatted .docx interview prep document.
+    Uses simple heading/normal/bullet styles — no resume color scheme.
+    """
+    doc = Document()
+
+    # Page margins
+    from docx.shared import Inches
+    sec = doc.sections[0]
+    sec.left_margin = Inches(1.0)
+    sec.right_margin = Inches(1.0)
+    sec.top_margin = Inches(1.0)
+    sec.bottom_margin = Inches(1.0)
+
+    def add_heading(text, level=1):
+        p = doc.add_heading(text, level=level)
+        p.paragraph_format.space_before = Pt(12)
+        p.paragraph_format.space_after = Pt(4)
+
+    def add_normal(text):
+        p = doc.add_paragraph(text)
+        p.paragraph_format.space_after = Pt(4)
+
+    def add_bullet(text):
+        p = doc.add_paragraph(text, style='List Bullet')
+        p.paragraph_format.space_after = Pt(2)
+
+    def parse_and_add_section(text):
+        """
+        Parse section text and add to doc with appropriate styles.
+        Lines starting with all-caps followed by colon = Heading 3
+        Lines starting with bullet markers = List Bullet
+        Everything else = Normal
+        """
+        import re
+        for line in text.split('\n'):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # All-caps heading pattern (e.g. "COMPANY OVERVIEW:", "STORY 1 —")
+            if (re.match(r'^[A-Z][A-Z\s\-–&/]+[:\-–]', stripped) and
+                    len(stripped) < 80 and not stripped.startswith('-')):
+                add_heading(stripped, level=2)
+            # Bullet lines
+            elif stripped.startswith('- ') or stripped.startswith('• '):
+                add_bullet(stripped.lstrip('-•').strip())
+            # Numbered items
+            elif re.match(r'^\d+\.', stripped):
+                add_bullet(stripped)
+            # Story labels (Situation:, Task:, Action:, Result:)
+            elif re.match(r'^(Situation|Task|Action|Result|Employer|'
+                          r'Gap|Honest answer|Bridge|Redirect|'
+                          r'If probed|Theme \d|Follow-up):', stripped):
+                p = doc.add_paragraph()
+                p.paragraph_format.space_after = Pt(2)
+                # Label in bold
+                label_end = stripped.index(':') + 1
+                run1 = p.add_run(stripped[:label_end])
+                run1.bold = True
+                run2 = p.add_run(stripped[label_end:])
+                run2.bold = False
+            else:
+                add_normal(stripped)
+
+    # Title
+    title_p = doc.add_heading('Interview Prep Package', 0)
+    title_p.paragraph_format.space_after = Pt(4)
+
+    # Metadata
+    add_normal(f"Role: {role}")
+    add_normal(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
+    if resume_source:
+        add_normal(f"Resume source: {resume_source}")
+    doc.add_paragraph()
+
+    # Section 1
+    add_heading("Company & Role Brief", level=1)
+    add_normal("(Web-informed — verify currency before interview)")
+    parse_and_add_section(section1)
+
+    # Section 2
+    add_heading("Story Bank", level=1)
+    add_normal("Workshop stories before interview — correct any overreach.")
+    parse_and_add_section(section2)
+
+    # Section 3
+    add_heading("Gap Preparation", level=1)
+    parse_and_add_section(section3)
+
+    # Section 4
+    add_heading("Questions to Ask", level=1)
+    parse_and_add_section(section4)
+
+    # Salary guidance
+    if salary_data['found']:
+        add_heading("Salary Guidance", level=1)
+        add_normal(salary_data['guidance'])
+
+    doc.save(output_path)
 
 # ==============================================
 # VALIDATE INPUTS
 # ==============================================
 
 print("=" * 60)
-print("PHASE 5 — INTERVIEW PREP GENERATOR")
+print("PHASE 5 — INTERVIEW PREP GENERATOR v2")
 print("=" * 60)
 print(f"Role: {ROLE}")
 print(f"Package: {PACKAGE_DIR}")
 
 errors = []
-
 if not os.path.exists(PACKAGE_DIR):
     errors.append(f"Job package folder not found: {PACKAGE_DIR}")
 if not os.path.exists(JD_PATH):
@@ -167,11 +393,9 @@ with open(JD_PATH, encoding='utf-8') as f:
 with open(CANDIDATE_PROFILE_PATH, encoding='utf-8') as f:
     raw_profile = f.read()
 
-# Strip PII before any API call
 candidate_profile = strip_pii(raw_profile)
 print("  Candidate profile loaded and PII stripped.")
 
-# Extract salary from JD
 salary_data = extract_salary(jd)
 if salary_data['found']:
     print(f"  Salary range found: {salary_data['text']}")
@@ -180,21 +404,17 @@ else:
 
 with open(EXPERIENCE_LIBRARY, encoding='utf-8') as f:
     library = json.load(f)
+print(f"  Experience library loaded: {library['metadata']['total_bullets']} bullets")
 
-# Build a concise bullet summary from the library for context
-# Top 5 bullets per employer, max 3 employers for token efficiency
-def build_library_summary(library, max_employers=4, bullets_per_employer=5):
-    summary = []
-    for employer in library['employers']:
-        name = employer['name']
-        bullets = [b for b in employer['bullets'] if not b.get('flagged')][:bullets_per_employer]
-        if bullets:
-            summary.append(f"\n{name}:")
-            for b in bullets:
-                summary.append(f"  - {b['text'][:150]}")
-    return "\n".join(summary)
+resume_data, resume_source = load_resume_bullets(STAGE4_PATH, STAGE2_PATH)
+if resume_data:
+    emp_count = len([e for e, b in resume_data['employers'].items() if b])
+    print(f"  Resume loaded from {resume_source} ({emp_count} employers)")
+else:
+    print(f"  WARNING: No stage file found — stories will use library only")
 
-library_summary = build_library_summary(library)
+jd_lower = jd.lower()
+story_context = build_story_context(library, resume_data, jd_lower)
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
@@ -203,149 +423,139 @@ client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 # ==============================================
 
 SYSTEM_PROMPT = """You are an expert career coach specializing in defense and aerospace
-systems engineering. You help senior engineers prepare for technical interviews with
-defense prime contractors and technology companies.
+systems engineering. You help senior engineers prepare for technical interviews.
 
 You always:
-- Provide specific, actionable guidance grounded in the candidate's actual background
-- Frame stories using the STAR format (Situation, Task, Action, Result)
-- Give honest gap assessments with confident, truthful talking points
-- Tailor questions to demonstrate genuine domain knowledge
-- Keep language professional and direct
+- Ground all stories and claims in the candidate's confirmed experience only
+- Use employer attribution in stories ("During my time at G2 OPS..." or
+  "When I was supporting Shield AI...")
+- Frame stories using STAR format with factually accurate details
+- Give honest gap assessments — never suggest claiming experience not held
+- Keep language professional, direct, and confident
+- Use en dashes, never em dashes
 
 You never:
-- Invent experience the candidate does not have
-- Suggest the candidate claim skills or credentials they lack
-- Use vague or generic interview advice
-- Use em dashes (use en dashes instead)"""
+- Invent metrics, outcomes, or experience not in the provided background
+- Suggest the candidate overstate their role or involvement
+- Use vague or generic advice"""
 
 # ==============================================
-# SECTION 1 — COMPANY & ROLE BRIEF
+# SECTION 1 — COMPANY & ROLE BRIEF (WEB-INFORMED)
 # ==============================================
 
-print("\nGenerating Section 1: Company & Role Brief...")
+print("\nSection 1: Company & Role Brief (searching web)...")
 
-company_prompt = """Generate a concise company and role brief for interview preparation.
+company_prompt = f"""Research this company and role, then generate an interview prep brief.
 
 JOB DESCRIPTION:
-__JD_TEXT__
+{jd[:2500]}
 
-Provide the following in this exact format:
+Use the web_search tool to find:
+1. Current information about this company's defense/government business
+2. The specific business unit mentioned in the JD
+3. Recent news, programs, or contracts relevant to this interview
+
+Then provide your brief in this exact format:
 
 COMPANY OVERVIEW:
-[3-4 sentences on the company — what they do, their defense/government focus,
-relevant business units, scale and reputation in the defense market]
+[3-4 sentences — what they do, defense/government focus, scale.
+Use current web search results where available.]
 
-INTEGRATED SOLUTIONS BUSINESS UNIT:
-[2-3 sentences specifically about the business unit hiring for this role —
-what they work on, their customer base, their technical focus]
+BUSINESS UNIT OVERVIEW:
+[2-3 sentences on the specific business unit for this role.]
 
 ROLE IN CONTEXT:
-[2-3 sentences on what this role actually does day-to-day based on the JD —
-the "glue" framing, what success looks like in this position]
+[2-3 sentences on what this role does day-to-day based on the JD.]
 
 SALARY & LEVEL CONTEXT:
-JD posted range: __SALARY_TEXT__
-[1-2 sentences on what level this salary band represents and where
-in the range a realistic initial offer is likely to land]
+JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}
+[1-2 sentences on what level this represents and where initial offers typically land.]
 
 SALARY EXPECTATIONS GUIDANCE:
-__SALARY_GUIDANCE__
+{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}
 
-KEY TALKING POINTS ABOUT THE COMPANY:
-[3 bullet points — things to mention that show you researched the company
-and understand their mission. Keep these factual and grounded.]
+KEY TALKING POINTS:
+[3 bullet points — specific, current, factual things showing you researched the company]
 
-RECENT CONTEXT TO BE AWARE OF:
-[1-2 sentences on anything relevant about Viasat's current business
-situation, programs, or direction that might come up in conversation.
-Note if you are uncertain about recency of information.]"""
-
-# Format salary info for prompt
-salary_text = salary_data['text'] if salary_data['found'] else 'Not found in JD'
-salary_guidance = salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview'
-company_prompt = (company_prompt
-    .replace('__SALARY_TEXT__', salary_text)
-    .replace('__SALARY_GUIDANCE__', salary_guidance)
-    .replace('__JD_TEXT__', jd[:3000]))
+RECENT CONTEXT:
+[1-2 sentences on current business situation or relevant programs.
+Note your source or flag if from training data rather than current search.]"""
 
 response1 = client.messages.create(
     model="claude-sonnet-4-20250514",
-    max_tokens=1000,
+    max_tokens=1500,
     system=SYSTEM_PROMPT,
+    tools=[{"type": "web_search_20250305", "name": "web_search"}],
     messages=[{"role": "user", "content": company_prompt}]
 )
-section1 = response1.content[0].text
+
+# Extract text blocks from response — web search returns mixed content types
+section1_parts = []
+for block in response1.content:
+    if hasattr(block, 'text') and block.text:
+        section1_parts.append(block.text)
+section1 = "\n".join(section1_parts) if section1_parts else \
+    "Web search unavailable — review company website before interview."
 
 # ==============================================
-# SECTION 2 — ROLE ANALYSIS, STORY BANK & GAP PREP
+# SECTION 2 — STORY BANK (LIBRARY-GROUNDED)
 # ==============================================
 
-print("Generating Section 2: Role Analysis, Story Bank & Gap Prep...")
+print("Section 2: Story Bank (grounded in resume and library)...")
 
-story_prompt = f"""Generate interview preparation materials for this specific role.
+story_prompt = f"""Generate employer-attributed STAR interview stories for this role.
 
 CANDIDATE PROFILE (PII removed):
-{candidate_profile[:4000]}
+{candidate_profile[:2500]}
 
-SAMPLE BULLETS FROM EXPERIENCE LIBRARY:
-{library_summary[:2000]}
+RESUME SUBMITTED FOR THIS ROLE — with employer context:
+{story_context[:3000]}
 
 JOB DESCRIPTION:
-{jd[:3000]}
+{jd[:2000]}
 
-Provide the following in this exact format:
+CRITICAL INSTRUCTIONS:
+- Every story MUST be grounded in the bullets shown above
+- Every story MUST include employer attribution
+  ("During my time at [Employer as [Title], [dates]...")
+- Do NOT invent metrics or outcomes
+- Frame results qualitatively when no specific outcome is documented
+- Stories should directly address specific JD requirements
+
+Provide in this exact format:
 
 ROLE FIT ASSESSMENT:
-[3-4 sentences on overall fit — where the candidate is strongest and
-where there are genuine gaps. Be honest.]
+[3-4 honest sentences — strengths and genuine gaps]
 
 KEY THEMES TO LEAD WITH:
-[3 themes with 1-2 sentences each — the strongest narratives to emphasize
-throughout the interview based on JD requirements]
+Theme 1 — [Name]: [1-2 sentences on strongest narrative for this role]
+Theme 2 — [Name]: [1-2 sentences]
+Theme 3 — [Name]: [1-2 sentences]
 
-STORY BANK — STAR FORMAT:
-[Generate 5 interview stories in STAR format, each mapped to a specific
-JD requirement. Label each with the JD theme it addresses.]
+STORY BANK:
 
-STORY 1 — [JD Theme]:
-Situation: [context]
-Task: [what needed to be done]
-Action: [what the candidate did specifically]
-Result: [outcome — no fabricated metrics, frame qualitatively if needed]
+STORY 1 — [JD Requirement this addresses]:
+Employer: [Company name | Title | Dates]
+Situation: [Context — what program, environment, challenge]
+Task: [What specifically needed to be accomplished]
+Action: [What YOU did — first person, specific to the bullets provided]
+Result: [Outcome — qualitative acceptable, no fabricated numbers]
+If probed: [One sentence — what to add if they ask for more detail]
 
-STORY 2 — [JD Theme]:
+STORY 2 — [JD Requirement]:
 [same format]
 
-STORY 3 — [JD Theme]:
+STORY 3 — [JD Requirement]:
 [same format]
 
-STORY 4 — [JD Theme]:
+STORY 4 — [JD Requirement]:
 [same format]
 
-STORY 5 — [JD Theme]:
+STORY 5 — [JD Requirement]:
 [same format]
-
-GAP PREPARATION:
-[For each significant gap between JD requirements and candidate background,
-provide an honest, confident talking point. Do not suggest claiming
-experience the candidate does not have.]
-
-GAP 1 — [Topic]:
-Honest answer: [what to say]
-Bridge: [how to connect to relevant actual experience]
-
-GAP 2 — [Topic]:
-Honest answer: [what to say]
-Bridge: [how to connect to relevant actual experience]
-
-GAP 3 — [Topic]:
-Honest answer: [what to say]
-Bridge: [how to connect to relevant actual experience]
 
 LIKELY INTERVIEW QUESTIONS:
-[List 8 questions likely to be asked based on this JD and role level,
-with a brief note on how to approach each]"""
+[8 questions likely to be asked, with a one-line approach for each]"""
 
 response2 = client.messages.create(
     model="claude-sonnet-4-20250514",
@@ -356,52 +566,97 @@ response2 = client.messages.create(
 section2 = response2.content[0].text
 
 # ==============================================
-# SECTION 3 — QUESTIONS TO ASK
+# SECTION 3 — GAP PREPARATION
 # ==============================================
 
-print("Generating Section 3: Questions to Ask...")
+print("Section 3: Gap Preparation...")
 
-questions_prompt = f"""Generate thoughtful questions for a candidate to ask during
-a 45-minute phone interview for this role.
+# Extract confirmed gaps section from profile
+gaps_section = ""
+if 'CONFIRMED GAPS' in raw_profile:
+    start = raw_profile.find('CONFIRMED GAPS')
+    end = raw_profile.find('## STYLE RULES', start)
+    gaps_section = strip_pii(raw_profile[start:end if end > 0 else start + 2000])
 
-JOB DESCRIPTION:
+gap_prompt = f"""Identify genuine gaps between this candidate and the JD requirements,
+and provide honest, confident talking points.
+
+CANDIDATE CONFIRMED GAPS:
+{gaps_section[:1500]}
+
+JOB DESCRIPTION REQUIREMENTS:
 {jd[:2000]}
 
-CANDIDATE BACKGROUND SUMMARY:
-Senior Systems Engineer, 20+ years defense experience, MBSE expertise,
-Project Overmatch (CNO priority program) MBSE Pillar Lead, autonomous systems
-(UAS and maritime), C4ISR, V-model, requirements analysis specialist.
-Current TS/SCI clearance.
-
-Generate 8 questions organized into three categories. Each question should
-demonstrate domain knowledge and genuine curiosity — not generic interview questions.
+For each significant gap provide a direct, confident response — not apologetic.
+The goal is to acknowledge honestly and pivot to relevant strength.
 
 Format exactly as:
 
-QUESTIONS ABOUT THE ROLE & TEAM:
-1. [Question] — [Why ask this / what it signals]
-2. [Question] — [Why ask this / what it signals]
-3. [Question] — [Why ask this / what it signals]
+GAP 1 — [Topic]:
+Gap: [What JD requires that candidate lacks]
+Honest answer: [What to say — confident, not apologetic]
+Bridge: [Connection to actual experience]
+Redirect: [Strength to pivot toward]
 
-QUESTIONS ABOUT THE PROGRAM & TECHNICAL ENVIRONMENT:
-4. [Question] — [Why ask this / what it signals]
-5. [Question] — [Why ask this / what it signals]
-6. [Question] — [Why ask this / what it signals]
+GAP 2 — [Topic]:
+[same format]
 
-QUESTIONS ABOUT SUCCESS & GROWTH:
-7. [Question] — [Why ask this / what it signals]
-8. [Question] — [Why ask this / what it signals]
+GAP 3 — [Topic]:
+[same format]
 
-CLOSING NOTE:
-[1-2 sentences on how to close the interview — what to leave them with]"""
+HARD QUESTIONS TO PREPARE FOR:
+[5 questions that will probe the gaps, with one-sentence approach each]"""
 
 response3 = client.messages.create(
     model="claude-sonnet-4-20250514",
     max_tokens=1200,
     system=SYSTEM_PROMPT,
-    messages=[{"role": "user", "content": questions_prompt}]
+    messages=[{"role": "user", "content": gap_prompt}]
 )
 section3 = response3.content[0].text
+
+# ==============================================
+# SECTION 4 — QUESTIONS TO ASK
+# ==============================================
+
+print("Section 4: Questions to Ask...")
+
+questions_prompt = f"""Generate thoughtful questions for the candidate to ask
+during a 45-minute phone interview for this role.
+
+JOB DESCRIPTION:
+{jd[:2000]}
+
+CANDIDATE BACKGROUND SUMMARY (PII removed):
+{strip_pii(candidate_profile[:800])}
+
+Generate 8 questions in three categories. Each should demonstrate genuine
+domain knowledge — not generic interview questions.
+
+QUESTIONS ABOUT THE ROLE & TEAM:
+1. [Question] — [Why ask this / what expertise it signals]
+2. [Question] — [Why ask this / what expertise it signals]
+3. [Question] — [Why ask this / what expertise it signals]
+
+QUESTIONS ABOUT THE PROGRAM & TECHNICAL ENVIRONMENT:
+4. [Question] — [Why ask this / what expertise it signals]
+5. [Question] — [Why ask this / what expertise it signals]
+6. [Question] — [Why ask this / what expertise it signals]
+
+QUESTIONS ABOUT SUCCESS & GROWTH:
+7. [Question] — [Why ask this / what expertise it signals]
+8. [Question] — [Why ask this / what expertise it signals]
+
+CLOSING NOTE:
+[1-2 sentences on how to close the interview effectively]"""
+
+response4 = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1200,
+    system=SYSTEM_PROMPT,
+    messages=[{"role": "user", "content": questions_prompt}]
+)
+section4 = response4.content[0].text
 
 # ==============================================
 # COMPILE AND SAVE OUTPUT
@@ -411,29 +666,40 @@ print("\nCompiling output...")
 
 output_lines = []
 output_lines.append("=" * 60)
-output_lines.append("INTERVIEW PREP PACKAGE")
+output_lines.append("INTERVIEW PREP PACKAGE v2")
 output_lines.append("=" * 60)
 output_lines.append(f"Role: {ROLE}")
 output_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
+output_lines.append(f"Resume source: {resume_source if resume_source else 'Not found'}")
 output_lines.append("Note: PII stripped from all API calls.")
 output_lines.append("=" * 60)
 output_lines.append("")
 
 output_lines.append("SECTION 1 — COMPANY & ROLE BRIEF")
+output_lines.append("(Web-informed — verify currency before interview)")
 output_lines.append("-" * 60)
 output_lines.append(section1)
 output_lines.append("")
 
 output_lines.append("=" * 60)
-output_lines.append("SECTION 2 — ROLE ANALYSIS, STORY BANK & GAP PREP")
+output_lines.append("SECTION 2 — STORY BANK")
+output_lines.append("(Grounded in submitted resume with employer attribution)")
+output_lines.append("REMINDER: Workshop stories in chat before interview.")
+output_lines.append("Correct any overreach — every detail must be accurate.")
 output_lines.append("-" * 60)
 output_lines.append(section2)
 output_lines.append("")
 
 output_lines.append("=" * 60)
-output_lines.append("SECTION 3 — QUESTIONS TO ASK")
+output_lines.append("SECTION 3 — GAP PREPARATION")
 output_lines.append("-" * 60)
 output_lines.append(section3)
+output_lines.append("")
+
+output_lines.append("=" * 60)
+output_lines.append("SECTION 4 — QUESTIONS TO ASK")
+output_lines.append("-" * 60)
+output_lines.append(section4)
 output_lines.append("")
 
 output_lines.append("=" * 60)
@@ -443,25 +709,39 @@ output_lines.append("=" * 60)
 
 output_text = "\n".join(output_lines)
 
-# Check if file already exists
+# Overwrite protection
 if os.path.exists(OUTPUT_PATH):
-    print(f"\nWARNING: {OUTPUT_FILENAME} already exists in {PACKAGE_DIR}")
-    response = input("  Overwrite? (y/n): ").strip().lower()
-    if response != 'y':
+    print(f"\nWARNING: {OUTPUT_FILENAME} already exists.")
+    overwrite = input("  Overwrite? (y/n): ").strip().lower()
+    if overwrite != 'y':
         print("  Cancelled. Existing file preserved.")
         sys.exit(0)
 
 with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
     f.write(output_text)
 
+# Generate docx
+print("  Generating .docx...")
+try:
+    generate_prep_docx(
+        OUTPUT_DOCX_PATH, ROLE, resume_source,
+        section1, section2, section3, section4,
+        salary_data
+    )
+    print(f"  Docx saved: {OUTPUT_DOCX_PATH}")
+except Exception as e:
+    print(f"  WARNING: Docx generation failed: {str(e)}")
+    print(f"  Text file is still available: {OUTPUT_PATH}")
+
 print(f"\n{'=' * 60}")
 print("PHASE 5 COMPLETE")
 print(f"{'=' * 60}")
 print(f"Output saved: {OUTPUT_PATH}")
 print(f"\nNext steps:")
-print(f"  1. Open {OUTPUT_PATH} in VS Code")
-print(f"  2. Review company brief for accuracy")
-print(f"  3. Practice STAR stories out loud")
-print(f"  4. Select 4-5 questions to ask from Section 3")
-print(f"  5. Note any gap prep talking points to rehearse")
+print(f"  1. Open {OUTPUT_DOCX_PATH} in Word for formatted reading")
+print(f"     Or open {OUTPUT_PATH} in VS Code (View > Word Wrap)")
+print(f"  2. Verify company brief accuracy (web results may be stale)")
+print(f"  3. Workshop STAR stories in chat — correct any overreach")
+print(f"  4. Practice gap answers out loud — confident, not apologetic")
+print(f"  5. Select 4-5 questions from Section 4")
 print(f"{'=' * 60}")

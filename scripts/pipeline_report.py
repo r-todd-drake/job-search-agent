@@ -101,6 +101,26 @@ active_apps = [
     if (a.get("Status", "") or "").strip() == "Active"
 ]
 
+# Duplicate req number detection from jobs.csv
+import csv
+duplicate_reqs = []
+try:
+    jobs_csv_path = "data/jobs.csv"
+    if os.path.exists(jobs_csv_path):
+        req_seen = {}
+        with open(jobs_csv_path, newline='', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                req = (row.get("req_number") or "").strip()
+                if req:
+                    key = f"{row.get('company','')} | {row.get('title','')}"
+                    if req in req_seen:
+                        duplicate_reqs.append((req, req_seen[req], key))
+                    else:
+                        req_seen[req] = key
+except Exception as e:
+    pass
+
 # Response time analysis – for applications that got a response
 response_times = []
 for a in applications:
@@ -152,6 +172,14 @@ if salaries:
     print(f"   Roles with data:         {len(salaries)} of {total}")
 else:
     print("   No salary data found")
+
+
+if duplicate_reqs:
+    print(f"\nWARNING — DUPLICATE REQ NUMBERS IN JOBS.CSV")
+    for req, first, second in duplicate_reqs:
+        print(f"  REQ {req}:")
+        print(f"    {first}")
+        print(f"    {second}")
 
 print(f"\nCOMPANIES WITH MULTIPLE APPLICATIONS")
 if repeat_companies:
@@ -229,6 +257,12 @@ with open(filepath, "w", encoding="utf-8") as f:
             f.write(f"   {a.get('Company')} | {a.get('Position')} | {stage}\n")
     else:
         f.write("   None currently active\n")
+    if duplicate_reqs:
+        f.write(f"\nWARNING — DUPLICATE REQ NUMBERS IN JOBS.CSV\n")
+        for req, first, second in duplicate_reqs:
+            f.write(f"  REQ {req}:\n")
+            f.write(f"    {first}\n")
+            f.write(f"    {second}\n")
     f.write(f"\nCOMPANIES WITH MULTIPLE APPLICATIONS\n")
     for company, count in sorted(repeat_companies.items(), key=lambda x: -x[1]):
         f.write(f"   {company}: {count} applications\n")

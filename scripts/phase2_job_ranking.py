@@ -153,6 +153,7 @@ for job in jobs:
         "location":         job.get("location", ""),
         "salary_range":     job.get("salary_range", ""),
         "url":              job.get("url", ""),
+        "req_number":       job.get("req_number", "").strip(),
         "date_found":       job.get("date_found", ""),
         "status":           status,
         "package_folder":   package_folder,
@@ -181,8 +182,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 with open(RANKED_OUTPUT, "w", newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
     writer.writerow(["rank", "status", "company", "title", "location",
-                     "salary_range", "score", "match_pct", "top_keywords",
-                     "url", "package_folder"])
+                     "salary_range", "req_number", "score", "match_pct",
+                     "top_keywords", "url", "package_folder"])
     for i, r in enumerate(actionable, 1):
         top_keywords = ", ".join(
             f"{k}({v})" for k, v in
@@ -195,6 +196,7 @@ with open(RANKED_OUTPUT, "w", newline='', encoding='utf-8') as f:
             r["title"],
             r["location"],
             r["salary_range"],
+            r["req_number"],
             r["score"],
             f"{r['match_pct']}%",
             top_keywords,
@@ -231,6 +233,26 @@ for status in ["NEW", "PURSUE", "CONSIDER", "APPLIED", "SKIP"]:
         report_lines.append(f"  {status:<10} {count}")
 report_lines.append("")
 
+# Duplicate req number detection
+req_seen = {}
+duplicates = []
+for r in all_results:
+    req = r.get("req_number", "").strip()
+    if req:
+        if req in req_seen:
+            duplicates.append((req, req_seen[req], r["company"], r["title"]))
+        else:
+            req_seen[req] = f"{r['company']} | {r['title']}"
+
+if duplicates:
+    report_lines.append("DUPLICATE REQ NUMBERS DETECTED")
+    report_lines.append("-" * 40)
+    for req, first, company, title in duplicates:
+        report_lines.append(f"  REQ {req}:")
+        report_lines.append(f"    First:  {first}")
+        report_lines.append(f"    Second: {company} | {title}")
+    report_lines.append("")
+
 # Actionable roles — ranked
 report_lines.append(f"ACTIONABLE ROLES ({len(actionable)} roles — NEW, PURSUE, CONSIDER)")
 report_lines.append("=" * 60)
@@ -242,7 +264,8 @@ if not actionable:
 else:
     for i, r in enumerate(actionable, 1):
         status_label = r["status"] if r["status"] else "NEW"
-        report_lines.append(f"#{i}  [{status_label}]  {r['company']} | {r['title']}")
+        req_display = f"  |  Req: {r['req_number']}" if r.get('req_number') else ""
+        report_lines.append(f"#{i}  [{status_label}]  {r['company']} | {r['title']}{req_display}")
         report_lines.append(f"    Location: {r['location']}  |  Salary: {r['salary_range']}")
         report_lines.append(f"    Score: {r['score']} ({r['match_pct']}% match)")
         report_lines.append(f"    Matched keywords:")
