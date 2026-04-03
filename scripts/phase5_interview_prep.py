@@ -578,34 +578,58 @@ if 'CONFIRMED GAPS' in raw_profile:
     end = raw_profile.find('## STYLE RULES', start)
     gaps_section = strip_pii(raw_profile[start:end if end > 0 else start + 2000])
 
-gap_prompt = f"""Identify genuine gaps between this candidate and the JD requirements,
-and provide honest, confident talking points.
+gap_prompt = f"""You are doing a two-step gap analysis grounded strictly in the JD text and
+candidate profile. Follow these steps exactly.
+
+STEP 1 — EXTRACT ALL JD REQUIREMENTS:
+Read the FULL job description below — including required qualifications, preferred
+qualifications, responsibilities, and any other stated criteria. Extract two lists:
+  REQUIRED: skills, experience, tools, or credentials explicitly marked as required
+  PREFERRED: skills or experience explicitly marked as preferred, desired, or a plus
+
+Do not infer requirements from job type, title, seniority, or industry norms.
+Only use what the JD text directly states.
+
+FULL JOB DESCRIPTION:
+{jd}
+
+STEP 2 — CROSS-REFERENCE AGAINST CANDIDATE PROFILE:
+Compare your extracted lists against the candidate profile below. A gap is valid if:
+  - HARD GAP: JD lists it as REQUIRED and it is either in the confirmed gaps section
+    OR clearly absent from the candidate's documented experience
+  - PREFERRED GAP: JD lists it as PREFERRED and it is absent from the profile —
+    flag these as "preferred but not held" (lower severity)
+
+Do NOT flag anything based on inference, assumption, or industry norms.
+Only flag what the JD text explicitly states as required or preferred.
+
+Expect to find 3-5 gaps for a typical senior engineering role. If you find zero,
+re-examine the preferred qualifications section — gaps there count.
 
 CANDIDATE CONFIRMED GAPS:
 {gaps_section[:1500]}
 
-JOB DESCRIPTION REQUIREMENTS:
-{jd[:2000]}
+CANDIDATE FULL PROFILE (for cross-referencing skills not in confirmed gaps):
+{candidate_profile[:2000]}
 
-For each significant gap provide a direct, confident response — not apologetic.
-The goal is to acknowledge honestly and pivot to relevant strength.
+For each gap provide a direct, confident talking point — not apologetic.
 
 Format exactly as:
 
-GAP 1 — [Topic]:
-Gap: [What JD requires that candidate lacks]
+GAP 1 — [Topic] [REQUIRED or PREFERRED]:
+Gap: [What the JD states (quote or close paraphrase) and why it's a gap]
 Honest answer: [What to say — confident, not apologetic]
 Bridge: [Connection to actual experience]
 Redirect: [Strength to pivot toward]
 
-GAP 2 — [Topic]:
+GAP 2 — [Topic] [REQUIRED or PREFERRED]:
 [same format]
 
-GAP 3 — [Topic]:
+GAP 3 — [Topic] [REQUIRED or PREFERRED]:
 [same format]
 
 HARD QUESTIONS TO PREPARE FOR:
-[5 questions that will probe the gaps, with one-sentence approach each]"""
+[5 questions that will probe these gaps, with one-sentence approach each]"""
 
 response3 = client.messages.create(
     model="claude-sonnet-4-20250514",

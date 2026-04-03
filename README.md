@@ -116,6 +116,7 @@ Package contains:
 - **python-docx** — resume and interview prep document generation
 - **VS Code** — development environment (View > Word Wrap for .txt files)
 - **Git / GitHub** — version control and portfolio publishing
+- **Claude Code** — AI-assisted development via VS Code extension (optional)
 
 ---
 
@@ -129,6 +130,20 @@ All personal data (experience library, resumes, job packages, tracker) is
 excluded from version control via `.gitignore`.
 
 Anthropic API: inputs are not used for model training under commercial terms.
+
+---
+
+## Claude Code (Optional)
+
+This project includes a `CLAUDE.md` configuration file for use with
+[Claude Code](https://claude.ai/code) in VS Code. It defines project
+conventions and file access boundaries for AI-assisted script development.
+
+Install the Claude Code extension from the VS Code marketplace to use it.
+Claude Code is useful for making targeted script changes, debugging, and
+refactoring — working directly against your local files without manual
+uploads. All personal data folders are excluded from Claude Code access
+via instructions in `CLAUDE.md`.
 
 ---
 
@@ -201,6 +216,7 @@ Job_search_agent/
 │   ├── check_resume.py
 │   └── utils/pii_filter.py       # PII stripping — safe for GitHub
 ├── example_data/
+├── CLAUDE.md                     # Claude Code project conventions and safety rules
 ├── .env                          # API keys and PII — never committed
 ├── .gitignore
 ├── requirements.txt
@@ -223,6 +239,7 @@ Job_search_agent/
 - JSON data modeling and structured knowledge base design
 - Security-conscious development practices
 - Git version control and GitHub portfolio publishing
+- AI-assisted development workflow with Claude Code
 
 ---
 
