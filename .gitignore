@@ -35,6 +35,9 @@ __pycache__/
 # VS Code
 .vscode/
 
+# Claude Code local settings
+.claude/
+
 # OS files
 .DS_Store
 Thumbs.db

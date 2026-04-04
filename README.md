@@ -24,7 +24,7 @@ for every role in the pipeline.
 |-------|-------------|--------|
 | 1 | Pipeline report script and tracker schema | ✅ Complete |
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
-| 3 | Experience knowledge base — structured JSON library | ✅ Complete |
+| 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume generation — tailored .docx per application | 🔧 Prototype |
 | 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
 | 6 | Networking and discovery agents | ⏳ Planned |
@@ -175,7 +175,12 @@ CANDIDATE_GITHUB=github.com/yourusername
 
 ### 5. Build the experience library
 ```bash
+# Full parse — all employers:
 python scripts/phase3_parse_library.py
+
+# Re-parse a single employer (faster, no full run):
+python scripts/phase3_parse_employer.py "employer name"
+
 python scripts/phase3_build_candidate_profile.py
 python scripts/phase3_compile_library.py
 ```
@@ -209,12 +214,15 @@ Job_search_agent/
 │   ├── phase2_job_ranking.py     # Keyword scoring + req number tracking
 │   ├── phase2_semantic_analyzer.py
 │   ├── phase3_parse_library.py
+│   ├── phase3_parse_employer.py  # Re-parse a single employer without full run
 │   ├── phase3_build_candidate_profile.py
 │   ├── phase3_compile_library.py
 │   ├── phase4_resume_generator.py
 │   ├── phase5_interview_prep.py  # Web search + resume-grounded stories
 │   ├── check_resume.py
-│   └── utils/pii_filter.py       # PII stripping — safe for GitHub
+│   └── utils/
+│       ├── library_parser.py     # Shared parsing logic — imported by phase3 scripts
+│       └── pii_filter.py         # PII stripping — safe for GitHub
 ├── example_data/
 ├── CLAUDE.md                     # Claude Code project conventions and safety rules
 ├── .env                          # API keys and PII — never committed
@@ -240,6 +248,7 @@ Job_search_agent/
 - Security-conscious development practices
 - Git version control and GitHub portfolio publishing
 - AI-assisted development workflow with Claude Code
+- Modular shared-library design — parsing logic extracted to an importable module with no side effects, consumed by multiple scripts
 
 ---
 

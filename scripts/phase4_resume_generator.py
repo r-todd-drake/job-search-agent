@@ -237,20 +237,29 @@ def stage1_select_bullets(client, jd, library):
                          2: MAX_CANDIDATES_TIER2,
                          3: MAX_CANDIDATES_TIER3}.get(tier, 6)
 
-        # Score and sort bullets
+        # Score and sort bullets — priority bullets are always included
+        priority = []
         scored = []
         for bullet in employer['bullets']:
             if bullet.get('flagged'):
                 continue
-            score = keyword_score_bullet(bullet, jd_lower)
-            scored.append((score, bullet))
+            if bullet.get('priority'):
+                priority.append(bullet)
+            else:
+                score = keyword_score_bullet(bullet, jd_lower)
+                scored.append((score, bullet))
 
         scored.sort(key=lambda x: -x[0])
-        top = [b for score, b in scored[:max_candidates] if score > 0 or len(scored) <= max_candidates]
+
+        # Fill remaining slots with top-scored non-priority bullets
+        remaining_slots = max(0, max_candidates - len(priority))
+        top_scored = [b for score, b in scored[:remaining_slots]
+                      if score > 0 or len(scored) <= remaining_slots]
+        top = priority + top_scored
 
         # Always include at least some bullets for Tier 1 employers
         if tier == 1 and len(top) == 0:
-            top = [b for _, b in scored[:3]]
+            top = priority + [b for _, b in scored[:3]]
 
         if top:
             candidates_by_employer[name] = {

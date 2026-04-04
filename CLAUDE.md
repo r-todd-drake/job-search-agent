@@ -21,6 +21,7 @@ Never use Glob, Read, or any tool to browse or read files in the above directori
 - README.md
 - requirements.txt
 - CLAUDE.md
+- PROJECT_CONTEXT.md
 
 ### Git safety:
 - Never run git add . — always stage specific files
