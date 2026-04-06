@@ -1,6 +1,6 @@
 # Parking Lot
 # Load for: planning next development session, prioritizing work items
-Last updated: 05 Apr 2026
+Last updated: 06 Apr 2026
 
 ## Active Items
 
@@ -49,6 +49,28 @@ Last updated: 05 Apr 2026
 8. **capabilities.md — traceability document**
    - Maps script capabilities to project phases
    - Deferred until Phase 5 fully stable
+
+9. **Script identifier audit — GitHub exposure risk**
+   - Concern: hardcoded strings in scripts or comments that combine identifiers
+     (company name + req number, role title, folder path, salary) could narrow
+     attribution even if no direct PII is present
+   - Scope: audit all committed scripts for hardcoded role-specific strings,
+     example values drawn from real applications, and folder path defaults that
+     include role or employer names
+   - Remediation: replace with generic placeholders (e.g., [company], [role]);
+     confirm example_data/ uses only fictional names and values
+   - Out of scope: generic company name mentions in comments explaining script
+     logic at a conceptual level — those are not a risk
+   - Note: pii_filter.py, .gitignore on data/ and resumes/, and CLAUDE.md
+     restrictions already cover the high-risk surface; this audit targets
+     residual risk in script code and comments
+
+## Standing / Evergreen Tasks
+- **Experience library tool equivalence review**
+  - After any tool clarification or correction (e.g., Cameo = MagicDraw), verify
+    that affected bullets use consistent naming across all employer sections
+  - Trigger: any update to the Confirmed Tools line in CANDIDATE_BACKGROUND.md
+  - Goal: prevent Phase 5 false gap flags caused by naming inconsistency     
 
 ## Completed (recent)
 - Overmatch bullet priority flag — COMPLETE (05 Apr 2026)
