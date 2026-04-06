@@ -10,9 +10,11 @@ templates/
 
 # Personal configuration and context files
 .env
-PROJECT_CONTEXT.md
 project_career_resume.md
 RESUME_TAILORING_CONTEXT.md
+context/CANDIDATE_BACKGROUND.md
+context/PIPELINE_STATUS.md
+
 
 # Utility scripts containing personal data or local file paths
 scripts/utils/diagnose_library.py
@@ -21,6 +23,7 @@ scripts/utils/diagnose_library3.py
 scripts/utils/diagnose_encoding.py
 scripts/utils/diagnose_keywords.py
 scripts/utils/normalize_library.py
+scripts/utils/diagnose_experience.py
 
 # Note: scripts/utils/pii_filter.py is intentionally NOT excluded
 # It contains no personal data — PII values are loaded from .env

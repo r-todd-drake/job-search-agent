@@ -44,3 +44,8 @@ Key scripts: phase2_job_ranking.py, phase2_semantic_analyzer.py, phase3_*.py, ph
 2. Make targeted changes only
 3. Run syntax check after editing
 4. Never modify data files directly
+
+## When asked to develop scripts:
+1. Read the prompt, and any provided files first
+2. Plan the proposed solution, do not begin developing the      script until there is a 95% propobability of successfully meeting the requiremnet articulated in the prompt. Ask clarifying questions to close the probability of scussess gap if necessary.
+3. Run syntax check after development.

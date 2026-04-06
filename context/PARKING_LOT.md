@@ -1,0 +1,71 @@
+# Parking Lot
+# Load for: planning next development session, prioritizing work items
+Last updated: 05 Apr 2026
+
+## Active Items
+
+### Development
+1. **Phase 4.5 — Cover letter generator**
+   - Input: JD + stage4_final.txt + candidate_profile.md
+   - Output: cover_letter_draft.txt + [role]_CoverLetter.docx
+   - Visual style: matches resume template (same header, fonts, color scheme)
+   - PII stripped from all API calls
+   - Standalone script — not a required Phase 4 stage
+
+2. **Phase 6 — Networking support**
+   - Scoped and ready to build
+   - Standalone script: python scripts/phase6_networking.py --role [role]
+   - Section 1: LinkedIn search guidance (queries, filters, who to look for)
+   - Section 2: Connection request message (300 char limit)
+   - Section 3: Follow-up message after connecting
+   - Section 4: Cold outreach / InMail template
+   - Section 5: Informational interview request
+   - User performs LinkedIn searches manually — script provides guidance
+   - Once stable: add Phase 6 reference to Phase 4 Stage 4 next steps output
+
+3. **Phase 4 Stage 4 — Add Phase 6 prompt to next steps**
+   - Deferred until Phase 6 is stable
+
+4. **Experience library update workflow**
+   - Process to add new bullets written during resume tailoring back into library
+   - NG SE Man2 book club bullet, compensation bullets, Army expansion not yet in library
+   - Need structured intake process: draft bullet to verify to library entry
+
+5. **candidate_profile.md rebuild**
+   - CompTIA Security+ lapsed — must be flagged not omitted
+   - HAIPE experience needs adding (confirmed from KForce/NGLD-M)
+   - Rebuild from current experience_library.json via phase3_build_candidate_profile.py
+
+6. **Phase 5 — HAIPE gap false positive**
+   - Phase 5 gap analysis sometimes flags HAIPE as a gap
+   - KForce/NGLD-M has confirmed HAIPE-enabled architecture experience
+   - Fix: update candidate_profile.md (item 5 above) — should resolve automatically
+
+7. **Phase 7 — Search agent**
+   - Automated role discovery: Google, USAJobs, ClearanceJobs
+   - NOT LinkedIn (blocks automation)
+   - Deferred — lower priority than Phase 6
+
+8. **capabilities.md — traceability document**
+   - Maps script capabilities to project phases
+   - Deferred until Phase 5 fully stable
+
+## Completed (recent)
+- Overmatch bullet priority flag — COMPLETE (05 Apr 2026)
+  Data tagged (*PRIORITY: true*), parser updated, confirmed working in Stage 1
+- Phase 5 gap detection fix — COMPLETE
+  Two-tier REQUIRED/PREFERRED, full JD used, no inference from industry norms
+- Phase 5 web search — COMPLETE (v2)
+- Phase 5 resume bullet pull from stage files — COMPLETE (v2)
+- Phase 5 .docx output — COMPLETE
+- req_number tracking in jobs.csv — COMPLETE
+- Duplicate req number detection in pipeline and ranking scripts — COMPLETE
+- Experience library cleanup — COMPLETE (05 Apr 2026)
+  G2 OPS: 158 to 118 bullets | Summaries: 48 to 26
+  Overmatch theme: cleaned to 2 canonical bullets + 2 supporting themes
+- Phase 3 architecture refactor — COMPLETE
+  Shared library_parser.py module, single-employer re-parse script
+- Claude Code setup in VS Code — COMPLETE
+  CLAUDE.md configured with access restrictions
+- pii_filter.py — COMPLETE (on GitHub)
+- check_resume.py — COMPLETE (23 rules)

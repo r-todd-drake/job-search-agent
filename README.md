@@ -1,7 +1,7 @@
 # AI Job Search Agent
 
-A multi-phase AI-powered job search automation system built as both a 
-practical tool for managing an active job search and a portfolio project 
+A multi-phase AI-powered job search automation system built as both a
+practical tool for managing an active job search and a portfolio project
 demonstrating real-world Python development, API integration, and AI agent design.
 
 ---
@@ -26,8 +26,25 @@ for every role in the pipeline.
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume generation — tailored .docx per application | 🔧 Prototype |
+| 4.5 | Cover letter generator — aligned with resume content and style | ⏳ Planned |
 | 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
-| 6 | Networking and discovery agents | ⏳ Planned |
+| 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
+| 7 | Search agent — automated role discovery | ⏳ Planned |
+
+---
+
+## Development vs Implementation
+
+This project is split into two distinct workflows:
+
+**Development** — building and improving the pipeline tools.
+Performed using Claude Code in VS Code, working directly against local files.
+Reference: `context/DECISIONS_LOG.md` for coding conventions and architecture.
+
+**Implementation** — applying the tools to an active job search.
+Performed using Claude web chat for resume tailoring, interview prep,
+story workshopping, and pipeline management.
+Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 
 ---
 
@@ -46,7 +63,7 @@ for every role in the pipeline.
    → Stage files are source of truth — never edit .docx directly
 5. Run phase5_interview_prep.py when interview is scheduled
    → Generates .txt and .docx prep package
-   → Workshop stories in chat before interview
+   → Workshop stories in Claude web chat before interview
 6. Submit, update status to APPLIED, move to tracker
 ```
 
@@ -69,6 +86,7 @@ for every role in the pipeline.
 ```
 Stage 1 (automated)  →  stage1_draft.txt
                          Keyword + semantic bullet selection
+                         Priority bullets always included (priority: true in library)
                          Core competencies generated from JD
                          Summary selected from library
 
@@ -103,7 +121,7 @@ Package contains:
 - Company & role brief with current web-searched information
 - Salary expectations guidance with anchor and floor
 - Employer-attributed STAR stories grounded in submitted resume bullets
-- Gap preparation with honest/bridge/redirect structure
+- Two-tier gap preparation: REQUIRED vs PREFERRED, sourced from full JD text
 - Thoughtful questions to ask organized by category
 
 ---
@@ -126,8 +144,8 @@ PII is stripped from all API calls before any data leaves the local machine.
 `pii_filter.py` loads PII values from `.env` at runtime — no personal data
 is hardcoded in the published code.
 
-All personal data (experience library, resumes, job packages, tracker) is
-excluded from version control via `.gitignore`.
+All personal data (experience library, resumes, job packages, tracker, and
+candidate background files) is excluded from version control via `.gitignore`.
 
 Anthropic API: inputs are not used for model training under commercial terms.
 
@@ -141,9 +159,13 @@ conventions and file access boundaries for AI-assisted script development.
 
 Install the Claude Code extension from the VS Code marketplace to use it.
 Claude Code is useful for making targeted script changes, debugging, and
-refactoring — working directly against your local files without manual
-uploads. All personal data folders are excluded from Claude Code access
-via instructions in `CLAUDE.md`.
+refactoring — working directly against local files without manual uploads.
+All personal data folders are excluded from Claude Code access via
+instructions in `CLAUDE.md`.
+
+Note: `.gitignore` controls what is committed to git but does NOT restrict
+Claude Code's file system access. `CLAUDE.md` is the correct control for
+that boundary.
 
 ---
 
@@ -178,7 +200,7 @@ CANDIDATE_GITHUB=github.com/yourusername
 # Full parse — all employers:
 python scripts/phase3_parse_library.py
 
-# Re-parse a single employer (faster, no full run):
+# Re-parse a single employer (faster for targeted edits):
 python scripts/phase3_parse_employer.py "employer name"
 
 python scripts/phase3_build_candidate_profile.py
@@ -203,33 +225,51 @@ python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 
 ```
 Job_search_agent/
+├── context/                              # Context data store
+│   ├── PROJECT_CONTEXT.md                # Lean index — load this first
+│   ├── DECISIONS_LOG.md                  # Coding conventions + architecture
+│   ├── PARKING_LOT.md                    # Outstanding work items
+│   ├── CANDIDATE_BACKGROUND.md           # Career background (local only)
+│   └── PIPELINE_STATUS.md               # Active applications (local only)
 ├── data/
-│   ├── jobs.csv                  # Pipeline with status + req number tracking
-│   ├── job_packages/[role]/      # JD, stage files, interview prep
-│   └── experience_library/       # Library source, JSON, candidate profile
-├── resumes/tailored/             # Generated resumes (local only)
-├── templates/resume_template.docx
+│   ├── jobs.csv                          # Pipeline — status + req number tracking
+│   ├── job_packages/[role]/              # JD, stage files, interview prep
+│   └── experience_library/              # Library source, JSON, candidate profile
+├── resumes/tailored/                     # Generated resumes (local only)
+├── templates/resume_template.docx        # Resume template (local only)
 ├── scripts/
-│   ├── pipeline_report.py        # Pipeline metrics + duplicate req detection
-│   ├── phase2_job_ranking.py     # Keyword scoring + req number tracking
-│   ├── phase2_semantic_analyzer.py
-│   ├── phase3_parse_library.py
-│   ├── phase3_parse_employer.py  # Re-parse a single employer without full run
+│   ├── pipeline_report.py                # Pipeline metrics + duplicate req detection
+│   ├── phase2_job_ranking.py             # Keyword scoring + req number tracking
+│   ├── phase2_semantic_analyzer.py       # Claude API semantic fit analysis
+│   ├── phase3_parse_library.py           # Full library parse (thin wrapper)
+│   ├── phase3_parse_employer.py          # Single-employer re-parse
 │   ├── phase3_build_candidate_profile.py
 │   ├── phase3_compile_library.py
-│   ├── phase4_resume_generator.py
-│   ├── phase5_interview_prep.py  # Web search + resume-grounded stories
-│   ├── check_resume.py
+│   ├── phase4_resume_generator.py        # Four-stage resume generation
+│   ├── phase5_interview_prep.py          # Web search + resume-grounded stories
+│   ├── check_resume.py                   # 23-rule quality check
 │   └── utils/
-│       ├── library_parser.py     # Shared parsing logic — imported by phase3 scripts
-│       └── pii_filter.py         # PII stripping — safe for GitHub
+│       ├── library_parser.py             # Shared parsing logic (no side effects)
+│       └── pii_filter.py                 # PII stripping — safe for GitHub
 ├── example_data/
-├── CLAUDE.md                     # Claude Code project conventions and safety rules
-├── .env                          # API keys and PII — never committed
+├── CLAUDE.md                             # Claude Code conventions and safety rules
+├── .env                                  # API keys and PII — never committed
 ├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
+
+---
+
+## Way Ahead
+
+| Item | Description |
+|------|-------------|
+| Phase 4.5 | Cover letter generator — inputs JD + stage4_final.txt, outputs styled .docx matching resume template |
+| Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
+| Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
+| Library workflow | Structured process for adding resume-tailoring bullets back into experience library |
+| candidate_profile.md | Rebuild from current library — update lapsed certifications and confirmed skills |
 
 ---
 
@@ -245,16 +285,16 @@ Job_search_agent/
 - Status-based pipeline management with duplicate detection
 - Document generation with python-docx
 - JSON data modeling and structured knowledge base design
+- Modular shared-library design — parsing logic extracted to importable module
 - Security-conscious development practices
-- Git version control and GitHub portfolio publishing
 - AI-assisted development workflow with Claude Code
-- Modular shared-library design — parsing logic extracted to an importable module with no side effects, consumed by multiple scripts
+- Git version control and GitHub portfolio publishing
 
 ---
 
 ## Author
 
-R. Todd Drake — Portfolio project, actively developed.  
+R. Todd Drake — Portfolio project, actively developed.
 Built from scratch as a real-world introduction to Python, API development,
 and AI agent design — applied directly to an active senior defense SE job search.
 
