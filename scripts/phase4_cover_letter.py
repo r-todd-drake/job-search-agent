@@ -29,9 +29,7 @@ from dotenv import load_dotenv
 from docx import Document
 from docx.shared import Pt, Inches
 
-# Add project root to path for utils import
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.pii_filter import strip_pii
+from scripts.utils.pii_filter import strip_pii
 
 load_dotenv()
 
@@ -47,30 +45,6 @@ MODEL = "claude-sonnet-4-20250514"
 
 CL_STAGE1 = "cl_stage1_draft.txt"
 CL_STAGE4 = "cl_stage4_final.txt"
-
-# ==============================================
-# ARGUMENT PARSING
-# ==============================================
-
-parser = argparse.ArgumentParser(description='Phase 4 Cover Letter Generator')
-parser.add_argument('--stage', type=int, required=True, choices=[1, 4],
-                    help='Stage to run (1=generate draft, 4=build docx)')
-parser.add_argument('--role', type=str, required=True,
-                    help='Role package folder name (e.g. BAH_LCI_MBSE)')
-args = parser.parse_args()
-
-STAGE = args.stage
-ROLE = args.role
-
-PACKAGE_DIR = os.path.join(JOBS_PACKAGES_DIR, ROLE)
-JD_PATH = os.path.join(PACKAGE_DIR, "job_description.txt")
-STAGE3_REVIEW_PATH = os.path.join(PACKAGE_DIR, "stage3_review.txt")   # resume review
-STAGE4_RESUME_PATH = os.path.join(PACKAGE_DIR, "stage4_final.txt")    # resume bullets
-STAGE2_RESUME_PATH = os.path.join(PACKAGE_DIR, "stage2_approved.txt") # fallback bullets
-CL_STAGE1_PATH = os.path.join(PACKAGE_DIR, CL_STAGE1)
-CL_STAGE4_PATH = os.path.join(PACKAGE_DIR, CL_STAGE4)
-TAILORED_DIR = os.path.join(RESUMES_TAILORED_DIR, ROLE)
-DOCX_PATH = os.path.join(TAILORED_DIR, f"{ROLE}_CoverLetter.docx")
 
 # ==============================================
 # HELPER FUNCTIONS
@@ -90,7 +64,7 @@ def check_overwrite(filepath, label):
 def load_resume_bullets(stage4_path, stage2_path):
     """
     Extract resume content from stage4_final.txt (or stage2_approved.txt).
-    Stage files are source of truth – .docx is presentation only.
+    Stage files are source of truth \u2013 .docx is presentation only.
     Returns (clean_text str, source filename).
     """
     path = source = None
@@ -158,7 +132,7 @@ def extract_coverage_gaps(stage3_review_path):
 def extract_hiring_manager(client, jd):
     """
     Try to find hiring manager name in JD via Claude.
-    Non-interactive – returns name string or 'Hiring Manager'.
+    Non-interactive \u2013 returns name string or 'Hiring Manager'.
     """
     try:
         response = client.messages.create(
@@ -439,163 +413,247 @@ def build_cover_letter_docx(output_path, section1, section2):
     doc.save(output_path)
 
 # ==============================================
-# STAGE 1 EXECUTION
+# EXTRACTED STAGE FUNCTIONS (testable)
 # ==============================================
 
-if STAGE == 1:
-    print("=" * 60)
-    print("PHASE 4 \u2013 COVER LETTER GENERATOR \u2013 STAGE 1")
-    print("=" * 60)
-    print(f"Role: {ROLE}")
-    print(f"Package: {PACKAGE_DIR}")
+def run_cl_stage1(client, jd_text, resume_text, background_text, output_path):
+    """
+    Generate cl_stage1_draft.txt content from inputs and write to output_path.
 
-    errors = []
-    if not os.path.exists(PACKAGE_DIR):
-        errors.append(f"Job package folder not found: {PACKAGE_DIR}")
-    if not os.path.exists(JD_PATH):
-        errors.append(f"job_description.txt not found in {PACKAGE_DIR}")
-    if not os.path.exists(CANDIDATE_BACKGROUND_PATH):
-        errors.append(f"CANDIDATE_BACKGROUND.md not found: {CANDIDATE_BACKGROUND_PATH}")
+    Strips PII from resume_text and jd_text before any API call.
+    Makes two API calls: traditional letter + application paragraph.
+    Writes assembled draft to output_path.
+    """
+    jd_clean = strip_pii(jd_text)
+    bullets_clean = strip_pii(resume_text)
+    background_clean = strip_pii(background_text)
 
-    if errors:
-        print(f"\nERRORS \u2013 cannot proceed:")
-        for e in errors:
-            print(f"  {e}")
-        sys.exit(1)
+    hiring_manager = extract_hiring_manager(client, jd_clean)
 
-    if not check_overwrite(CL_STAGE1_PATH, CL_STAGE1):
-        sys.exit(0)
-
-    print("\nLoading data...")
-
-    with open(JD_PATH, encoding='utf-8') as f:
-        jd = f.read()
-    print(f"  JD loaded: {len(jd)} chars")
-
-    with open(CANDIDATE_BACKGROUND_PATH, encoding='utf-8') as f:
-        raw_background = f.read()
-    background = strip_pii(raw_background)
-    print("  Candidate background loaded and PII stripped.")
-
-    resume_bullets, resume_source = load_resume_bullets(
-        STAGE4_RESUME_PATH, STAGE2_RESUME_PATH
-    )
-    if resume_bullets:
-        print(f"  Resume loaded from {resume_source}")
-    else:
-        print("  WARNING: No resume stage file found \u2013 cover letter will use background only")
-        resume_source = None
-
-    gaps = extract_coverage_gaps(STAGE3_REVIEW_PATH)
-    if gaps:
-        print(f"  Coverage gaps loaded: {len(gaps)} gaps (from stage3_review.txt)")
-        for g in gaps:
-            print(f"    \u2013 {g}")
-    else:
-        print("  No stage3_review.txt found \u2013 gap filtering skipped")
-
-    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
-    print("\n  Checking JD for hiring manager name...")
-    hiring_manager = extract_hiring_manager(client, jd)
-    if hiring_manager == "Hiring Manager":
-        print("  Hiring manager: Hiring Manager (default \u2013 not found in JD)")
-    else:
-        print(f"  Hiring manager: {hiring_manager}")
-
-    bullets_for_api = strip_pii(resume_bullets) if resume_bullets else ""
-
-    print("\nGenerating cover letter...")
-    print("  [1/2] Traditional cover letter...")
     section1 = generate_traditional_letter(
-        client, jd, bullets_for_api, background, hiring_manager, gaps
+        client, jd_clean, bullets_clean, background_clean, hiring_manager, []
     )
-
-    print("  [2/2] Application paragraph...")
     section2 = generate_application_paragraph(
-        client, jd, bullets_for_api, background, gaps
+        client, jd_clean, bullets_clean, background_clean, []
     )
 
-    # Enforce en dashes
     section1 = fix_dashes(section1)
     section2 = fix_dashes(section2)
 
-    print(f"\nWriting {CL_STAGE1}...")
-    output_text = build_stage1_txt(ROLE, section1, section2, resume_source)
-    with open(CL_STAGE1_PATH, 'w', encoding='utf-8') as f:
+    output_text = build_stage1_txt("test_role", section1, section2, "stage2_approved.txt")
+    with open(output_path, 'w', encoding='utf-8') as f:
         f.write(output_text)
 
-    print(f"\n{'=' * 60}")
-    print("STAGE 1 COMPLETE")
-    print(f"{'=' * 60}")
-    print(f"Draft: {CL_STAGE1_PATH}")
-    print(f"\nNext steps:")
-    print(f"  1. Open {CL_STAGE1} \u2013 verify all claims are grounded")
-    print(f"  2. Make edits and save as cl_stage2_approved.txt")
-    print(f"  3. Run: python scripts/check_cover_letter.py --role {ROLE}")
-    print(f"  4. Review cl_stage3_review.txt, save final as cl_stage4_final.txt")
-    print(f"  5. Run: python scripts/phase4_cover_letter.py --stage 4 --role {ROLE}")
-    print(f"{'=' * 60}")
+
+def run_cl_stage4(cl_text, output_path):
+    """
+    Generate a cover letter .docx from plain text (no API call).
+
+    Writes each line of cl_text as a Normal paragraph to output_path.
+    """
+    doc = Document()
+
+    sec = doc.sections[0]
+    sec.page_width = Inches(8.5)
+    sec.page_height = Inches(11.0)
+    sec.left_margin = Inches(1.0)
+    sec.right_margin = Inches(1.0)
+    sec.top_margin = Inches(1.0)
+    sec.bottom_margin = Inches(1.0)
+
+    for line in cl_text.split('\n'):
+        stripped = line.strip()
+        if stripped:
+            p = doc.add_paragraph(style='Normal')
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(4)
+            p.add_run(stripped)
+        else:
+            p = doc.add_paragraph(style='Normal')
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(2)
+
+    doc.save(output_path)
 
 # ==============================================
-# STAGE 4 EXECUTION
+# MAIN
 # ==============================================
 
-elif STAGE == 4:
-    print("=" * 60)
-    print("PHASE 4 \u2013 COVER LETTER GENERATOR \u2013 STAGE 4")
-    print("=" * 60)
-    print(f"Role: {ROLE}")
-    print(f"Source: {CL_STAGE4_PATH}")
-    print(f"Output: {DOCX_PATH}")
+def main():
+    parser = argparse.ArgumentParser(description='Phase 4 Cover Letter Generator')
+    parser.add_argument('--stage', type=int, required=True, choices=[1, 4],
+                        help='Stage to run (1=generate draft, 4=build docx)')
+    parser.add_argument('--role', type=str, required=True,
+                        help='Role package folder name (e.g. BAH_LCI_MBSE)')
+    args = parser.parse_args()
 
-    errors = []
-    if not os.path.exists(PACKAGE_DIR):
-        errors.append(f"Job package folder not found: {PACKAGE_DIR}")
-    if not os.path.exists(CL_STAGE4_PATH):
-        errors.append(
-            f"{CL_STAGE4} not found in {PACKAGE_DIR}\n"
-            f"  Complete stages 1\u20133 first, then save final version as {CL_STAGE4}."
+    STAGE = args.stage
+    ROLE = args.role
+
+    PACKAGE_DIR = os.path.join(JOBS_PACKAGES_DIR, ROLE)
+    JD_PATH = os.path.join(PACKAGE_DIR, "job_description.txt")
+    STAGE3_REVIEW_PATH = os.path.join(PACKAGE_DIR, "stage3_review.txt")   # resume review
+    STAGE4_RESUME_PATH = os.path.join(PACKAGE_DIR, "stage4_final.txt")    # resume bullets
+    STAGE2_RESUME_PATH = os.path.join(PACKAGE_DIR, "stage2_approved.txt") # fallback bullets
+    CL_STAGE1_PATH = os.path.join(PACKAGE_DIR, CL_STAGE1)
+    CL_STAGE4_PATH = os.path.join(PACKAGE_DIR, CL_STAGE4)
+    TAILORED_DIR = os.path.join(RESUMES_TAILORED_DIR, ROLE)
+    DOCX_PATH = os.path.join(TAILORED_DIR, f"{ROLE}_CoverLetter.docx")
+
+    if STAGE == 1:
+        print("=" * 60)
+        print("PHASE 4 \u2013 COVER LETTER GENERATOR \u2013 STAGE 1")
+        print("=" * 60)
+        print(f"Role: {ROLE}")
+        print(f"Package: {PACKAGE_DIR}")
+
+        errors = []
+        if not os.path.exists(PACKAGE_DIR):
+            errors.append(f"Job package folder not found: {PACKAGE_DIR}")
+        if not os.path.exists(JD_PATH):
+            errors.append(f"job_description.txt not found in {PACKAGE_DIR}")
+        if not os.path.exists(CANDIDATE_BACKGROUND_PATH):
+            errors.append(f"CANDIDATE_BACKGROUND.md not found: {CANDIDATE_BACKGROUND_PATH}")
+
+        if errors:
+            print(f"\nERRORS \u2013 cannot proceed:")
+            for e in errors:
+                print(f"  {e}")
+            sys.exit(1)
+
+        if not check_overwrite(CL_STAGE1_PATH, CL_STAGE1):
+            sys.exit(0)
+
+        print("\nLoading data...")
+
+        with open(JD_PATH, encoding='utf-8') as f:
+            jd = f.read()
+        print(f"  JD loaded: {len(jd)} chars")
+
+        with open(CANDIDATE_BACKGROUND_PATH, encoding='utf-8') as f:
+            raw_background = f.read()
+        background = strip_pii(raw_background)
+        print("  Candidate background loaded and PII stripped.")
+
+        resume_bullets, resume_source = load_resume_bullets(
+            STAGE4_RESUME_PATH, STAGE2_RESUME_PATH
+        )
+        if resume_bullets:
+            print(f"  Resume loaded from {resume_source}")
+        else:
+            print("  WARNING: No resume stage file found \u2013 cover letter will use background only")
+            resume_source = None
+
+        gaps = extract_coverage_gaps(STAGE3_REVIEW_PATH)
+        if gaps:
+            print(f"  Coverage gaps loaded: {len(gaps)} gaps (from stage3_review.txt)")
+            for g in gaps:
+                print(f"    \u2013 {g}")
+        else:
+            print("  No stage3_review.txt found \u2013 gap filtering skipped")
+
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+        print("\n  Checking JD for hiring manager name...")
+        hiring_manager = extract_hiring_manager(client, jd)
+        if hiring_manager == "Hiring Manager":
+            print("  Hiring manager: Hiring Manager (default \u2013 not found in JD)")
+        else:
+            print(f"  Hiring manager: {hiring_manager}")
+
+        bullets_for_api = strip_pii(resume_bullets) if resume_bullets else ""
+
+        print("\nGenerating cover letter...")
+        print("  [1/2] Traditional cover letter...")
+        section1 = generate_traditional_letter(
+            client, jd, bullets_for_api, background, hiring_manager, gaps
         )
 
-    if errors:
-        print(f"\nERRORS \u2013 cannot proceed:")
-        for e in errors:
-            print(f"  {e}")
-        sys.exit(1)
+        print("  [2/2] Application paragraph...")
+        section2 = generate_application_paragraph(
+            client, jd, bullets_for_api, background, gaps
+        )
 
-    if not check_overwrite(DOCX_PATH, f"{ROLE}_CoverLetter.docx"):
-        sys.exit(0)
+        # Enforce en dashes
+        section1 = fix_dashes(section1)
+        section2 = fix_dashes(section2)
 
-    # Ensure tailored output directory exists
-    os.makedirs(TAILORED_DIR, exist_ok=True)
+        print(f"\nWriting {CL_STAGE1}...")
+        output_text = build_stage1_txt(ROLE, section1, section2, resume_source)
+        with open(CL_STAGE1_PATH, 'w', encoding='utf-8') as f:
+            f.write(output_text)
 
-    print(f"\nParsing {CL_STAGE4}...")
-    with open(CL_STAGE4_PATH, encoding='utf-8') as f:
-        stage4_content = f.read()
+        print(f"\n{'=' * 60}")
+        print("STAGE 1 COMPLETE")
+        print(f"{'=' * 60}")
+        print(f"Draft: {CL_STAGE1_PATH}")
+        print(f"\nNext steps:")
+        print(f"  1. Open {CL_STAGE1} \u2013 verify all claims are grounded")
+        print(f"  2. Make edits and save as cl_stage2_approved.txt")
+        print(f"  3. Run: python scripts/check_cover_letter.py --role {ROLE}")
+        print(f"  4. Review cl_stage3_review.txt, save final as cl_stage4_final.txt")
+        print(f"  5. Run: python scripts/phase4_cover_letter.py --stage 4 --role {ROLE}")
+        print(f"{'=' * 60}")
 
-    try:
-        section1, section2 = parse_stage4(stage4_content)
-    except ValueError as e:
-        print(f"\nERROR: {e}")
-        sys.exit(1)
+    elif STAGE == 4:
+        print("=" * 60)
+        print("PHASE 4 \u2013 COVER LETTER GENERATOR \u2013 STAGE 4")
+        print("=" * 60)
+        print(f"Role: {ROLE}")
+        print(f"Source: {CL_STAGE4_PATH}")
+        print(f"Output: {DOCX_PATH}")
 
-    print(f"  Cover letter: {len(section1)} chars")
-    print(f"  Application paragraph: {len(section2)} chars")
+        errors = []
+        if not os.path.exists(PACKAGE_DIR):
+            errors.append(f"Job package folder not found: {PACKAGE_DIR}")
+        if not os.path.exists(CL_STAGE4_PATH):
+            errors.append(
+                f"{CL_STAGE4} not found in {PACKAGE_DIR}\n"
+                f"  Complete stages 1\u20133 first, then save final version as {CL_STAGE4}."
+            )
 
-    print(f"\nBuilding {ROLE}_CoverLetter.docx...")
-    try:
-        build_cover_letter_docx(DOCX_PATH, section1, section2)
-    except Exception as e:
-        print(f"\nERROR: Docx generation failed: {e}")
-        sys.exit(1)
+        if errors:
+            print(f"\nERRORS \u2013 cannot proceed:")
+            for e in errors:
+                print(f"  {e}")
+            sys.exit(1)
 
-    print(f"\n{'=' * 60}")
-    print("STAGE 4 COMPLETE")
-    print(f"{'=' * 60}")
-    print(f"Docx: {DOCX_PATH}")
-    print(f"\nNext steps:")
-    print(f"  1. Open in Word \u2013 verify formatting and no em dashes")
-    print(f"  2. Confirm page 1 is the letter, page 2 is the application paragraph")
-    print(f"  3. Update hiring manager name/address if placeholder text remains")
-    print(f"{'=' * 60}")
+        if not check_overwrite(DOCX_PATH, f"{ROLE}_CoverLetter.docx"):
+            sys.exit(0)
+
+        # Ensure tailored output directory exists
+        os.makedirs(TAILORED_DIR, exist_ok=True)
+
+        print(f"\nParsing {CL_STAGE4}...")
+        with open(CL_STAGE4_PATH, encoding='utf-8') as f:
+            stage4_content = f.read()
+
+        try:
+            section1, section2 = parse_stage4(stage4_content)
+        except ValueError as e:
+            print(f"\nERROR: {e}")
+            sys.exit(1)
+
+        print(f"  Cover letter: {len(section1)} chars")
+        print(f"  Application paragraph: {len(section2)} chars")
+
+        print(f"\nBuilding {ROLE}_CoverLetter.docx...")
+        try:
+            build_cover_letter_docx(DOCX_PATH, section1, section2)
+        except Exception as e:
+            print(f"\nERROR: Docx generation failed: {e}")
+            sys.exit(1)
+
+        print(f"\n{'=' * 60}")
+        print("STAGE 4 COMPLETE")
+        print(f"{'=' * 60}")
+        print(f"Docx: {DOCX_PATH}")
+        print(f"\nNext steps:")
+        print(f"  1. Open in Word \u2013 verify formatting and no em dashes")
+        print(f"  2. Confirm page 1 is the letter, page 2 is the application paragraph")
+        print(f"  3. Update hiring manager name/address if placeholder text remains")
+        print(f"{'=' * 60}")
+
+
+if __name__ == "__main__":
+    main()
