@@ -175,7 +175,7 @@ else:
 
 
 if duplicate_reqs:
-    print(f"\nWARNING — DUPLICATE REQ NUMBERS IN JOBS.CSV")
+    print(f"\nWARNING – DUPLICATE REQ NUMBERS IN JOBS.CSV")
     for req, first, second in duplicate_reqs:
         print(f"  REQ {req}:")
         print(f"    {first}")
@@ -258,7 +258,7 @@ with open(filepath, "w", encoding="utf-8") as f:
     else:
         f.write("   None currently active\n")
     if duplicate_reqs:
-        f.write(f"\nWARNING — DUPLICATE REQ NUMBERS IN JOBS.CSV\n")
+        f.write(f"\nWARNING – DUPLICATE REQ NUMBERS IN JOBS.CSV\n")
         for req, first, second in duplicate_reqs:
             f.write(f"  REQ {req}:\n")
             f.write(f"    {first}\n")

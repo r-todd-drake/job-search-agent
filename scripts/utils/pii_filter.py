@@ -3,7 +3,7 @@
 # Strips direct PII from text before sending
 # to external APIs (Anthropic, web search, etc.)
 #
-# PII values are loaded from .env — never
+# PII values are loaded from .env – never
 # hardcoded in this file.
 #
 # Add to .env:
@@ -32,7 +32,7 @@ def get_pii_replacements():
     """
     replacements = []
 
-    # Candidate name — also handle common variants
+    # Candidate name – also handle common variants
     name = os.getenv('CANDIDATE_NAME', '')
     if name:
         replacements.append((re.escape(name), '[CANDIDATE]'))
@@ -59,7 +59,7 @@ def get_pii_replacements():
     if email:
         replacements.append((re.escape(email), '[EMAIL]'))
 
-    # LinkedIn URL — handle with and without https://www.
+    # LinkedIn URL – handle with and without https://www.
     linkedin = os.getenv('CANDIDATE_LINKEDIN', '')
     if linkedin:
         # Strip protocol prefix for matching
@@ -68,7 +68,7 @@ def get_pii_replacements():
         replacements.append((re.escape('https://www.' + clean), '[LINKEDIN]'))
         replacements.append((re.escape('https://' + clean), '[LINKEDIN]'))
 
-    # GitHub URL — handle with and without https://
+    # GitHub URL – handle with and without https://
     github = os.getenv('CANDIDATE_GITHUB', '')
     if github:
         clean = re.sub(r'^https?://', '', github)
@@ -110,7 +110,7 @@ def strip_pii(text):
 def verify_strip(text):
     """
     Check if any known PII remains in text after stripping.
-    Returns list of detected PII types — empty list means clean.
+    Returns list of detected PII types – empty list means clean.
     Use for testing and validation.
     """
     detected = []
@@ -137,7 +137,7 @@ def verify_strip(text):
 # ==============================================
 
 if __name__ == '__main__':
-    print("PII Filter — Standalone Test")
+    print("PII Filter – Standalone Test")
     print("=" * 40)
 
     # Check env vars are loaded
@@ -157,7 +157,7 @@ if __name__ == '__main__':
             print(f"  {label}: ✓ ({val[:20]}...)" if len(val) > 20
                   else f"  {label}: ✓ ({val})")
         else:
-            print(f"  {label}: ✗ NOT SET — add {key} to .env")
+            print(f"  {label}: ✗ NOT SET – add {key} to .env")
             all_loaded = False
 
     if not all_loaded:

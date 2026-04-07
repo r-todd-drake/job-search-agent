@@ -5,11 +5,11 @@
 # profile, and produces a ranked shortlist.
 #
 # Status workflow:
-#   blank   = new, not yet reviewed — appears in report
-#   PURSUE  = apply next — appears in report
-#   CONSIDER = on deck — appears in report
-#   SKIP    = decided against — excluded from report
-#   APPLIED = submitted — excluded from report
+#   blank   = new, not yet reviewed – appears in report
+#   PURSUE  = apply next – appears in report
+#   CONSIDER = on deck – appears in report
+#   SKIP    = decided against – excluded from report
+#   APPLIED = submitted – excluded from report
 # ==============================================
 
 import csv
@@ -174,7 +174,7 @@ print(f"  Actionable (blank/PURSUE/CONSIDER): {len(actionable)}")
 print(f"  Excluded (SKIP/APPLIED): {len(excluded)}")
 
 # ==============================================
-# SAVE RANKED CSV — actionable roles only
+# SAVE RANKED CSV – actionable roles only
 # ==============================================
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -253,13 +253,13 @@ if duplicates:
         report_lines.append(f"    Second: {company} | {title}")
     report_lines.append("")
 
-# Actionable roles — ranked
-report_lines.append(f"ACTIONABLE ROLES ({len(actionable)} roles — NEW, PURSUE, CONSIDER)")
+# Actionable roles – ranked
+report_lines.append(f"ACTIONABLE ROLES ({len(actionable)} roles – NEW, PURSUE, CONSIDER)")
 report_lines.append("=" * 60)
 report_lines.append("")
 
 if not actionable:
-    report_lines.append("  No actionable roles — all roles have been reviewed.")
+    report_lines.append("  No actionable roles – all roles have been reviewed.")
     report_lines.append("  Add new roles to jobs.csv to continue.")
 else:
     for i, r in enumerate(actionable, 1):

@@ -10,7 +10,6 @@ AI-powered job search automation system. Python scripts for job ranking, resume 
 - data/ — contains personal career data, resumes, job packages
 - resumes/ — contains tailored resume documents
 - outputs/ — contains generated reports
-- templates/ — contains resume template
 
 **Important:** .gitignore does NOT prevent Claude's tools (Glob, Read) from accessing these paths.
 Never use Glob, Read, or any tool to browse or read files in the above directories, even if asked to explore the project structure.
@@ -18,6 +17,7 @@ Never use Glob, Read, or any tool to browse or read files in the above directori
 ### Safe to read and edit:
 - scripts/*.py — all Python automation scripts
 - scripts/utils/*.py — utility scripts
+- context/*.md — candidate background, decisions log, project context
 - README.md
 - requirements.txt
 - CLAUDE.md
@@ -37,7 +37,15 @@ Never use Glob, Read, or any tool to browse or read files in the above directori
 
 ## Project Structure
 See README.md for full structure.
-Key scripts: phase2_job_ranking.py, phase2_semantic_analyzer.py, phase3_*.py, phase4_resume_generator.py, phase5_interview_prep.py
+### Key scripts:
+- scripts/phase2_job_ranking.py
+- scripts/phase2_semantic_analyzer.py
+- scripts/phase3_*.py
+- scripts/phase4_resume_generator.py
+- scripts/phase4_cover_letter.py
+- scripts/phase5_interview_prep.py
+- scripts/pipeline_report.py
+- scripts/check_resume.py
 
 ## When asked to modify scripts:
 1. Read the existing script first
@@ -45,7 +53,8 @@ Key scripts: phase2_job_ranking.py, phase2_semantic_analyzer.py, phase3_*.py, ph
 3. Run syntax check after editing
 4. Never modify data files directly
 
-## When asked to develop scripts:
-1. Read the prompt, and any provided files first
-2. Plan the proposed solution, do not begin developing the      script until there is a 95% propobability of successfully meeting the requiremnet articulated in the prompt. Ask clarifying questions to close the probability of scussess gap if necessary.
-3. Run syntax check after development.
+## When asked to develop a capability:
+1. Read the prompt and any provided files before responding.
+2. Use Plan mode to discuss the proposed solution, including architecture and how to verify and test the solution, before writing any code.
+Do not begin development until there is high confidence the approach meets the stated requirement. Ask clarifying questions to close any gaps.
+3. Run a syntax check after development is complete.

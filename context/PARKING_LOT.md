@@ -5,7 +5,7 @@ Last updated: 06 Apr 2026
 ## Active Items
 
 ### Development
-1. **Phase 4.5 — Cover letter generator**
+1. **Phase 4 — Cover letter generator**
    - Input: JD + stage4_final.txt + candidate_profile.md
    - Output: cover_letter_draft.txt + [role]_CoverLetter.docx
    - Visual style: matches resume template (same header, fonts, color scheme)
@@ -65,6 +65,16 @@ Last updated: 06 Apr 2026
      restrictions already cover the high-risk surface; this audit targets
      residual risk in script code and comments
 
+10. **pytest baseline setup**
+    - Install pytest and configure for project root discovery
+    - Create tests/ folder mirroring scripts/ structure
+    - Write baseline tests for existing capabilities — priority order:
+      1. utils/pii_filter.py — confirm PII stripping works correctly
+      2. utils/library_parser.py — confirm parsing output structure
+      3. phase2 scripts — confirm duplicate req number detection
+    - Add pytest to requirements.txt
+    - Verify VS Code Testing panel discovers tests/ correctly
+
 ## Standing / Evergreen Tasks
 - **Experience library tool equivalence review**
   - After any tool clarification or correction (e.g., Cameo = MagicDraw), verify
@@ -72,6 +82,24 @@ Last updated: 06 Apr 2026
   - Trigger: any update to the Confirmed Tools line in CANDIDATE_BACKGROUND.md
   - Goal: prevent Phase 5 false gap flags caused by naming inconsistency     
 
+## Future / Speculative Ideas
+*(Not ready to scope or build — needs further refinement before moving to Active)*
+
+- **Qualitative fit assessment — design spike**
+  - Concept: develop a candidate profile document that describes the candidate
+    holistically; use it as the basis for a manager-lens fit assessment against
+    incoming JDs rather than keyword/semantic matching
+  - Flow: profile → qualitative role fit assessment → targeted evidence retrieval
+    from experience library — inverting the current keyword-first approach
+  - Open questions:
+    - Profile structure: narrative vs. capability dimensions?
+    - Primary user: job seeker tool or recruiter/hiring manager tool?
+    - Relationship to candidate_profile.md rebuild (item 5) — foundation or
+      separate artifact?
+  - Note: may be more valuable as a complementary recruiter-facing tool than
+    as a job seeker capability — needs further refinement before scoping
+  - Do not begin development until design spike is complete
+  
 ## Completed (recent)
 - Overmatch bullet priority flag — COMPLETE (05 Apr 2026)
   Data tagged (*PRIORITY: true*), parser updated, confirmed working in Stage 1
@@ -90,4 +118,4 @@ Last updated: 06 Apr 2026
 - Claude Code setup in VS Code — COMPLETE
   CLAUDE.md configured with access restrictions
 - pii_filter.py — COMPLETE (on GitHub)
-- check_resume.py — COMPLETE (23 rules)
+- check_resume.py — COMPLETE (two-layer: string matching + API assessment)

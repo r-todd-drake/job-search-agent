@@ -2,8 +2,8 @@
 # utils/library_parser.py
 # Shared parsing logic for experience_library.md.
 # Used by:
-#   phase3_parse_library.py   — full parse, all employers
-#   phase3_parse_employer.py  — single-employer targeted parse
+#   phase3_parse_library.py   – full parse, all employers
+#   phase3_parse_employer.py  – single-employer targeted parse
 # ==============================================
 
 import os

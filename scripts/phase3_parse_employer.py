@@ -8,7 +8,7 @@
 #   python scripts/phase3_parse_employer.py "Employer Name" --keywords
 #   python scripts/phase3_parse_employer.py "Employer Name" --keywords
 #
-# Matching: case-insensitive substring — "employer name" matches "Employer Name Inc."
+# Matching: case-insensitive substring – "employer name" matches "Employer Name Inc."
 # Keywords are skipped by default. Add --keywords to generate them.
 #
 # Output:

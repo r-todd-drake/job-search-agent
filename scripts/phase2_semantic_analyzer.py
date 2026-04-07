@@ -4,7 +4,7 @@
 # on job descriptions against candidate background.
 #
 # Only analyzes PURSUE and CONSIDER roles from
-# jobs.csv — skips SKIP, APPLIED, and blank/NEW.
+# jobs.csv – skips SKIP, APPLIED, and blank/NEW.
 # Run phase2_job_ranking.py first and assign
 # PURSUE/CONSIDER status before running this.
 # ==============================================
@@ -28,7 +28,7 @@ RANKED_CSV = os.path.join(OUTPUT_DIR, "ranked_jobs.csv")
 CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
 SEMANTIC_OUTPUT = os.path.join(OUTPUT_DIR, f"semantic_analysis_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
 
-# Only these statuses get semantic analysis — API calls cost money
+# Only these statuses get semantic analysis – API calls cost money
 ANALYZE_STATUSES = {"PURSUE", "CONSIDER"}
 
 # ==============================================
@@ -76,7 +76,7 @@ You never:
 """
 
 # ==============================================
-# LOAD JOBS — FILTER TO PURSUE AND CONSIDER ONLY
+# LOAD JOBS – FILTER TO PURSUE AND CONSIDER ONLY
 # ==============================================
 
 print("Script started")

@@ -59,7 +59,7 @@ RESUME_TEMPLATE = "templates/resume_template.docx"
 RESUMES_TAILORED_DIR = "resumes/tailored"
 CHECK_RESUME_SCRIPT = "scripts/check_resume.py"
 
-# Employer tier definitions — controls bullet priority and trimming order
+# Employer tier definitions – controls bullet priority and trimming order
 EMPLOYER_TIERS = {
     "SARONIC TECHNOLOGIES": 1,
     "KFORCE (Supporting Leidos / NIWC PAC)": 1,
@@ -207,7 +207,7 @@ def load_text(filepath):
         return f.read()
 
 # ==============================================
-# STAGE 1 — BULLET SELECTION
+# STAGE 1 – BULLET SELECTION
 # ==============================================
 
 def keyword_score_bullet(bullet, jd_lower):
@@ -228,7 +228,7 @@ def stage1_select_bullets(client, jd, library):
     print("\nStage 1: Selecting bullets from experience library...")
     jd_lower = jd.lower()
 
-    # Step 1A — Keyword pre-filter per employer
+    # Step 1A – Keyword pre-filter per employer
     candidates_by_employer = {}
     for employer in library['employers']:
         name = employer['name']
@@ -237,7 +237,7 @@ def stage1_select_bullets(client, jd, library):
                          2: MAX_CANDIDATES_TIER2,
                          3: MAX_CANDIDATES_TIER3}.get(tier, 6)
 
-        # Score and sort bullets — priority bullets are always included
+        # Score and sort bullets – priority bullets are always included
         priority = []
         scored = []
         for bullet in employer['bullets']:
@@ -269,7 +269,7 @@ def stage1_select_bullets(client, jd, library):
 
     print(f"  Keyword pre-filter: {sum(len(v['bullets']) for v in candidates_by_employer.values())} candidate bullets across {len(candidates_by_employer)} employers")
 
-    # Step 1B — Semantic selection via Claude API
+    # Step 1B – Semantic selection via Claude API
     print("  Running semantic selection...")
 
     candidates_text = ""
@@ -312,7 +312,7 @@ INSTRUCTIONS:
 
 3. Return your response in EXACTLY this format:
 
-SUMMARY_SELECTION: [number or "NONE — suggest new"]
+SUMMARY_SELECTION: [number or "NONE – suggest new"]
 SUMMARY_REASON: [one sentence why]
 
 EMPLOYER: [exact employer name]
@@ -332,7 +332,7 @@ Do not include any other text. Follow the format exactly."""
 
     selection_text = response.content[0].text
 
-    # Step 1C — Generate core competencies
+    # Step 1C – Generate core competencies
     print("  Generating core competencies...")
     comp_prompt = f"""You are generating a Core Competencies section for a defense systems engineering resume.
 
@@ -351,12 +351,12 @@ Rules:
 - Always include a Clearance & Certifications line last
 - The Clearance & Certifications line must be EXACTLY:
   "Clearance & Certifications: Current TS/SCI | ICAgile Certified Professional"
-- CRITICAL: The candidate's actual degree is B.A. Geography, GIS & Remote Sensing — NOT Systems Engineering
+- CRITICAL: The candidate's actual degree is B.A. Geography, GIS & Remote Sensing – NOT Systems Engineering
   Never claim a degree the candidate does not hold
 - Never invent experience, credentials, or education not in the candidate profile
 - NEVER include these specific tools the candidate does not have:
   GitLab, Terraform, INCOSE certification, FAA/DO-178, FEA, CFD, Cucumber, TDD
-- Version control experience is GitHub only — never GitLab
+- Version control experience is GitHub only – never GitLab
 - If a JD requires a tool the candidate lacks, omit it entirely from competencies
 - En dashes only, never em dashes
 
@@ -369,7 +369,7 @@ Return ONLY the competency lines, one per line, no numbering, no extra text."""
     )
     competencies = comp_response.content[0].text.strip()
 
-    # Step 1D — Parse selections and build draft
+    # Step 1D – Parse selections and build draft
     draft = build_stage1_draft(jd, selection_text, candidates_by_employer,
                                 library['summaries'], library, competencies)
     return draft
@@ -383,7 +383,7 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
 
     # Header
     draft_lines.append("=" * 60)
-    draft_lines.append("STAGE 1 DRAFT — FOR YOUR REVIEW")
+    draft_lines.append("STAGE 1 DRAFT – FOR YOUR REVIEW")
     draft_lines.append("=" * 60)
     draft_lines.append(f"Role: {ROLE}")
     draft_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
@@ -435,14 +435,14 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
     draft_lines.append("")
     if summary_num and summary_num <= len(summaries):
         selected_summary = summaries[summary_num - 1]
-        draft_lines.append(f"[Source: Summary #{summary_num} — {selected_summary['theme']}]")
+        draft_lines.append(f"[Source: Summary #{summary_num} – {selected_summary['theme']}]")
         draft_lines.append(f"[Reason: {summary_reason}]")
         draft_lines.append("")
         draft_lines.append(selected_summary['text'])
     else:
         draft_lines.append("[FLAG: No strong summary match found in library.]")
         draft_lines.append("[A suggested summary will be generated in Stage 3.]")
-        draft_lines.append("[Placeholder — replace with approved summary text]")
+        draft_lines.append("[Placeholder – replace with approved summary text]")
     draft_lines.append("")
 
     # Write core competencies section
@@ -454,7 +454,7 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
             if line:
                 draft_lines.append(f"- {line}")
     else:
-        draft_lines.append("[No competencies generated — add manually]")
+        draft_lines.append("[No competencies generated – add manually]")
     draft_lines.append("")
 
     # Write employer sections in reverse chronological order
@@ -492,7 +492,7 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
         draft_lines.append("")
 
         if not selected_nums:
-            draft_lines.append("[No bullets selected — remove this section or add manually]")
+            draft_lines.append("[No bullets selected – remove this section or add manually]")
         else:
             bullets = data['bullets']
             for num in selected_nums:
@@ -514,7 +514,7 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
     return "\n".join(draft_lines)
 
 # ==============================================
-# STAGE 3 — SEMANTIC REVIEW
+# STAGE 3 – SEMANTIC REVIEW
 # ==============================================
 
 def stage3_semantic_review(client, jd, approved_content):
@@ -525,7 +525,7 @@ def stage3_semantic_review(client, jd, approved_content):
     print("\nStage 3: Running semantic review...")
 
     prompt = f"""You are reviewing a draft resume for a specific job application.
-Your role is ADVISORY ONLY — suggest improvements, do not rewrite.
+Your role is ADVISORY ONLY – suggest improvements, do not rewrite.
 
 CANDIDATE PROFILE AND RULES:
 {CANDIDATE_PROFILE}
@@ -579,7 +579,7 @@ OVERALL ASSESSMENT:
     # Wrap in header
     output = []
     output.append("=" * 60)
-    output.append("STAGE 3 SEMANTIC REVIEW — ADVISORY ONLY")
+    output.append("STAGE 3 SEMANTIC REVIEW – ADVISORY ONLY")
     output.append("=" * 60)
     output.append(f"Role: {ROLE}")
     output.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
@@ -600,7 +600,7 @@ OVERALL ASSESSMENT:
     return "\n".join(output)
 
 # ==============================================
-# STAGE 4 — DOCUMENT GENERATION
+# STAGE 4 – DOCUMENT GENERATION
 # ==============================================
 
 def stage4_generate_docx(final_content, role):
@@ -747,15 +747,15 @@ def build_docx(sections, output_path):
         return p
 
     def add_name_header():
-        # Name — Title style
+        # Name – Title style
         p = add_paragraph('', style='Title', space_after=0)
         run = p.add_run("R. Todd Drake")
 
-        # Role title — Heading 1 style
+        # Role title – Heading 1 style
         p2 = add_paragraph('', style='Heading 1', space_after=0)
         run2 = p2.add_run("Senior Systems Engineer")
 
-        # Contact line — Normal 10pt
+        # Contact line – Normal 10pt
         p3 = add_paragraph('', style='Normal', space_after=6)
         run3 = p3.add_run(
             "San Diego, CA | (619) 379-5783 | r_todd_d@msn.com | "
@@ -815,7 +815,7 @@ def build_docx(sections, output_path):
             for bullet_text in emp['bullets']:
                 add_bullet(bullet_text)
 
-    # Earlier Career — if any Tier 3 employers with bullets
+    # Earlier Career – if any Tier 3 employers with bullets
     # (handled as regular employers in current implementation)
 
     # Education & Certifications
@@ -831,7 +831,7 @@ def build_docx(sections, output_path):
 # ==============================================
 
 print("=" * 60)
-print(f"PHASE 4 — RESUME GENERATOR — STAGE {STAGE}")
+print(f"PHASE 4 – RESUME GENERATOR – STAGE {STAGE}")
 print("=" * 60)
 print(f"Role: {ROLE}")
 print(f"Package: {PACKAGE_DIR}")
@@ -839,7 +839,7 @@ print(f"Package: {PACKAGE_DIR}")
 # Validate inputs
 errors = validate_inputs(STAGE)
 if errors:
-    print("\nERRORS — cannot proceed:")
+    print("\nERRORS – cannot proceed:")
     for error in errors:
         print(f"\n  {error}")
     exit(1)
@@ -885,7 +885,7 @@ elif STAGE == 3:
     print(f"  Review saved: {STAGE3_PATH}")
     print(f"\nNext steps:")
     print(f"  1. Open {STAGE3_PATH} in VS Code")
-    print(f"  2. Review suggestions — accept or reject each one")
+    print(f"  2. Review suggestions – accept or reject each one")
     print(f"  3. Apply accepted changes to {STAGE2_PATH}")
     print(f"  4. Save final version as {STAGE4_PATH}")
     print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 4 --role {ROLE}")
@@ -917,7 +917,7 @@ elif STAGE == 4:
         if result.stderr:
             print("  Check stderr:", result.stderr[:200])
         if result.returncode != 0:
-            print("  WARNING: Quality check found errors — review before submitting.")
+            print("  WARNING: Quality check found errors – review before submitting.")
         else:
             print("  Quality check passed.")
     except FileNotFoundError:

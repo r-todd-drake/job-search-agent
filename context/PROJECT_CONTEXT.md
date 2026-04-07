@@ -27,7 +27,7 @@ Reference: context/PIPELINE_STATUS.md and context/CANDIDATE_BACKGROUND.md.
 | 1 | Pipeline report + tracker schema | Complete |
 | 2 | Job ranking + semantic fit analysis | Complete |
 | 3 | Experience library — structured JSON + shared parser | Complete |
-| 4 | Resume generation — tailored .docx per application | Prototype |
+| 4 | Resume generation + cover letter — tailored .docx per application | Prototype |
 | 5 | Interview prep — web search, story bank, gap analysis | Prototype |
 | 6 | Networking and outreach support | Planned |
 | 7 | Search agent — automated role discovery | Planned |

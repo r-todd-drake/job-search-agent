@@ -119,7 +119,7 @@ def extract_salary(jd_text):
             f"Posted range: ${low:,.0f} – ${high:,.0f}\n"
             f"  Realistic offer zone: ${offer_low:,.0f} – ${offer_high:,.0f} "
             f"(companies rarely open at the top of range)\n"
-            f"  Suggested anchor: ${anchor_rounded:,.0f} — already rounded for natural delivery\n"
+            f"  Suggested anchor: ${anchor_rounded:,.0f} – already rounded for natural delivery\n"
             f"  If asked: '${anchor_rounded:,.0f} based on my 20+ years of defense SE "
             f"experience and current TS/SCI clearance, though I am open to "
             f"discussing total compensation.'\n"
@@ -134,7 +134,7 @@ def extract_salary(jd_text):
 def load_resume_bullets(stage4_path, stage2_path):
     """
     Extract bullets and summary from stage4_final.txt (or stage2_approved.txt).
-    Stage files are the source of truth — the .docx is presentation only.
+    Stage files are the source of truth – the .docx is presentation only.
     Returns (resume_data dict, source filename).
     """
     path = source = None
@@ -201,7 +201,7 @@ def build_story_context(library, resume_data, jd_lower):
     dates, and additional context for STAR story building.
     """
     if not resume_data:
-        return "No resume stage file found — using candidate profile only."
+        return "No resume stage file found – using candidate profile only."
 
     context_lines = []
 
@@ -257,7 +257,7 @@ def generate_prep_docx(output_path, role, resume_source,
                         salary_data):
     """
     Generate a clean formatted .docx interview prep document.
-    Uses simple heading/normal/bullet styles — no resume color scheme.
+    Uses simple heading/normal/bullet styles – no resume color scheme.
     """
     doc = Document()
 
@@ -294,7 +294,7 @@ def generate_prep_docx(output_path, role, resume_source,
             stripped = line.strip()
             if not stripped:
                 continue
-            # All-caps heading pattern (e.g. "COMPANY OVERVIEW:", "STORY 1 —")
+            # All-caps heading pattern (e.g. "COMPANY OVERVIEW:", "STORY 1 –")
             if (re.match(r'^[A-Z][A-Z\s\-–&/]+[:\-–]', stripped) and
                     len(stripped) < 80 and not stripped.startswith('-')):
                 add_heading(stripped, level=2)
@@ -332,12 +332,12 @@ def generate_prep_docx(output_path, role, resume_source,
 
     # Section 1
     add_heading("Company & Role Brief", level=1)
-    add_normal("(Web-informed — verify currency before interview)")
+    add_normal("(Web-informed – verify currency before interview)")
     parse_and_add_section(section1)
 
     # Section 2
     add_heading("Story Bank", level=1)
-    add_normal("Workshop stories before interview — correct any overreach.")
+    add_normal("Workshop stories before interview – correct any overreach.")
     parse_and_add_section(section2)
 
     # Section 3
@@ -360,7 +360,7 @@ def generate_prep_docx(output_path, role, resume_source,
 # ==============================================
 
 print("=" * 60)
-print("PHASE 5 — INTERVIEW PREP GENERATOR v2")
+print("PHASE 5 – INTERVIEW PREP GENERATOR v2")
 print("=" * 60)
 print(f"Role: {ROLE}")
 print(f"Package: {PACKAGE_DIR}")
@@ -376,7 +376,7 @@ if not os.path.exists(EXPERIENCE_LIBRARY):
     errors.append(f"experience_library.json not found: {EXPERIENCE_LIBRARY}")
 
 if errors:
-    print("\nERRORS — cannot proceed:")
+    print("\nERRORS – cannot proceed:")
     for e in errors:
         print(f"  {e}")
     sys.exit(1)
@@ -411,7 +411,7 @@ if resume_data:
     emp_count = len([e for e, b in resume_data['employers'].items() if b])
     print(f"  Resume loaded from {resume_source} ({emp_count} employers)")
 else:
-    print(f"  WARNING: No stage file found — stories will use library only")
+    print(f"  WARNING: No stage file found – stories will use library only")
 
 jd_lower = jd.lower()
 story_context = build_story_context(library, resume_data, jd_lower)
@@ -430,7 +430,7 @@ You always:
 - Use employer attribution in stories ("During my time at G2 OPS..." or
   "When I was supporting Shield AI...")
 - Frame stories using STAR format with factually accurate details
-- Give honest gap assessments — never suggest claiming experience not held
+- Give honest gap assessments – never suggest claiming experience not held
 - Keep language professional, direct, and confident
 - Use en dashes, never em dashes
 
@@ -440,7 +440,7 @@ You never:
 - Use vague or generic advice"""
 
 # ==============================================
-# SECTION 1 — COMPANY & ROLE BRIEF (WEB-INFORMED)
+# SECTION 1 – COMPANY & ROLE BRIEF (WEB-INFORMED)
 # ==============================================
 
 print("\nSection 1: Company & Role Brief (searching web)...")
@@ -458,7 +458,7 @@ Use the web_search tool to find:
 Then provide your brief in this exact format:
 
 COMPANY OVERVIEW:
-[3-4 sentences — what they do, defense/government focus, scale.
+[3-4 sentences – what they do, defense/government focus, scale.
 Use current web search results where available.]
 
 BUSINESS UNIT OVERVIEW:
@@ -475,7 +475,7 @@ SALARY EXPECTATIONS GUIDANCE:
 {salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}
 
 KEY TALKING POINTS:
-[3 bullet points — specific, current, factual things showing you researched the company]
+[3 bullet points – specific, current, factual things showing you researched the company]
 
 RECENT CONTEXT:
 [1-2 sentences on current business situation or relevant programs.
@@ -489,16 +489,16 @@ response1 = client.messages.create(
     messages=[{"role": "user", "content": company_prompt}]
 )
 
-# Extract text blocks from response — web search returns mixed content types
+# Extract text blocks from response – web search returns mixed content types
 section1_parts = []
 for block in response1.content:
     if hasattr(block, 'text') and block.text:
         section1_parts.append(block.text)
 section1 = "\n".join(section1_parts) if section1_parts else \
-    "Web search unavailable — review company website before interview."
+    "Web search unavailable – review company website before interview."
 
 # ==============================================
-# SECTION 2 — STORY BANK (LIBRARY-GROUNDED)
+# SECTION 2 – STORY BANK (LIBRARY-GROUNDED)
 # ==============================================
 
 print("Section 2: Story Bank (grounded in resume and library)...")
@@ -508,7 +508,7 @@ story_prompt = f"""Generate employer-attributed STAR interview stories for this 
 CANDIDATE PROFILE (PII removed):
 {candidate_profile[:2500]}
 
-RESUME SUBMITTED FOR THIS ROLE — with employer context:
+RESUME SUBMITTED FOR THIS ROLE – with employer context:
 {story_context[:3000]}
 
 JOB DESCRIPTION:
@@ -525,33 +525,33 @@ CRITICAL INSTRUCTIONS:
 Provide in this exact format:
 
 ROLE FIT ASSESSMENT:
-[3-4 honest sentences — strengths and genuine gaps]
+[3-4 honest sentences – strengths and genuine gaps]
 
 KEY THEMES TO LEAD WITH:
-Theme 1 — [Name]: [1-2 sentences on strongest narrative for this role]
-Theme 2 — [Name]: [1-2 sentences]
-Theme 3 — [Name]: [1-2 sentences]
+Theme 1 – [Name]: [1-2 sentences on strongest narrative for this role]
+Theme 2 – [Name]: [1-2 sentences]
+Theme 3 – [Name]: [1-2 sentences]
 
 STORY BANK:
 
-STORY 1 — [JD Requirement this addresses]:
+STORY 1 – [JD Requirement this addresses]:
 Employer: [Company name | Title | Dates]
-Situation: [Context — what program, environment, challenge]
+Situation: [Context – what program, environment, challenge]
 Task: [What specifically needed to be accomplished]
-Action: [What YOU did — first person, specific to the bullets provided]
-Result: [Outcome — qualitative acceptable, no fabricated numbers]
-If probed: [One sentence — what to add if they ask for more detail]
+Action: [What YOU did – first person, specific to the bullets provided]
+Result: [Outcome – qualitative acceptable, no fabricated numbers]
+If probed: [One sentence – what to add if they ask for more detail]
 
-STORY 2 — [JD Requirement]:
+STORY 2 – [JD Requirement]:
 [same format]
 
-STORY 3 — [JD Requirement]:
+STORY 3 – [JD Requirement]:
 [same format]
 
-STORY 4 — [JD Requirement]:
+STORY 4 – [JD Requirement]:
 [same format]
 
-STORY 5 — [JD Requirement]:
+STORY 5 – [JD Requirement]:
 [same format]
 
 LIKELY INTERVIEW QUESTIONS:
@@ -566,7 +566,7 @@ response2 = client.messages.create(
 section2 = response2.content[0].text
 
 # ==============================================
-# SECTION 3 — GAP PREPARATION
+# SECTION 3 – GAP PREPARATION
 # ==============================================
 
 print("Section 3: Gap Preparation...")
@@ -581,8 +581,8 @@ if 'CONFIRMED GAPS' in raw_profile:
 gap_prompt = f"""You are doing a two-step gap analysis grounded strictly in the JD text and
 candidate profile. Follow these steps exactly.
 
-STEP 1 — EXTRACT ALL JD REQUIREMENTS:
-Read the FULL job description below — including required qualifications, preferred
+STEP 1 – EXTRACT ALL JD REQUIREMENTS:
+Read the FULL job description below – including required qualifications, preferred
 qualifications, responsibilities, and any other stated criteria. Extract two lists:
   REQUIRED: skills, experience, tools, or credentials explicitly marked as required
   PREFERRED: skills or experience explicitly marked as preferred, desired, or a plus
@@ -593,18 +593,18 @@ Only use what the JD text directly states.
 FULL JOB DESCRIPTION:
 {jd}
 
-STEP 2 — CROSS-REFERENCE AGAINST CANDIDATE PROFILE:
+STEP 2 – CROSS-REFERENCE AGAINST CANDIDATE PROFILE:
 Compare your extracted lists against the candidate profile below. A gap is valid if:
   - HARD GAP: JD lists it as REQUIRED and it is either in the confirmed gaps section
     OR clearly absent from the candidate's documented experience
-  - PREFERRED GAP: JD lists it as PREFERRED and it is absent from the profile —
+  - PREFERRED GAP: JD lists it as PREFERRED and it is absent from the profile –
     flag these as "preferred but not held" (lower severity)
 
 Do NOT flag anything based on inference, assumption, or industry norms.
 Only flag what the JD text explicitly states as required or preferred.
 
 Expect to find 3-5 gaps for a typical senior engineering role. If you find zero,
-re-examine the preferred qualifications section — gaps there count.
+re-examine the preferred qualifications section – gaps there count.
 
 CANDIDATE CONFIRMED GAPS:
 {gaps_section[:1500]}
@@ -612,20 +612,20 @@ CANDIDATE CONFIRMED GAPS:
 CANDIDATE FULL PROFILE (for cross-referencing skills not in confirmed gaps):
 {candidate_profile[:2000]}
 
-For each gap provide a direct, confident talking point — not apologetic.
+For each gap provide a direct, confident talking point – not apologetic.
 
 Format exactly as:
 
-GAP 1 — [Topic] [REQUIRED or PREFERRED]:
+GAP 1 – [Topic] [REQUIRED or PREFERRED]:
 Gap: [What the JD states (quote or close paraphrase) and why it's a gap]
-Honest answer: [What to say — confident, not apologetic]
+Honest answer: [What to say – confident, not apologetic]
 Bridge: [Connection to actual experience]
 Redirect: [Strength to pivot toward]
 
-GAP 2 — [Topic] [REQUIRED or PREFERRED]:
+GAP 2 – [Topic] [REQUIRED or PREFERRED]:
 [same format]
 
-GAP 3 — [Topic] [REQUIRED or PREFERRED]:
+GAP 3 – [Topic] [REQUIRED or PREFERRED]:
 [same format]
 
 HARD QUESTIONS TO PREPARE FOR:
@@ -640,7 +640,7 @@ response3 = client.messages.create(
 section3 = response3.content[0].text
 
 # ==============================================
-# SECTION 4 — QUESTIONS TO ASK
+# SECTION 4 – QUESTIONS TO ASK
 # ==============================================
 
 print("Section 4: Questions to Ask...")
@@ -655,21 +655,21 @@ CANDIDATE BACKGROUND SUMMARY (PII removed):
 {strip_pii(candidate_profile[:800])}
 
 Generate 8 questions in three categories. Each should demonstrate genuine
-domain knowledge — not generic interview questions.
+domain knowledge – not generic interview questions.
 
 QUESTIONS ABOUT THE ROLE & TEAM:
-1. [Question] — [Why ask this / what expertise it signals]
-2. [Question] — [Why ask this / what expertise it signals]
-3. [Question] — [Why ask this / what expertise it signals]
+1. [Question] – [Why ask this / what expertise it signals]
+2. [Question] – [Why ask this / what expertise it signals]
+3. [Question] – [Why ask this / what expertise it signals]
 
 QUESTIONS ABOUT THE PROGRAM & TECHNICAL ENVIRONMENT:
-4. [Question] — [Why ask this / what expertise it signals]
-5. [Question] — [Why ask this / what expertise it signals]
-6. [Question] — [Why ask this / what expertise it signals]
+4. [Question] – [Why ask this / what expertise it signals]
+5. [Question] – [Why ask this / what expertise it signals]
+6. [Question] – [Why ask this / what expertise it signals]
 
 QUESTIONS ABOUT SUCCESS & GROWTH:
-7. [Question] — [Why ask this / what expertise it signals]
-8. [Question] — [Why ask this / what expertise it signals]
+7. [Question] – [Why ask this / what expertise it signals]
+8. [Question] – [Why ask this / what expertise it signals]
 
 CLOSING NOTE:
 [1-2 sentences on how to close the interview effectively]"""
@@ -699,29 +699,29 @@ output_lines.append("Note: PII stripped from all API calls.")
 output_lines.append("=" * 60)
 output_lines.append("")
 
-output_lines.append("SECTION 1 — COMPANY & ROLE BRIEF")
-output_lines.append("(Web-informed — verify currency before interview)")
+output_lines.append("SECTION 1 – COMPANY & ROLE BRIEF")
+output_lines.append("(Web-informed – verify currency before interview)")
 output_lines.append("-" * 60)
 output_lines.append(section1)
 output_lines.append("")
 
 output_lines.append("=" * 60)
-output_lines.append("SECTION 2 — STORY BANK")
+output_lines.append("SECTION 2 – STORY BANK")
 output_lines.append("(Grounded in submitted resume with employer attribution)")
 output_lines.append("REMINDER: Workshop stories in chat before interview.")
-output_lines.append("Correct any overreach — every detail must be accurate.")
+output_lines.append("Correct any overreach – every detail must be accurate.")
 output_lines.append("-" * 60)
 output_lines.append(section2)
 output_lines.append("")
 
 output_lines.append("=" * 60)
-output_lines.append("SECTION 3 — GAP PREPARATION")
+output_lines.append("SECTION 3 – GAP PREPARATION")
 output_lines.append("-" * 60)
 output_lines.append(section3)
 output_lines.append("")
 
 output_lines.append("=" * 60)
-output_lines.append("SECTION 4 — QUESTIONS TO ASK")
+output_lines.append("SECTION 4 – QUESTIONS TO ASK")
 output_lines.append("-" * 60)
 output_lines.append(section4)
 output_lines.append("")
@@ -765,7 +765,7 @@ print(f"\nNext steps:")
 print(f"  1. Open {OUTPUT_DOCX_PATH} in Word for formatted reading")
 print(f"     Or open {OUTPUT_PATH} in VS Code (View > Word Wrap)")
 print(f"  2. Verify company brief accuracy (web results may be stale)")
-print(f"  3. Workshop STAR stories in chat — correct any overreach")
-print(f"  4. Practice gap answers out loud — confident, not apologetic")
+print(f"  3. Workshop STAR stories in chat – correct any overreach")
+print(f"  4. Practice gap answers out loud – confident, not apologetic")
 print(f"  5. Select 4-5 questions from Section 4")
 print(f"{'=' * 60}")

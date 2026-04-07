@@ -1,6 +1,6 @@
 # ==============================================
 # phase3_parse_library.py
-# Full parse of experience_library.md — all employers.
+# Full parse of experience_library.md – all employers.
 # Writes one JSON file per employer + summaries.json.
 #
 # Output:

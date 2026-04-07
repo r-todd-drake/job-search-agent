@@ -25,8 +25,7 @@ for every role in the pipeline.
 | 1 | Pipeline report script and tracker schema | ✅ Complete |
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
-| 4 | Automated resume generation — tailored .docx per application | 🔧 Prototype |
-| 4.5 | Cover letter generator — aligned with resume content and style | ⏳ Planned |
+| 4 | Automated resume + cover letter generation — tailored .docx per application | 🔧 Prototype |
 | 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
@@ -61,10 +60,14 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 4. Run phase4_resume_generator.py for top PURSUE roles
    → Four-stage async workflow with human review at each stage
    → Stage files are source of truth — never edit .docx directly
-5. Run phase5_interview_prep.py when interview is scheduled
+   → Run check_resume.py --role [role] after Stage 2 to catch violations
+5. Run phase4_cover_letter.py --stage 1 --role [role]
+   → Generates cover letter draft aligned with resume content
+   → Stage through to docx via --stage 4
+6. Run phase5_interview_prep.py when interview is scheduled
    → Generates .txt and .docx prep package
    → Workshop stories in Claude web chat before interview
-6. Submit, update status to APPLIED, move to tracker
+7. Submit, update status to APPLIED, move to tracker
 ```
 
 ---
@@ -215,8 +218,10 @@ python scripts/phase2_semantic_analyzer.py
 python scripts/phase4_resume_generator.py --stage 1 --role [role]
 python scripts/phase4_resume_generator.py --stage 3 --role [role]
 python scripts/phase4_resume_generator.py --stage 4 --role [role]
+python scripts/check_resume.py --role [role]
+python scripts/phase4_cover_letter.py --stage 1 --role [role]
+python scripts/phase4_cover_letter.py --stage 4 --role [role]
 python scripts/phase5_interview_prep.py --role [role]
-python scripts/check_resume.py resumes/tailored/[role]/[resume].docx
 ```
 
 ---
@@ -246,8 +251,9 @@ Job_search_agent/
 │   ├── phase3_build_candidate_profile.py
 │   ├── phase3_compile_library.py
 │   ├── phase4_resume_generator.py        # Four-stage resume generation
+│   ├── phase4_cover_letter.py            # Staged cover letter generator
 │   ├── phase5_interview_prep.py          # Web search + resume-grounded stories
-│   ├── check_resume.py                   # 23-rule quality check
+│   ├── check_resume.py                   # Two-layer quality check (string matching + API)
 │   └── utils/
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       └── pii_filter.py                 # PII stripping — safe for GitHub
@@ -265,7 +271,6 @@ Job_search_agent/
 
 | Item | Description |
 |------|-------------|
-| Phase 4.5 | Cover letter generator — inputs JD + stage4_final.txt, outputs styled .docx matching resume template |
 | Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
 | Library workflow | Structured process for adding resume-tailoring bullets back into experience library |
