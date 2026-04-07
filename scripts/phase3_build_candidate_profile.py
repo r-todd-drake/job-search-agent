@@ -20,6 +20,7 @@ import time
 from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from scripts.utils.pii_filter import strip_pii
 
 load_dotenv()
 
@@ -35,14 +36,14 @@ API_DELAY = 0.5  # seconds between calls
 
 # Known facts not derivable from bullets alone
 # These supplement the library-derived profile
-KNOWN_FACTS = """
+KNOWN_FACTS = f"""
 CONFIRMED FACTS (supplement library data):
-- Name: R. Todd Drake
-- Location: San Diego, CA
-- Phone: (619) 379-5783
-- Email: r_todd_d@msn.com
-- LinkedIn: linkedin.com/in/rtodddrake
-- GitHub: github.com/r-todd-drake
+- Name: {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')}
+- Location: {os.getenv('CANDIDATE_LOCATION', 'San Diego, CA')}
+- Phone: {os.getenv('CANDIDATE_PHONE', '[PHONE]')}
+- Email: {os.getenv('CANDIDATE_EMAIL', '[EMAIL]')}
+- LinkedIn: {os.getenv('CANDIDATE_LINKEDIN', '[LINKEDIN]')}
+- GitHub: {os.getenv('CANDIDATE_GITHUB', '[GITHUB]')}
 
 EDUCATION (confirmed):
 - San Diego State University
@@ -72,8 +73,8 @@ MILITARY SERVICE (confirmed):
 - D-TOC OIC at Fort Huachuca – FBCB2, MCS, AFATDS, ASAS
 
 CONFIRMED SKILLS - PROGRAMMING:
-- Python: self-taught, beginner to intermediate – built multi-phase AI job 
-  search automation system using Anthropic API, openpyxl, python-docx, 
+- Python: self-taught, beginner to intermediate – built multi-phase AI job
+  search automation system using Anthropic API, openpyxl, python-docx,
   python-dotenv. Not a software developer but demonstrates applied capability.
 - Git/GitHub: version control for personal projects
 - No GitLab, no MATLAB, no C++, no Java
@@ -101,7 +102,7 @@ STYLE RULES:
 
 SYSTEM_PROMPT = """You are building a canonical candidate profile from resume experience data.
 Your job is to extract ONLY confirmed facts – skills, tools, roles, and scope that are
-explicitly demonstrated in the provided bullets. 
+explicitly demonstrated in the provided bullets.
 
 You NEVER invent, infer, or embellish. If a skill is not explicitly demonstrated in the
 bullets, it does not appear in the profile. If something is ambiguous, note it as
@@ -110,50 +111,58 @@ bullets, it does not appear in the profile. If something is ambiguous, note it a
 Your output will be used to prevent AI hallucinations when generating future resumes.
 Accuracy and explicit gap documentation are more important than completeness."""
 
-# ==============================================
-# LOAD DATA
-# ==============================================
-
-print("=" * 60)
-print("PHASE 3 – BUILD CANDIDATE PROFILE")
-print("=" * 60)
-
-if not os.path.exists(LIBRARY_JSON):
-    print(f"ERROR: {LIBRARY_JSON} not found. Run phase3_compile_library.py first.")
-    exit(1)
-
-with open(LIBRARY_JSON, encoding='utf-8') as f:
-    library = json.load(f)
-
-with open(SUMMARIES_PATH, encoding='utf-8') as f:
-    summaries_data = json.load(f)
-
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
-employer_profiles = {}
 
 # ==============================================
-# STEP 1 – EXTRACT PER-EMPLOYER PROFILE
+# CORE FUNCTION
 # ==============================================
 
-print(f"\nStep 1: Extracting confirmed skills per employer...")
+def build_profile(client, library_json_path, output_path):
+    """
+    Build a canonical candidate profile from the experience library.
 
-for employer in library['employers']:
-    name = employer['name']
-    title = employer.get('title', '')
-    dates = employer.get('dates', '')
-    bullets = [b for b in employer['bullets'] if not b.get('flagged')]
+    Args:
+        client: Anthropic client instance
+        library_json_path: Path to experience_library.json
+        output_path: Path for the output candidate_profile.md
+    """
+    with open(library_json_path, encoding='utf-8') as f:
+        library = json.load(f)
 
-    if not bullets:
-        print(f"  Skipping {name} – no cleared bullets")
-        continue
+    # Load summaries – prefer inline in library, fall back to summaries.json
+    summaries_raw = library.get('summaries', [])
+    if not summaries_raw:
+        summaries_path = os.path.join(
+            os.path.dirname(library_json_path), 'summaries.json'
+        )
+        if os.path.exists(summaries_path):
+            with open(summaries_path, encoding='utf-8') as f:
+                summaries_data = json.load(f)
+            summaries_raw = summaries_data.get('summaries', [])
 
-    print(f"  Processing {name} ({len(bullets)} bullets)...")
+    employer_profiles = {}
 
-    # Build bullet text block
-    bullet_text = "\n".join([f"- {b['text']}" for b in bullets])
+    # ==============================================
+    # STEP 1 – EXTRACT PER-EMPLOYER PROFILE
+    # ==============================================
 
-    prompt = f"""Analyze these resume bullets for {name} ({title}, {dates}) and extract
+    print(f"\nStep 1: Extracting confirmed skills per employer...")
+
+    for employer in library['employers']:
+        name = employer['name']
+        title = employer.get('title', '')
+        dates = employer.get('dates', '')
+        bullets = [b for b in employer['bullets'] if not b.get('flagged')]
+
+        if not bullets:
+            print(f"  Skipping {name} – no cleared bullets")
+            continue
+
+        print(f"  Processing {name} ({len(bullets)} bullets)...")
+
+        # Build bullet text block
+        bullet_text = "\n".join([f"- {b['text']}" for b in bullets])
+
+        prompt = f"""Analyze these resume bullets for {name} ({title}, {dates}) and extract
 a confirmed skills and capabilities profile.
 
 BULLETS:
@@ -185,35 +194,36 @@ GAPS VISIBLE FROM THIS ROLE:
 
 Be conservative. Only list what is explicitly demonstrated, not what can be inferred."""
 
-    try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1500,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        employer_profiles[name] = response.content[0].text
-        print(f"    Done.")
-    except Exception as e:
-        print(f"    ERROR: {str(e)[:80]}")
-        employer_profiles[name] = f"ERROR processing {name}: {str(e)}"
+        safe_prompt = strip_pii(prompt)
 
-    time.sleep(API_DELAY)
+        try:
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1500,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": safe_prompt}]
+            )
+            employer_profiles[name] = response.content[0].text
+            print(f"    Done.")
+        except Exception as e:
+            print(f"    ERROR: {str(e)[:80]}")
+            employer_profiles[name] = f"ERROR processing {name}: {str(e)}"
 
-# ==============================================
-# STEP 2 – EXTRACT SUMMARY THEMES
-# ==============================================
+        time.sleep(API_DELAY)
 
-print(f"\nStep 2: Analyzing summary themes...")
+    # ==============================================
+    # STEP 2 – EXTRACT SUMMARY THEMES
+    # ==============================================
 
-summaries = summaries_data.get('summaries', [])
-summary_themes = []
-for s in summaries:
-    summary_themes.append(f"- {s['theme']}: {s['text'][:150]}...")
+    print(f"\nStep 2: Analyzing summary themes...")
 
-summary_block = "\n".join(summary_themes[:20])  # First 20 for context
+    summary_themes = []
+    for s in summaries_raw:
+        summary_themes.append(f"- {s['theme']}: {s['text'][:150]}...")
 
-summary_prompt = f"""Analyze these resume summary themes and identify the consistent
+    summary_block = "\n".join(summary_themes[:20])  # First 20 for context
+
+    summary_prompt = f"""Analyze these resume summary themes and identify the consistent
 positioning patterns and core value propositions across all versions.
 
 SUMMARY THEMES:
@@ -229,31 +239,33 @@ STRONGEST VALUE PROPOSITIONS:
 POSITIONING TO AVOID:
 [Any themes that appear overclaimed or inconsistent with a systems engineering background]"""
 
-try:
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=800,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": summary_prompt}]
-    )
-    summary_analysis = response.content[0].text
-    print("  Done.")
-except Exception as e:
-    summary_analysis = f"ERROR: {str(e)}"
-    print(f"  ERROR: {str(e)[:80]}")
+    safe_summary_prompt = strip_pii(summary_prompt)
 
-# ==============================================
-# STEP 3 – COMPILE MASTER PROFILE
-# ==============================================
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=800,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": safe_summary_prompt}]
+        )
+        summary_analysis = response.content[0].text
+        print("  Done.")
+    except Exception as e:
+        summary_analysis = f"ERROR: {str(e)}"
+        print(f"  ERROR: {str(e)[:80]}")
 
-print(f"\nStep 3: Compiling master candidate profile...")
+    # ==============================================
+    # STEP 3 – COMPILE MASTER PROFILE
+    # ==============================================
 
-# Build compilation input
-employer_summaries = ""
-for name, profile in employer_profiles.items():
-    employer_summaries += f"\n\n{'='*40}\n{profile}\n"
+    print(f"\nStep 3: Compiling master candidate profile...")
 
-compile_prompt = f"""You are compiling a master canonical candidate profile for use in
+    # Build compilation input
+    employer_summaries = ""
+    for name, profile in employer_profiles.items():
+        employer_summaries += f"\n\n{'='*40}\n{profile}\n"
+
+    compile_prompt = f"""You are compiling a master canonical candidate profile for use in
 resume generation. This profile will be used to PREVENT hallucinations – it defines
 exactly what the candidate has and has NOT done.
 
@@ -269,7 +281,7 @@ CONFIRMED SUPPLEMENTAL FACTS:
 Compile a comprehensive master profile in this format:
 
 # CANONICAL CANDIDATE PROFILE
-# R. Todd Drake – Compiled from Experience Library
+# [CANDIDATE] – Compiled from Experience Library
 # Generated: {datetime.now().strftime('%d %b %Y')}
 # PURPOSE: Use this file to ground all resume generation – prevents hallucinations
 
@@ -320,30 +332,36 @@ Compile a comprehensive master profile in this format:
 
 Be thorough on the CONFIRMED GAPS section – it is the most important part of this document."""
 
-try:
-    response = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4000,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": compile_prompt}]
-    )
-    master_profile = response.content[0].text
-    print("  Done.")
-except Exception as e:
-    master_profile = f"ERROR compiling master profile: {str(e)}"
-    print(f"  ERROR: {str(e)[:80]}")
+    safe_compile_prompt = strip_pii(compile_prompt)
 
-# ==============================================
-# STEP 4 – SAVE OUTPUT
-# ==============================================
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4000,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": safe_compile_prompt}]
+        )
+        master_profile = response.content[0].text
+        print("  Done.")
+    except Exception as e:
+        master_profile = f"ERROR compiling master profile: {str(e)}"
+        print(f"  ERROR: {str(e)[:80]}")
 
-print(f"\nStep 4: Saving candidate profile...")
+    # ==============================================
+    # STEP 4 – SAVE OUTPUT
+    # ==============================================
 
-header = f"""# CANONICAL CANDIDATE PROFILE
-# R. Todd Drake
+    print(f"\nStep 4: Saving candidate profile...")
+
+    candidate_name = os.getenv('CANDIDATE_NAME', '[CANDIDATE]')
+    total_bullets = library.get('metadata', {}).get('total_bullets', 0)
+    total_employers = library.get('metadata', {}).get('total_employers', 0)
+
+    header = f"""# CANONICAL CANDIDATE PROFILE
+# {candidate_name}
 # Generated: {datetime.now().strftime('%d %b %Y %H:%M')}
-# Source: experience_library.json ({library['metadata']['total_bullets']} bullets,
-#         {library['metadata']['total_employers']} employers)
+# Source: experience_library.json ({total_bullets} bullets,
+#         {total_employers} employers)
 #
 # PURPOSE: Ground all Phase 4 resume generation – prevents hallucinations
 # USAGE: Load this file into CANDIDATE_PROFILE in phase4_resume_generator.py
@@ -354,19 +372,42 @@ header = f"""# CANONICAL CANDIDATE PROFILE
 
 """
 
-with open(OUTPUT_PATH, 'w', encoding='utf-8') as f:
-    f.write(header)
-    f.write(master_profile)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True) if os.path.dirname(output_path) else None
 
-size_kb = os.path.getsize(OUTPUT_PATH) / 1024
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(header)
+        f.write(master_profile)
 
-print(f"\n{'=' * 60}")
-print(f"CANDIDATE PROFILE BUILD COMPLETE")
-print(f"  Output: {OUTPUT_PATH}")
-print(f"  File size: {size_kb:.1f} KB")
-print(f"\nNext steps:")
-print(f"  1. Review {OUTPUT_PATH} in VS Code")
-print(f"  2. Update CANDIDATE_PROFILE in phase4_resume_generator.py")
-print(f"     to load from this file instead of the hardcoded constant")
-print(f"  3. Rerun Stage 1 to verify improved hallucination prevention")
-print(f"{'=' * 60}")
+    size_kb = os.path.getsize(output_path) / 1024
+
+    print(f"\n{'=' * 60}")
+    print(f"CANDIDATE PROFILE BUILD COMPLETE")
+    print(f"  Output: {output_path}")
+    print(f"  File size: {size_kb:.1f} KB")
+    print(f"\nNext steps:")
+    print(f"  1. Review {output_path} in VS Code")
+    print(f"  2. Update CANDIDATE_PROFILE in phase4_resume_generator.py")
+    print(f"     to load from this file instead of the hardcoded constant")
+    print(f"  3. Rerun Stage 1 to verify improved hallucination prevention")
+    print(f"{'=' * 60}")
+
+
+# ==============================================
+# ENTRY POINT
+# ==============================================
+
+def main():
+    print("=" * 60)
+    print("PHASE 3 – BUILD CANDIDATE PROFILE")
+    print("=" * 60)
+
+    if not os.path.exists(LIBRARY_JSON):
+        print(f"ERROR: {LIBRARY_JSON} not found. Run phase3_compile_library.py first.")
+        exit(1)
+
+    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    build_profile(client, LIBRARY_JSON, OUTPUT_PATH)
+
+
+if __name__ == "__main__":
+    main()
