@@ -41,6 +41,12 @@ Last updated: 06 Apr 2026
    - KForce/NGLD-M has confirmed HAIPE-enabled architecture experience
    - Fix: update candidate_profile.md (item 5 above) — should resolve automatically
 
+6. **Phase 5 updates
+    - Duplicate salary guidance in the prep package — reconcile to a single anchor and remove the duplicate section
+    - Gap 1 redirect fabricates an MBSE gap that doesn't exist — rewrite around the real Shield AI story (domain gap, not MBSE gap)
+    - Add UCSD Systems Engineering certificate program to CANDIDATE_BACKGROUND and experience library education section
+    -  remove Security+ language entirely, it's lapsed
+
 7. **Phase 7 — Search agent**
    - Automated role discovery: Google, USAJobs, ClearanceJobs
    - NOT LinkedIn (blocks automation)
@@ -74,6 +80,13 @@ Last updated: 06 Apr 2026
       3. phase2 scripts — confirm duplicate req number detection
     - Add pytest to requirements.txt
     - Verify VS Code Testing panel discovers tests/ correctly
+
+11. ** Phase 5 revision stage (proper pipeline extension)
+    Add a Stage 2 to phase5_interview_prep.py — similar to how Phase 4 has multiple stages. Stage 1 generates the initial prep package, Stage 2 accepts workshop notes or a corrected prep file and produces a clean revised version. Could also flag experience library updates automatically.
+12. **check_utils.py shared module — deferred**
+    - Concept: extract shared logic (gap term extraction, Layer 1 rules, output formatting)
+      from check_resume.py and check_cover_letter.py into scripts/utils/check_utils.py
+    - Reevaluate if a third checking module is added — two checkers don't justify the abstraction
 
 ## Standing / Evergreen Tasks
 - **Experience library tool equivalence review**
