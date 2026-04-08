@@ -27,7 +27,7 @@ for every role in the pipeline.
 | 1 | Pipeline report script and tracker schema | ✅ Complete |
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
-| 4 | Automated resume + cover letter generation — tailored .docx per application | 🔧 Prototype |
+| 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
 | 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
@@ -65,6 +65,7 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
    → Run check_resume.py --role [role] after Stage 2 to catch violations
 5. Run phase4_cover_letter.py --stage 1 --role [role]
    → Generates cover letter draft aligned with resume content
+   → Run check_cover_letter.py --role [role] after editing Stage 2
    → Stage through to docx via --stage 4
 6. Run phase5_interview_prep.py when interview is scheduled
    → Generates .txt and .docx prep package
@@ -106,6 +107,28 @@ Stage 3 (automated)  →  stage3_review.txt
 Stage 4 (automated)  →  [Company]_[Role]_Resume.docx
                          Template-based .docx generation
                          Auto quality check via check_resume.py
+```
+
+## Phase 4 — Cover Letter Generation
+
+```
+Stage 1 (automated)  →  cl_stage1_draft.txt
+                         Traditional cover letter (3–4 paragraphs)
+                         Application paragraph (150–250 words, plain-text field)
+                         Hiring manager name extracted from JD if present
+                         Gap filtering from resume stage3_review.txt if available
+
+Stage 2 (manual)     →  cl_stage2_approved.txt
+                         Review draft, verify all claims against confirmed experience
+
+Stage 3 (automated)  →  cl_stage3_review.txt
+                         Two-layer quality check via check_cover_letter.py
+                         Layer 1: string matching (em dash, lapsed cert, gap terms)
+                         Layer 2: API assessment for implied gap fulfillment,
+                                  banned language, generic opener phrases
+
+Stage 4 (automated)  →  [Role]_CoverLetter.docx
+                         Template-based .docx — page 1 letter, page 2 application paragraph
 ```
 
 ---
@@ -235,6 +258,7 @@ python scripts/phase4_resume_generator.py --stage 3 --role [role]
 python scripts/phase4_resume_generator.py --stage 4 --role [role]
 python scripts/check_resume.py --role [role]
 python scripts/phase4_cover_letter.py --stage 1 --role [role]
+python -m scripts.check_cover_letter --role [role]
 python scripts/phase4_cover_letter.py --stage 4 --role [role]
 python scripts/phase5_interview_prep.py --role [role]
 ```
@@ -269,7 +293,8 @@ Job_search_agent/
 │   ├── phase4_resume_generator.py        # Four-stage resume generation
 │   ├── phase4_cover_letter.py            # Staged cover letter generator
 │   ├── phase5_interview_prep.py          # Web search + resume-grounded stories
-│   ├── check_resume.py                   # Two-layer quality check (string matching + API)
+│   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
+│   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       └── pii_filter.py                 # PII stripping — safe for GitHub
