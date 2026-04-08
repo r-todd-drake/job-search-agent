@@ -200,6 +200,7 @@ def generate_traditional_letter(client, jd, bullets, background,
             + "\n"
         )
 
+    bullets_text = bullets[:3000] if bullets else "Not available \u2013 use candidate background only."
     prompt = f"""Write a traditional cover letter for this job application.
 
 HIRING MANAGER: {hiring_manager}
@@ -212,7 +213,7 @@ CANDIDATE BACKGROUND (PII removed):
 {background[:2000]}
 
 RESUME BULLETS FOR THIS ROLE:
-{bullets[:3000] if bullets else 'Not available \u2013 use candidate background only.'}
+{bullets_text}
 {gaps_block}
 RULES:
 - Full business letter format: date line, company name as inside address,
