@@ -137,9 +137,11 @@ Package contains:
 - **Anthropic Claude API** — LLM backbone including web search tool
 - **openpyxl** — application tracker (.xlsx)
 - **python-docx** — resume and interview prep document generation
+- **pytest / pytest-mock** — two-tier test suite (mock + live API)
+- **GitHub Actions** — CI pipeline running mock suite on every push
 - **VS Code** — development environment (View > Word Wrap for .txt files)
 - **Git / GitHub** — version control and portfolio publishing
-- **Claude Code** — AI-assisted development via VS Code extension (optional)
+- **Claude Code** — AI-assisted development via CLI and VS Code extension
 
 ---
 
@@ -182,6 +184,7 @@ Version 3.10 or higher from [python.org](https://python.org/downloads/)
 ### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt  # test dependencies (pytest, pytest-mock)
 ```
 
 ### 3. Configure environment
@@ -193,6 +196,7 @@ CANDIDATE_PHONE=(xxx) xxx-xxxx
 CANDIDATE_EMAIL=your@email.com
 CANDIDATE_LINKEDIN=linkedin.com/in/yourprofile
 CANDIDATE_GITHUB=github.com/yourusername
+CANDIDATE_LOCATION=City, ST
 ```
 
 ### 4. Add your data
@@ -212,7 +216,16 @@ python scripts/phase3_build_candidate_profile.py
 python scripts/phase3_compile_library.py
 ```
 
-### 6. Run scripts
+### 6. Run tests
+```bash
+# Tier 1 — mock suite (same as CI, no API key required):
+pytest tests/ -m "not live" -v
+
+# Tier 2 — live API tests (requires ANTHROPIC_API_KEY):
+pytest -m live -v
+```
+
+### 7. Run scripts
 ```bash
 python scripts/pipeline_report.py
 python scripts/phase2_job_ranking.py
@@ -232,6 +245,7 @@ python scripts/phase5_interview_prep.py --role [role]
 
 ```
 Job_search_agent/
+├── .github/workflows/test.yml            # GitHub Actions CI — mock suite on every push
 ├── context/                              # Context data store
 │   ├── PROJECT_CONTEXT.md                # Lean index — load this first
 │   ├── DECISIONS_LOG.md                  # Coding conventions + architecture
@@ -259,11 +273,19 @@ Job_search_agent/
 │   └── utils/
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       └── pii_filter.py                 # PII stripping — safe for GitHub
+├── tests/                                # Two-tier pytest suite (mock + live)
+│   ├── conftest.py                       # Shared fixtures and fictional test identity
+│   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
+│   ├── utils/                            # pii_filter, library_parser tests
+│   ├── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
 ├── example_data/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
+├── pytest.ini                            # Test config: pythonpath, live marker
+├── requirements.txt                      # Runtime dependencies
+├── requirements-dev.txt                  # Test dependencies (pytest, pytest-mock)
 ├── .env                                  # API keys and PII — never committed
+├── .env.example                          # Environment variable template
 ├── .gitignore
-├── requirements.txt
 └── README.md
 ```
 
@@ -294,6 +316,8 @@ Job_search_agent/
 - JSON data modeling and structured knowledge base design
 - Modular shared-library design — parsing logic extracted to importable module
 - Security-conscious development practices
+- Two-tier pytest suite with mock and live API tiers
+- CI/CD pipeline with GitHub Actions — green badge on every push
 - AI-assisted development workflow with Claude Code
 - Git version control and GitHub portfolio publishing
 
