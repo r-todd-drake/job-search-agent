@@ -176,3 +176,18 @@ def test_run_layer2_finding_has_required_keys():
     for key in ("layer", "rule", "line", "flagged_text", "fix"):
         assert key in f
     assert f["layer"] == 2
+
+
+def test_run_layer2_passes_context_to_prompt():
+    from scripts.check_cover_letter import run_layer2
+    client = make_mock_client("[]")
+    run_layer2(
+        client,
+        cl_text="some text",
+        gaps_section="- No MATLAB experience",
+        banned_section="- Use mission-critical not safety-critical",
+    )
+    call_args = client.messages.create.call_args
+    prompt_text = call_args.kwargs["messages"][0]["content"]
+    assert "No MATLAB experience" in prompt_text
+    assert "Use mission-critical not safety-critical" in prompt_text
