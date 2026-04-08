@@ -241,3 +241,47 @@ def test_validate_inputs_exits_on_missing_background(tmp_path, monkeypatch):
         assert exc.value.code == 1
     finally:
         mod.CANDIDATE_BACKGROUND_PATH = orig
+
+
+# ==============================================
+# PII safety -- strip_pii called before API
+# ==============================================
+
+def test_no_pii_in_api_payload(pii_values, monkeypatch):
+    """
+    Verifies PII is stripped before the API call.
+    Sets PII env vars, reloads pii_filter, strips text the same way _run_checks does,
+    then confirms the API payload contains no PII values.
+    """
+    import importlib
+    import scripts.utils.pii_filter as pii_module
+
+    for key, val in [
+        ("CANDIDATE_NAME", pii_values["name"]),
+        ("CANDIDATE_PHONE", pii_values["phone"]),
+        ("CANDIDATE_EMAIL", pii_values["email"]),
+        ("CANDIDATE_LINKEDIN", pii_values["linkedin"]),
+        ("CANDIDATE_GITHUB", pii_values["github"]),
+    ]:
+        monkeypatch.setenv(key, val)
+
+    importlib.reload(pii_module)
+
+    raw_cl = (
+        f"Contact {pii_values['name']} at {pii_values['email']}\n"
+        + FIXTURE_CL_STAGE2.read_text(encoding="utf-8")
+    )
+    safe_cl = pii_module.strip_pii(raw_cl)
+
+    for pii_value in pii_values.values():
+        assert pii_value not in safe_cl, f"PII not stripped before API call: {pii_value}"
+
+    from scripts.check_cover_letter import run_layer2
+    client = make_mock_client(MOCK_L2_RESPONSE)
+
+    run_layer2(client, safe_cl, gaps_section="No GitLab.", banned_section="Use en dashes.")
+
+    call_args = client.messages.create.call_args
+    full_payload = str(call_args)
+    for pii_value in pii_values.values():
+        assert pii_value not in full_payload, f"PII found in Layer 2 API payload: {pii_value}"
