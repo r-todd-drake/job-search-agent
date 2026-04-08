@@ -123,3 +123,56 @@ def test_run_layer1_no_false_positives_on_clean_cover_letter():
     cl_lines = FIXTURE_CL_STAGE2.read_text(encoding="utf-8").splitlines()
     findings = run_layer1(cl_lines, gap_terms=set())
     assert len(findings) == 0, f"Expected no findings on clean fixture, got: {[f['rule'] for f in findings]}"
+
+
+# ==============================================
+# run_layer2
+# ==============================================
+
+def test_run_layer2_parses_valid_json_response():
+    from scripts.check_cover_letter import run_layer2
+    mock_response = (
+        '[{"violation_type": "Em dash", "line_reference": "line 1",'
+        ' "flagged_text": "test \u2014 text", "suggested_fix": "Use en dash"}]'
+    )
+    client = make_mock_client(mock_response)
+    findings = run_layer2(
+        client,
+        cl_text="test \u2014 text",
+        gaps_section="",
+        banned_section=""
+    )
+    assert len(findings) == 1
+    assert findings[0]["rule"] == "Em dash"
+    assert findings[0]["layer"] == 2
+
+
+def test_run_layer2_returns_empty_list_for_no_violations():
+    from scripts.check_cover_letter import run_layer2
+    client = make_mock_client(MOCK_L2_RESPONSE)
+    findings = run_layer2(client, cl_text="Clean cover letter text.", gaps_section="", banned_section="")
+    assert findings == []
+
+
+def test_run_layer2_handles_json_parse_failure_gracefully():
+    from scripts.check_cover_letter import run_layer2
+    client = make_mock_client("This is not JSON at all.")
+    findings = run_layer2(client, cl_text="some text", gaps_section="", banned_section="")
+    assert len(findings) == 1
+    assert findings[0]["rule"] == "JSON parse failure"
+    assert findings[0]["layer"] == 2
+
+
+def test_run_layer2_finding_has_required_keys():
+    from scripts.check_cover_letter import run_layer2
+    mock_response = (
+        '[{"violation_type": "Generic opener", "line_reference": "line 1",'
+        ' "flagged_text": "I am excited to apply", "suggested_fix": "Lead with strongest credential"}]'
+    )
+    client = make_mock_client(mock_response)
+    findings = run_layer2(client, cl_text="I am excited to apply for this role.", gaps_section="", banned_section="")
+    assert len(findings) == 1
+    f = findings[0]
+    for key in ("layer", "rule", "line", "flagged_text", "fix"):
+        assert key in f
+    assert f["layer"] == 2

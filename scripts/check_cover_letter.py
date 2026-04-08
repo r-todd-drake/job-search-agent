@@ -214,3 +214,93 @@ def run_layer1(cl_lines, gap_terms):
                 continue
 
     return findings
+
+
+# ==============================================
+# LAYER 2 – API ASSESSMENT
+# ==============================================
+
+def run_layer2(client, cl_text, gaps_section, banned_section):
+    """
+    Single API call for nuanced gap and claims assessment.
+    Primary purpose: detect implied gap fulfillment – language that conveys experience
+    in a confirmed gap area without naming the gap term directly.
+    Returns list of finding dicts. Falls back to raw output on JSON parse failure.
+    """
+    prompt = f"""Review this cover letter text for violations against the confirmed gaps and banned language rules below.
+
+CONFIRMED GAPS (candidate has no professional experience with these – do not claim or imply):
+{gaps_section}
+
+BANNED / CORRECTED LANGUAGE (specific terms and their correct replacements):
+{banned_section}
+
+COVER LETTER TEXT:
+{cl_text}
+
+Assess the cover letter for:
+- IMPLIED GAP FULFILLMENT: Language that conveys experience, ownership, or authority in a confirmed
+  gap area without naming the gap term directly. This is the primary concern – cover letter prose
+  can imply gap fulfillment more subtly than resume bullets. Example: "hands-on experience deploying
+  cloud infrastructure" implies AWS/Azure/GCP experience even if those terms do not appear.
+- Claims that explicitly reference confirmed gap tools, credentials, or domains
+- Use of banned terms or language that should be corrected
+- GENERIC OPENER PHRASES: Flag sentences that open with "I am excited to apply", "I am writing to
+  express", "I am writing to apply", "I am pleased to apply", or similar filler opener patterns
+- Fabricated or unverifiable metrics, outcomes, or experience not grounded in confirmed background
+
+IMPORTANT – EM DASH CLARIFICATION:
+The em dash is the specific character \u2014 (U+2014). Only flag this character as a violation.
+Hyphens (-) in compound words such as "end-to-end", "mission-critical", "real-time" are correct
+usage and must NOT be flagged as em dash violations.
+
+IMPORTANT – ONLY FLAG ACTUAL VIOLATIONS:
+Only flag language that is actually wrong in the cover letter text. Do NOT flag language that already
+conforms to the rules. Examples of correct language that must NOT be flagged:
+- "mission-critical" – already the correct term, do not flag
+- "Current TS/SCI" – already the correct form, do not flag
+- "Plank Owner" – already the correct form, do not flag
+Flag only what is actually present and actually wrong, not what demonstrates compliance.
+
+Return ONLY a raw JSON array. No markdown fences. No explanation. No preamble.
+If no violations found, return an empty array: []
+
+Each finding must follow this exact structure:
+{{
+  "violation_type": "short label",
+  "line_reference": "line N" or "N/A",
+  "flagged_text": "exact quoted text from cover letter (keep short)",
+  "suggested_fix": "specific correction"
+}}"""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=1500,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    raw = response.content[0].text.strip()
+
+    try:
+        findings_raw = json.loads(raw)
+        findings = []
+        for f in findings_raw:
+            findings.append({
+                "layer": 2,
+                "rule": f.get("violation_type", "Unknown"),
+                "line": f.get("line_reference", "N/A"),
+                "flagged_text": f.get("flagged_text", ""),
+                "fix": f.get("suggested_fix", ""),
+            })
+        return findings
+    except json.JSONDecodeError:
+        print("\n  WARNING: Layer 2 response was not valid JSON. Raw output:")
+        print("  " + raw[:500])
+        return [{
+            "layer": 2,
+            "rule": "JSON parse failure",
+            "line": "N/A",
+            "flagged_text": raw[:200],
+            "fix": "Review raw API output above manually",
+        }]
