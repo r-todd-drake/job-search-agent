@@ -191,3 +191,53 @@ def test_run_layer2_passes_context_to_prompt():
     prompt_text = call_args.kwargs["messages"][0]["content"]
     assert "No MATLAB experience" in prompt_text
     assert "Use mission-critical not safety-critical" in prompt_text
+
+
+# ==============================================
+# validate_inputs
+# ==============================================
+
+def test_validate_inputs_exits_on_missing_stage2(tmp_path, monkeypatch):
+    from scripts.check_cover_letter import validate_inputs
+    monkeypatch.chdir(tmp_path)
+    package_dir = tmp_path / "data" / "job_packages" / "Test_Role"
+    package_dir.mkdir(parents=True)
+    # cl_stage2_approved.txt does NOT exist
+    stage2_path = str(package_dir / "cl_stage2_approved.txt")
+
+    # CANDIDATE_BACKGROUND.md must exist for this test to isolate the stage2 error
+    bg_dir = tmp_path / "context"
+    bg_dir.mkdir()
+    (bg_dir / "CANDIDATE_BACKGROUND.md").write_text("## Confirmed Gaps\n")
+
+    import scripts.check_cover_letter as mod
+    orig = mod.CANDIDATE_BACKGROUND_PATH
+    mod.CANDIDATE_BACKGROUND_PATH = str(bg_dir / "CANDIDATE_BACKGROUND.md")
+
+    try:
+        with pytest.raises(SystemExit) as exc:
+            validate_inputs(str(package_dir), stage2_path)
+        assert exc.value.code == 1
+    finally:
+        mod.CANDIDATE_BACKGROUND_PATH = orig
+
+
+def test_validate_inputs_exits_on_missing_background(tmp_path, monkeypatch):
+    from scripts.check_cover_letter import validate_inputs
+    monkeypatch.chdir(tmp_path)
+    package_dir = tmp_path / "data" / "job_packages" / "Test_Role"
+    package_dir.mkdir(parents=True)
+    stage2_path = str(package_dir / "cl_stage2_approved.txt")
+    (package_dir / "cl_stage2_approved.txt").write_text("Dear Hiring Manager,\n")
+
+    import scripts.check_cover_letter as mod
+    orig = mod.CANDIDATE_BACKGROUND_PATH
+    # Point to a path that does not exist
+    mod.CANDIDATE_BACKGROUND_PATH = str(tmp_path / "context" / "CANDIDATE_BACKGROUND.md")
+
+    try:
+        with pytest.raises(SystemExit) as exc:
+            validate_inputs(str(package_dir), stage2_path)
+        assert exc.value.code == 1
+    finally:
+        mod.CANDIDATE_BACKGROUND_PATH = orig

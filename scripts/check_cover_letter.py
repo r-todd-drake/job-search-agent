@@ -304,3 +304,135 @@ Each finding must follow this exact structure:
             "flagged_text": raw[:200],
             "fix": "Review raw API output above manually",
         }]
+
+
+# ==============================================
+# OUTPUT FORMATTING
+# ==============================================
+
+def print_findings(findings, layer_num, layer_label):
+    """Print findings for one layer. Returns count."""
+    layer_findings = [f for f in findings if f["layer"] == layer_num]
+    if not layer_findings:
+        print(f"  {layer_label}: No violations found.")
+    else:
+        for f in layer_findings:
+            line_ref = f"Line {f['line']}" if str(f['line']).isdigit() else f['line']
+            print(f"\n  [L{f['layer']} \u2013 {f['rule']}]")
+            print(f"    {line_ref}: \"{f['flagged_text']}\"")
+            print(f"    Fix: {f['fix']}")
+    return len(layer_findings)
+
+
+# ==============================================
+# VALIDATION
+# ==============================================
+
+def validate_inputs(package_dir, stage2_path):
+    errors = []
+    if not os.path.exists(package_dir):
+        errors.append(f"Package folder not found: {package_dir}")
+    if not os.path.exists(stage2_path):
+        errors.append(f"cl_stage2_approved.txt not found: {stage2_path}")
+    if not os.path.exists(CANDIDATE_BACKGROUND_PATH):
+        errors.append(f"CANDIDATE_BACKGROUND.md not found: {CANDIDATE_BACKGROUND_PATH}")
+    if errors:
+        print("============================================================")
+        print("COVER LETTER QUALITY CHECK \u2013 INPUT ERROR")
+        print("============================================================")
+        for e in errors:
+            print(f"  ERROR: {e}")
+        sys.exit(1)
+
+
+# ==============================================
+# MAIN
+# ==============================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Cover letter quality checker \u2013 Layer 1 string matching + Layer 2 API assessment"
+    )
+    parser.add_argument("--role", required=True, help="Role folder name (e.g. BAH_LCI_MBSE)")
+    args = parser.parse_args()
+
+    ROLE = args.role
+    PACKAGE_DIR = os.path.join(JOBS_PACKAGES_DIR, ROLE)
+    STAGE2_PATH = os.path.join(PACKAGE_DIR, "cl_stage2_approved.txt")
+
+    validate_inputs(PACKAGE_DIR, STAGE2_PATH)
+
+    RESULTS_PATH = os.path.join(PACKAGE_DIR, "cl_stage3_review.txt")
+
+    buffer = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buffer
+
+    try:
+        _run_checks(ROLE, PACKAGE_DIR, STAGE2_PATH)
+    finally:
+        sys.stdout = old_stdout
+
+    output = buffer.getvalue()
+    with open(RESULTS_PATH, 'w', encoding='utf-8') as f:
+        f.write(output)
+
+    print(f"Results written to {RESULTS_PATH}")
+    sys.exit(1 if "Status: FAIL" in output else 0)
+
+
+def _run_checks(ROLE, PACKAGE_DIR, STAGE2_PATH):
+    """Run both check layers. All output goes to stdout (captured by caller)."""
+    print("============================================================")
+    print("COVER LETTER QUALITY CHECK")
+    print("============================================================")
+    print(f"Role:   {ROLE}")
+    print(f"Source: {STAGE2_PATH}")
+
+    with open(STAGE2_PATH, 'r', encoding='utf-8') as f:
+        cl_text = f.read()
+    cl_lines = cl_text.splitlines()
+
+    with open(CANDIDATE_BACKGROUND_PATH, 'r', encoding='utf-8') as f:
+        background_text = f.read()
+
+    # \u2500\u2500 LAYER 1 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    print("\n--- LAYER 1: Pre-flight checks ---")
+    print("Loading CANDIDATE_BACKGROUND.md...")
+    gap_terms = extract_gap_terms(background_text)
+    print(f"  Gap terms extracted: {len(gap_terms)} terms")
+    print("Running string checks...")
+
+    l1_findings = run_layer1(cl_lines, gap_terms)
+    l1_count = print_findings(l1_findings, 1, "LAYER 1")
+
+    # \u2500\u2500 LAYER 2 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    print("\n--- LAYER 2: API assessment ---")
+    print("Stripping PII...")
+    safe_cl = strip_pii(cl_text)
+    gaps_section = extract_section(background_text, "## Confirmed Gaps")
+    banned_section = extract_section(background_text, "## Banned / Corrected Language")
+
+    print("Calling API...")
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    l2_findings = run_layer2(client, safe_cl, gaps_section, banned_section)
+    l2_count = print_findings(l2_findings, 2, "LAYER 2")
+
+    # \u2500\u2500 SUMMARY \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    total = l1_count + l2_count
+    print("\n============================================================")
+    print("SUMMARY")
+    print("============================================================")
+    print(f"Layer 1: {l1_count} violation(s)")
+    print(f"Layer 2: {l2_count} finding(s)")
+    print(f"Total:   {total}")
+    print()
+    if total == 0:
+        print("Status: PASS")
+    else:
+        print(f"Status: FAIL \u2013 {total} violation(s) found. Correct cl_stage2_approved.txt and rerun.")
+    print("============================================================")
+
+
+if __name__ == "__main__":
+    main()
