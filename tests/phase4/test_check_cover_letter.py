@@ -8,7 +8,6 @@
 # Run live test (requires ANTHROPIC_API_KEY):
 #   pytest tests/phase4/test_check_cover_letter.py -m live -v
 
-import importlib
 import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -61,7 +60,7 @@ def test_extract_gap_terms_finds_acronyms():
     from scripts.check_cover_letter import extract_gap_terms
     background = FIXTURE_BACKGROUND.read_text(encoding="utf-8")
     terms = extract_gap_terms(background)
-    assert "MATLAB" in terms or len(terms) > 0
+    assert "MATLAB" in terms
 
 
 # ==============================================
@@ -123,7 +122,4 @@ def test_run_layer1_no_false_positives_on_clean_cover_letter():
     from scripts.check_cover_letter import run_layer1
     cl_lines = FIXTURE_CL_STAGE2.read_text(encoding="utf-8").splitlines()
     findings = run_layer1(cl_lines, gap_terms=set())
-    rules = [f["rule"] for f in findings]
-    assert "Em dash" not in rules
-    assert "safety-critical" not in rules
-    assert "Active TS/SCI" not in rules
+    assert len(findings) == 0, f"Expected no findings on clean fixture, got: {[f['rule'] for f in findings]}"
