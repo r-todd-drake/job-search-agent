@@ -1,0 +1,29 @@
+April 8, 2026
+
+Hiring Team
+Anduril Industries
+Costa Mesa, CA
+
+Dear Hiring Manager,
+
+With 20 years of defense systems engineering experience and a Current TS/SCI clearance,
+I offer a strong match for the Systems Engineer, Open Architecture role. As the functional
+MBSE Pillar Lead for Project Overmatch – the CNO's second-highest priority program – I
+translated operational vision into an implemented enterprise MBSE architecture from
+program inception.
+
+My work at KForce/NGLD-M centered on requirements harmonization, V/V matrix development,
+and user story decomposition for a mission-critical Navy communications program. I
+identified suspected duplicate requirements, confirmed findings through independent
+research, and presented results to the Chief Engineer at periodic review boards.
+
+At Shield AI, I served as Lead Systems Engineer for the V-BAT autonomous UAS on the
+Army FTUAS program, coordinating across hardware and software teams to maintain system
+architecture integrity through rapid development cycles.
+
+I welcome the opportunity to discuss how my background in mission-critical systems and
+open architecture aligns with Anduril's goals.
+
+Sincerely,
+
+[Candidate Name]
