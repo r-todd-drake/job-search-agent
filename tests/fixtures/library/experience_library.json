@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "candidate": "Jane Q. Applicant",
+    "last_compiled": "2026-04-07 00:00",
+    "total_employers": 1,
+    "total_bullets": 2,
+    "total_flagged": 0,
+    "total_verify": 0,
+    "total_summaries": 1,
+    "employer_names": [
+      "Acme Defense Systems"
+    ]
+  },
+  "employers": [
+    {
+      "name": "Acme Defense Systems",
+      "short_name": "Acme Defense Systems",
+      "title": "Senior Systems Engineer",
+      "dates": "2020 - Present",
+      "domain": "Defense | Autonomous Systems | MBSE",
+      "standing_rules": [],
+      "bullets": [
+        {
+          "id": "acmede_001",
+          "theme": "Systems Architecture",
+          "keywords": [],
+          "text": "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.",
+          "sources": [
+            "acme_sse"
+          ],
+          "notes": [],
+          "flagged": false,
+          "verify": false,
+          "priority": true
+        },
+        {
+          "id": "acmede_002",
+          "theme": "Systems Architecture",
+          "keywords": [],
+          "text": "Developed system-of-systems architecture models supporting multi-domain C2 integration.",
+          "sources": [
+            "acme_sse"
+          ],
+          "notes": [],
+          "flagged": false,
+          "verify": false,
+          "priority": false
+        }
+      ]
+    }
+  ],
+  "summaries": [
+    {
+      "id": "summary_001",
+      "theme": "Defense Systems Engineering",
+      "text": "Senior systems engineer with 20+ years of experience in defense MBSE, autonomous systems, and multi-domain C2 integration. TS/SCI cleared.",
+      "sources": [
+        "acme_sse"
+      ],
+      "keywords": [],
+      "flagged": false
+    }
+  ]
+}

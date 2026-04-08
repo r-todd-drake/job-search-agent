@@ -1,0 +1,6 @@
+company,title,location,salary_range,url,req_number,date_found,status,package_folder
+Acme Defense Systems,Senior Systems Engineer,San Diego CA,$150-180k,https://example.com,ADS-12345,2026-01-01,PURSUE,acme_sse
+Generic Tech Inc,Systems Engineer II,Remote,$120-145k,https://example.com,GTC-00001,2026-01-05,,generic_se2
+Repeat Defense Co,Principal Engineer,San Diego CA,$155-175k,https://example.com,ADS-12345,2026-01-10,,repeat_pe
+Old Industries LLC,Project Manager,Los Angeles CA,$130-150k,https://example.com,OLD-0042,2026-01-15,SKIP,old_pm
+Applied Corp,Systems Architect,San Diego CA,$160-190k,https://example.com,AC-0099,2026-01-20,APPLIED,applied_arch

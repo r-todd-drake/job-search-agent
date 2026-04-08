@@ -34,9 +34,7 @@ import subprocess
 from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
-import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.pii_filter import strip_pii
+from scripts.utils.pii_filter import strip_pii
 from docx import Document as DocxDocument
 from docx.shared import Pt
 from docx.oxml.ns import qn
@@ -59,7 +57,7 @@ RESUME_TEMPLATE = "templates/resume_template.docx"
 RESUMES_TAILORED_DIR = "resumes/tailored"
 CHECK_RESUME_SCRIPT = "scripts/check_resume.py"
 
-# Employer tier definitions – controls bullet priority and trimming order
+# Employer tier definitions - controls bullet priority and trimming order
 EMPLOYER_TIERS = {
     "SARONIC TECHNOLOGIES": 1,
     "KFORCE (Supporting Leidos / NIWC PAC)": 1,
@@ -87,7 +85,7 @@ def load_candidate_profile():
         print("  Run phase3_build_candidate_profile.py to generate it.")
         print("  Using fallback minimal profile.")
         return """
-CANDIDATE: R. Todd Drake
+CANDIDATE: [CANDIDATE]
 CLEARANCE: Current TS/SCI
 LOCATION: San Diego, CA
 EXPERIENCE: 20+ years defense systems engineering
@@ -96,52 +94,27 @@ GAPS: No GitLab, no Terraform, no INCOSE, no FAA/DO-178, no FEA/CFD
 RULES: En dashes only, no unverifiable metrics, Saronic = maritime only
 """
 
-CANDIDATE_PROFILE = strip_pii(load_candidate_profile())
-print("  Candidate profile loaded and PII stripped.")
-
-# ==============================================
-# ARGUMENT PARSING
-# ==============================================
-
-parser = argparse.ArgumentParser(description='Phase 4 Resume Generator')
-parser.add_argument('--stage', type=int, required=True, choices=[1, 3, 4],
-                    help='Stage to run (1, 3, or 4)')
-parser.add_argument('--role', type=str, required=True,
-                    help='Role package folder name (e.g. BAH_LCI_MBSE)')
-args = parser.parse_args()
-
-ROLE = args.role
-STAGE = args.stage
-PACKAGE_DIR = os.path.join(JOBS_PACKAGES_DIR, ROLE)
-RESUME_OUTPUT_DIR = os.path.join(RESUMES_TAILORED_DIR, ROLE)
-
-# File paths
-JD_PATH = os.path.join(PACKAGE_DIR, "job_description.txt")
-STAGE1_PATH = os.path.join(PACKAGE_DIR, "stage1_draft.txt")
-STAGE2_PATH = os.path.join(PACKAGE_DIR, "stage2_approved.txt")
-STAGE3_PATH = os.path.join(PACKAGE_DIR, "stage3_review.txt")
-STAGE4_PATH = os.path.join(PACKAGE_DIR, "stage4_final.txt")
-
 # ==============================================
 # VALIDATION HELPERS
 # ==============================================
 
-def validate_inputs(stage):
+def validate_inputs(stage, package_dir, jd_path, stage1_path, stage2_path,
+                    stage4_path):
     """Validate required files exist before running a stage."""
     errors = []
 
     # Always required
-    if not os.path.exists(PACKAGE_DIR):
+    if not os.path.exists(package_dir):
         errors.append(
-            f"Job package folder not found: {PACKAGE_DIR}\n"
+            f"Job package folder not found: {package_dir}\n"
             f"  Create the folder and add job_description.txt before running Stage 1."
         )
         return errors  # No point checking further
 
-    if not os.path.exists(JD_PATH):
+    if not os.path.exists(jd_path):
         errors.append(
-            f"job_description.txt not found in {PACKAGE_DIR}\n"
-            f"  Paste the full job description into {JD_PATH} before running Stage 1."
+            f"job_description.txt not found in {package_dir}\n"
+            f"  Paste the full job description into {jd_path} before running Stage 1."
         )
 
     if not os.path.exists(EXPERIENCE_LIBRARY):
@@ -151,17 +124,17 @@ def validate_inputs(stage):
         )
 
     if stage >= 3:
-        if not os.path.exists(STAGE2_PATH):
+        if not os.path.exists(stage2_path):
             errors.append(
-                f"stage2_approved.txt not found in {PACKAGE_DIR}\n"
-                f"  Review {STAGE1_PATH} in VS Code, make your edits,\n"
+                f"stage2_approved.txt not found in {package_dir}\n"
+                f"  Review {stage1_path} in VS Code, make your edits,\n"
                 f"  and save as stage2_approved.txt before running Stage 3."
             )
-        elif os.path.exists(STAGE1_PATH):
+        elif os.path.exists(stage1_path):
             # Warn if stage2 appears to be unedited copy of stage1
-            with open(STAGE1_PATH) as f:
+            with open(stage1_path) as f:
                 s1_hash = hashlib.md5(f.read().encode()).hexdigest()
-            with open(STAGE2_PATH) as f:
+            with open(stage2_path) as f:
                 s2_hash = hashlib.md5(f.read().encode()).hexdigest()
             if s1_hash == s2_hash:
                 errors.append(
@@ -172,9 +145,9 @@ def validate_inputs(stage):
 
     if stage == 4:
         # Use stage4_final.txt if it exists, otherwise fall back to stage2_approved.txt
-        if not os.path.exists(STAGE4_PATH) and not os.path.exists(STAGE2_PATH):
+        if not os.path.exists(stage4_path) and not os.path.exists(stage2_path):
             errors.append(
-                f"Neither stage4_final.txt nor stage2_approved.txt found in {PACKAGE_DIR}\n"
+                f"Neither stage4_final.txt nor stage2_approved.txt found in {package_dir}\n"
                 f"  Complete Stage 2 review before running Stage 4."
             )
 
@@ -194,8 +167,8 @@ def check_overwrite(filepath, stage_name):
 # LOAD DATA
 # ==============================================
 
-def load_jd():
-    with open(JD_PATH, encoding='utf-8') as f:
+def load_jd(jd_path):
+    with open(jd_path, encoding='utf-8') as f:
         return f.read()
 
 def load_library():
@@ -220,7 +193,7 @@ def keyword_score_bullet(bullet, jd_lower):
             score += 1
     return score
 
-def stage1_select_bullets(client, jd, library):
+def stage1_select_bullets(client, jd, library, candidate_profile):
     """
     Stage 1: Keyword pre-filter + semantic selection.
     Returns structured draft content.
@@ -228,7 +201,7 @@ def stage1_select_bullets(client, jd, library):
     print("\nStage 1: Selecting bullets from experience library...")
     jd_lower = jd.lower()
 
-    # Step 1A – Keyword pre-filter per employer
+    # Step 1A - Keyword pre-filter per employer
     candidates_by_employer = {}
     for employer in library['employers']:
         name = employer['name']
@@ -237,7 +210,7 @@ def stage1_select_bullets(client, jd, library):
                          2: MAX_CANDIDATES_TIER2,
                          3: MAX_CANDIDATES_TIER3}.get(tier, 6)
 
-        # Score and sort bullets – priority bullets are always included
+        # Score and sort bullets - priority bullets are always included
         priority = []
         scored = []
         for bullet in employer['bullets']:
@@ -269,7 +242,7 @@ def stage1_select_bullets(client, jd, library):
 
     print(f"  Keyword pre-filter: {sum(len(v['bullets']) for v in candidates_by_employer.values())} candidate bullets across {len(candidates_by_employer)} employers")
 
-    # Step 1B – Semantic selection via Claude API
+    # Step 1B - Semantic selection via Claude API
     print("  Running semantic selection...")
 
     candidates_text = ""
@@ -284,13 +257,16 @@ def stage1_select_bullets(client, jd, library):
     for i, s in enumerate(library['summaries'], 1):
         summaries_text += f"[{i}] Theme: {s['theme']}\n{s['text'][:200]}...\n\n"
 
+    clean_profile = strip_pii(candidate_profile)
+    clean_jd = strip_pii(jd)
+
     prompt = f"""You are selecting resume content for a job application.
 
 CANDIDATE PROFILE:
-{CANDIDATE_PROFILE}
+{clean_profile}
 
 JOB DESCRIPTION:
-{jd[:3000]}
+{clean_jd[:3000]}
 
 CANDIDATE BULLETS BY EMPLOYER (pre-filtered by keyword relevance):
 {candidates_text}
@@ -307,12 +283,12 @@ INSTRUCTIONS:
    - DEDUPLICATION: Never select two bullets from the same employer that cover
      substantially the same topic or use similar language. If two bullets make
      the same point, select only the stronger, more specific one.
-   
+
 2. Select the best matching summary (by number), or flag if none are a strong fit.
 
 3. Return your response in EXACTLY this format:
 
-SUMMARY_SELECTION: [number or "NONE – suggest new"]
+SUMMARY_SELECTION: [number or "NONE - suggest new"]
 SUMMARY_REASON: [one sentence why]
 
 EMPLOYER: [exact employer name]
@@ -332,15 +308,15 @@ Do not include any other text. Follow the format exactly."""
 
     selection_text = response.content[0].text
 
-    # Step 1C – Generate core competencies
+    # Step 1C - Generate core competencies
     print("  Generating core competencies...")
     comp_prompt = f"""You are generating a Core Competencies section for a defense systems engineering resume.
 
 CANDIDATE PROFILE:
-{CANDIDATE_PROFILE}
+{clean_profile}
 
 JOB DESCRIPTION:
-{jd[:2000]}
+{clean_jd[:2000]}
 
 Generate 5-7 core competency bullet lines for this specific role.
 Each line should follow this format: "Category: specific skill 1, specific skill 2, specific skill 3"
@@ -351,12 +327,12 @@ Rules:
 - Always include a Clearance & Certifications line last
 - The Clearance & Certifications line must be EXACTLY:
   "Clearance & Certifications: Current TS/SCI | ICAgile Certified Professional"
-- CRITICAL: The candidate's actual degree is B.A. Geography, GIS & Remote Sensing – NOT Systems Engineering
+- CRITICAL: The candidate's actual degree is B.A. Geography, GIS & Remote Sensing - NOT Systems Engineering
   Never claim a degree the candidate does not hold
 - Never invent experience, credentials, or education not in the candidate profile
 - NEVER include these specific tools the candidate does not have:
   GitLab, Terraform, INCOSE certification, FAA/DO-178, FEA, CFD, Cucumber, TDD
-- Version control experience is GitHub only – never GitLab
+- Version control experience is GitHub only - never GitLab
 - If a JD requires a tool the candidate lacks, omit it entirely from competencies
 - En dashes only, never em dashes
 
@@ -367,9 +343,10 @@ Return ONLY the competency lines, one per line, no numbering, no extra text."""
         max_tokens=500,
         messages=[{"role": "user", "content": comp_prompt}]
     )
+
     competencies = comp_response.content[0].text.strip()
 
-    # Step 1D – Parse selections and build draft
+    # Step 1D - Parse selections and build draft
     draft = build_stage1_draft(jd, selection_text, candidates_by_employer,
                                 library['summaries'], library, competencies)
     return draft
@@ -383,9 +360,8 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
 
     # Header
     draft_lines.append("=" * 60)
-    draft_lines.append("STAGE 1 DRAFT – FOR YOUR REVIEW")
+    draft_lines.append("STAGE 1 DRAFT - FOR YOUR REVIEW")
     draft_lines.append("=" * 60)
-    draft_lines.append(f"Role: {ROLE}")
     draft_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
     draft_lines.append("")
     draft_lines.append("INSTRUCTIONS:")
@@ -435,14 +411,14 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
     draft_lines.append("")
     if summary_num and summary_num <= len(summaries):
         selected_summary = summaries[summary_num - 1]
-        draft_lines.append(f"[Source: Summary #{summary_num} – {selected_summary['theme']}]")
+        draft_lines.append(f"[Source: Summary #{summary_num} - {selected_summary['theme']}]")
         draft_lines.append(f"[Reason: {summary_reason}]")
         draft_lines.append("")
         draft_lines.append(selected_summary['text'])
     else:
         draft_lines.append("[FLAG: No strong summary match found in library.]")
         draft_lines.append("[A suggested summary will be generated in Stage 3.]")
-        draft_lines.append("[Placeholder – replace with approved summary text]")
+        draft_lines.append("[Placeholder - replace with approved summary text]")
     draft_lines.append("")
 
     # Write core competencies section
@@ -454,7 +430,7 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
             if line:
                 draft_lines.append(f"- {line}")
     else:
-        draft_lines.append("[No competencies generated – add manually]")
+        draft_lines.append("[No competencies generated - add manually]")
     draft_lines.append("")
 
     # Write employer sections in reverse chronological order
@@ -492,7 +468,7 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
         draft_lines.append("")
 
         if not selected_nums:
-            draft_lines.append("[No bullets selected – remove this section or add manually]")
+            draft_lines.append("[No bullets selected - remove this section or add manually]")
         else:
             bullets = data['bullets']
             for num in selected_nums:
@@ -514,27 +490,36 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
     return "\n".join(draft_lines)
 
 # ==============================================
-# STAGE 3 – SEMANTIC REVIEW
+# EXTRACTED STAGE FUNCTIONS (testable)
 # ==============================================
 
-def stage3_semantic_review(client, jd, approved_content):
+def run_stage1(client, jd_text, library, candidate_profile, output_path):
     """
-    Stage 3: Semantic review of approved draft.
-    Returns advisory report with suggestions.
+    Run Stage 1: bullet selection and draft generation.
+    Strips PII before API calls, writes draft to output_path.
     """
-    print("\nStage 3: Running semantic review...")
+    draft = stage1_select_bullets(client, jd_text, library, candidate_profile)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(draft)
+
+
+def run_stage3(client, stage2_text, jd_text, output_path):
+    """
+    Run Stage 3: semantic review of approved draft.
+    Strips PII from both inputs before API call.
+    Writes stage2_text + review notes to output_path.
+    """
+    clean_stage2 = strip_pii(stage2_text)
+    clean_jd = strip_pii(jd_text)
 
     prompt = f"""You are reviewing a draft resume for a specific job application.
-Your role is ADVISORY ONLY – suggest improvements, do not rewrite.
-
-CANDIDATE PROFILE AND RULES:
-{CANDIDATE_PROFILE}
+Your role is ADVISORY ONLY - suggest improvements, do not rewrite.
 
 JOB DESCRIPTION:
-{jd[:3000]}
+{clean_jd[:3000]}
 
 APPROVED RESUME DRAFT:
-{approved_content}
+{clean_stage2}
 
 Please provide your review in EXACTLY this format:
 
@@ -563,7 +548,7 @@ naturally incorporated without fabricating experience.]
 SUMMARY ASSESSMENT:
 [If the draft contains a library summary: confirm it is the best fit or suggest an alternative.
 If the draft contains a placeholder: generate a suggested summary based on the selected bullets
-and the style of existing summaries. Flag clearly as AI-GENERATED for Todd's review.]
+and the style of existing summaries. Flag clearly as AI-GENERATED for review.]
 
 OVERALL ASSESSMENT:
 [1-2 sentences on overall fit and readiness for Stage 4.]"""
@@ -579,9 +564,8 @@ OVERALL ASSESSMENT:
     # Wrap in header
     output = []
     output.append("=" * 60)
-    output.append("STAGE 3 SEMANTIC REVIEW – ADVISORY ONLY")
+    output.append("STAGE 3 SEMANTIC REVIEW - ADVISORY ONLY")
     output.append("=" * 60)
-    output.append(f"Role: {ROLE}")
     output.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
     output.append("")
     output.append("INSTRUCTIONS:")
@@ -597,30 +581,55 @@ OVERALL ASSESSMENT:
     output.append("END OF STAGE 3 REVIEW")
     output.append("=" * 60)
 
-    return "\n".join(output)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write("\n".join(output))
+
+
+def run_stage4(stage_text, output_path):
+    """
+    Run Stage 4: parse approved text and generate .docx resume.
+    Pure docx generation - no API call.
+    Falls back to basic Document() if template is not found.
+    """
+    sections = parse_final_content(stage_text)
+    build_docx(sections, output_path)
+
+# ==============================================
+# STAGE 3 – SEMANTIC REVIEW (legacy wrapper)
+# ==============================================
+
+def stage3_semantic_review(client, jd, approved_content, role=""):
+    """
+    Stage 3: Semantic review of approved draft.
+    Legacy wrapper - kept for main() compatibility.
+    """
+    print("\nStage 3: Running semantic review...")
+    import tempfile, pathlib
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False,
+                                     encoding='utf-8') as tmp:
+        tmp_path = tmp.name
+    run_stage3(client, approved_content, jd, tmp_path)
+    with open(tmp_path, encoding='utf-8') as f:
+        return f.read()
 
 # ==============================================
 # STAGE 4 – DOCUMENT GENERATION
 # ==============================================
 
-def stage4_generate_docx(final_content, role):
+def stage4_generate_docx(final_content, role, resume_output_dir):
     """
     Stage 4: Parse final approved content and generate .docx resume.
     Uses python-docx with established resume formatting.
     """
     print("\nStage 4: Generating resume document...")
 
-    os.makedirs(RESUME_OUTPUT_DIR, exist_ok=True)
-
-    # Parse the final content into sections
-    sections = parse_final_content(final_content)
+    os.makedirs(resume_output_dir, exist_ok=True)
 
     # Generate filename
     output_filename = f"{role}_Resume.docx"
-    output_path = os.path.join(RESUME_OUTPUT_DIR, output_filename)
+    output_path = os.path.join(resume_output_dir, output_filename)
 
-    # Build document
-    build_docx(sections, output_path)
+    run_stage4(final_content, output_path)
 
     return output_path
 
@@ -747,43 +756,64 @@ def build_docx(sections, output_path):
         return p
 
     def add_name_header():
-        # Name – Title style
-        p = add_paragraph('', style='Title', space_after=0)
-        run = p.add_run("R. Todd Drake")
+        # Name - Title style (use Normal as fallback if Title style absent)
+        try:
+            p = add_paragraph('', style='Title', space_after=0)
+        except Exception:
+            p = add_paragraph('', style='Normal', space_after=0)
+        p.add_run(os.getenv('CANDIDATE_NAME', '[CANDIDATE]'))
 
-        # Role title – Heading 1 style
-        p2 = add_paragraph('', style='Heading 1', space_after=0)
-        run2 = p2.add_run("Senior Systems Engineer")
+        # Role title - Heading 1 style
+        try:
+            p2 = add_paragraph('', style='Heading 1', space_after=0)
+        except Exception:
+            p2 = add_paragraph('', style='Normal', space_after=0)
+        p2.add_run("Senior Systems Engineer")
 
-        # Contact line – Normal 10pt
+        # Contact line - Normal 10pt
         p3 = add_paragraph('', style='Normal', space_after=6)
-        run3 = p3.add_run(
-            "San Diego, CA | (619) 379-5783 | r_todd_d@msn.com | "
-            "linkedin.com/in/rtodddrake | github.com/r-todd-drake"
-        )
+        location = os.getenv('CANDIDATE_LOCATION', 'San Diego, CA')
+        phone = os.getenv('CANDIDATE_PHONE', '')
+        email = os.getenv('CANDIDATE_EMAIL', '')
+        linkedin = os.getenv('CANDIDATE_LINKEDIN', '')
+        github = os.getenv('CANDIDATE_GITHUB', '')
+        contact_parts = [p for p in [location, phone, email, linkedin, github] if p]
+        run3 = p3.add_run(" | ".join(contact_parts))
         run3.font.size = Pt(10)
 
     def add_section_heading(text):
-        p = add_paragraph('', style='Heading 1', space_before=8, space_after=2)
+        try:
+            p = add_paragraph('', style='Heading 1', space_before=8, space_after=2)
+        except Exception:
+            p = add_paragraph('', style='Normal', space_before=8, space_after=2)
         p.add_run(text)
 
     def add_employer_heading(name, title, dates):
-        # Employer – Location on one line as Heading 3
-        p = add_paragraph('', style='Heading 3', space_before=6, space_after=0)
+        # Employer on one line as Heading 3
+        try:
+            p = add_paragraph('', style='Heading 3', space_before=6, space_after=0)
+        except Exception:
+            p = add_paragraph('', style='Normal', space_before=6, space_after=0)
         p.add_run(name)
 
-        # Role title (Strong) | Dates (Normal) on one line
+        # Role title (bold) | Dates on one line
         p2 = add_paragraph('', style='Normal', space_before=0, space_after=2)
         if title:
             run1 = p2.add_run(title)
             run1.bold = True
-            run1.font.color.rgb = RGBColor(0x17, 0x36, 0x5D)
+            try:
+                run1.font.color.rgb = RGBColor(0x17, 0x36, 0x5D)
+            except Exception:
+                pass
         if dates:
             run2 = p2.add_run(f"  |  {dates}")
             run2.bold = False
 
     def add_bullet(text):
-        p = add_paragraph('', style='List Bullet', space_after=2)
+        try:
+            p = add_paragraph('', style='List Bullet', space_after=2)
+        except Exception:
+            p = add_paragraph('', style='Normal', space_after=2)
         p.add_run(text)
 
     def add_normal(text, size=11):
@@ -815,12 +845,9 @@ def build_docx(sections, output_path):
             for bullet_text in emp['bullets']:
                 add_bullet(bullet_text)
 
-    # Earlier Career – if any Tier 3 employers with bullets
-    # (handled as regular employers in current implementation)
-
     # Education & Certifications
     add_section_heading("Education & Certifications")
-    add_normal("San Diego State University – B.A. Geography, GIS & Remote Sensing | Army ROTC")
+    add_normal("San Diego State University - B.A. Geography, GIS & Remote Sensing | Army ROTC")
     add_normal("ICAgile Certified Professional | Current TS/SCI")
 
     doc.save(output_path)
@@ -830,107 +857,128 @@ def build_docx(sections, output_path):
 # MAIN
 # ==============================================
 
-print("=" * 60)
-print(f"PHASE 4 – RESUME GENERATOR – STAGE {STAGE}")
-print("=" * 60)
-print(f"Role: {ROLE}")
-print(f"Package: {PACKAGE_DIR}")
+def main():
+    parser = argparse.ArgumentParser(description='Phase 4 Resume Generator')
+    parser.add_argument('--stage', type=int, required=True, choices=[1, 3, 4],
+                        help='Stage to run (1, 3, or 4)')
+    parser.add_argument('--role', type=str, required=True,
+                        help='Role package folder name (e.g. BAH_LCI_MBSE)')
+    args = parser.parse_args()
 
-# Validate inputs
-errors = validate_inputs(STAGE)
-if errors:
-    print("\nERRORS – cannot proceed:")
-    for error in errors:
-        print(f"\n  {error}")
-    exit(1)
+    role = args.role
+    stage = args.stage
+    package_dir = os.path.join(JOBS_PACKAGES_DIR, role)
+    resume_output_dir = os.path.join(RESUMES_TAILORED_DIR, role)
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    # File paths
+    jd_path = os.path.join(package_dir, "job_description.txt")
+    stage1_path = os.path.join(package_dir, "stage1_draft.txt")
+    stage2_path = os.path.join(package_dir, "stage2_approved.txt")
+    stage3_path = os.path.join(package_dir, "stage3_review.txt")
+    stage4_path = os.path.join(package_dir, "stage4_final.txt")
 
-# ── STAGE 1 ──────────────────────────────────────────────────────────────────
-if STAGE == 1:
-    if not check_overwrite(STAGE1_PATH, "Stage 1 draft"):
-        exit(0)
+    candidate_profile = strip_pii(load_candidate_profile())
+    print("  Candidate profile loaded and PII stripped.")
 
-    jd = load_jd()
-    library = load_library()
+    print("=" * 60)
+    print(f"PHASE 4 - RESUME GENERATOR - STAGE {stage}")
+    print("=" * 60)
+    print(f"Role: {role}")
+    print(f"Package: {package_dir}")
 
-    draft = stage1_select_bullets(client, jd, library)
+    # Validate inputs
+    errors = validate_inputs(stage, package_dir, jd_path, stage1_path,
+                             stage2_path, stage4_path)
+    if errors:
+        print("\nERRORS - cannot proceed:")
+        for error in errors:
+            print(f"\n  {error}")
+        exit(1)
 
-    with open(STAGE1_PATH, 'w', encoding='utf-8') as f:
-        f.write(draft)
+    client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-    print(f"\nStage 1 complete.")
-    print(f"  Draft saved: {STAGE1_PATH}")
-    print(f"\nNext steps:")
-    print(f"  1. Open {STAGE1_PATH} in VS Code")
-    print(f"  2. Review selected bullets and summary")
-    print(f"  3. Make any edits")
-    print(f"  4. Save as {STAGE2_PATH}")
-    print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 3 --role {ROLE}")
+    # -- STAGE 1 --
+    if stage == 1:
+        if not check_overwrite(stage1_path, "Stage 1 draft"):
+            exit(0)
 
-# ── STAGE 3 ──────────────────────────────────────────────────────────────────
-elif STAGE == 3:
-    if not check_overwrite(STAGE3_PATH, "Stage 3 review"):
-        exit(0)
+        jd = load_jd(jd_path)
+        library = load_library()
 
-    jd = load_jd()
-    approved = load_text(STAGE2_PATH)
+        run_stage1(client, jd, library, candidate_profile, stage1_path)
 
-    review = stage3_semantic_review(client, jd, approved)
+        print(f"\nStage 1 complete.")
+        print(f"  Draft saved: {stage1_path}")
+        print(f"\nNext steps:")
+        print(f"  1. Open {stage1_path} in VS Code")
+        print(f"  2. Review selected bullets and summary")
+        print(f"  3. Make any edits")
+        print(f"  4. Save as {stage2_path}")
+        print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 3 --role {role}")
 
-    with open(STAGE3_PATH, 'w', encoding='utf-8') as f:
-        f.write(review)
+    # -- STAGE 3 --
+    elif stage == 3:
+        if not check_overwrite(stage3_path, "Stage 3 review"):
+            exit(0)
 
-    print(f"\nStage 3 complete.")
-    print(f"  Review saved: {STAGE3_PATH}")
-    print(f"\nNext steps:")
-    print(f"  1. Open {STAGE3_PATH} in VS Code")
-    print(f"  2. Review suggestions – accept or reject each one")
-    print(f"  3. Apply accepted changes to {STAGE2_PATH}")
-    print(f"  4. Save final version as {STAGE4_PATH}")
-    print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 4 --role {ROLE}")
+        jd = load_jd(jd_path)
+        approved = load_text(stage2_path)
 
-# ── STAGE 4 ──────────────────────────────────────────────────────────────────
-elif STAGE == 4:
-    # Use stage4_final.txt if exists, otherwise stage2_approved.txt
-    input_path = STAGE4_PATH if os.path.exists(STAGE4_PATH) else STAGE2_PATH
-    print(f"  Using input: {input_path}")
+        run_stage3(client, approved, jd, stage3_path)
 
-    if not check_overwrite(
-        os.path.join(RESUME_OUTPUT_DIR, f"{ROLE}_Resume.docx"), "Resume .docx"
-    ):
-        exit(0)
+        print(f"\nStage 3 complete.")
+        print(f"  Review saved: {stage3_path}")
+        print(f"\nNext steps:")
+        print(f"  1. Open {stage3_path} in VS Code")
+        print(f"  2. Review suggestions - accept or reject each one")
+        print(f"  3. Apply accepted changes to {stage2_path}")
+        print(f"  4. Save final version as {stage4_path}")
+        print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 4 --role {role}")
 
-    final_content = load_text(input_path)
-    output_path = stage4_generate_docx(final_content, ROLE)
+    # -- STAGE 4 --
+    elif stage == 4:
+        # Use stage4_final.txt if exists, otherwise stage2_approved.txt
+        input_path = stage4_path if os.path.exists(stage4_path) else stage2_path
+        print(f"  Using input: {input_path}")
 
-    # Run check_resume.py automatically
-    print(f"\n  Running quality check...")
-    try:
-        check_path = output_path.replace(os.sep, '/')
-        result = subprocess.run(
-            ["python", CHECK_RESUME_SCRIPT, check_path],
-            capture_output=True, text=True, timeout=30
-        )
-        if result.stdout:
-            print(result.stdout)
-        if result.stderr:
-            print("  Check stderr:", result.stderr[:200])
-        if result.returncode != 0:
-            print("  WARNING: Quality check found errors – review before submitting.")
-        else:
-            print("  Quality check passed.")
-    except FileNotFoundError:
-        print(f"  WARNING: check_resume.py not found at {CHECK_RESUME_SCRIPT}")
-        print("  Run manually: python scripts/check_resume.py " + output_path)
-    except Exception as e:
-        print(f"  WARNING: Quality check failed to run: {str(e)}")
-        print("  Run manually: python scripts/check_resume.py " + output_path)
+        docx_output = os.path.join(resume_output_dir, f"{role}_Resume.docx")
+        if not check_overwrite(docx_output, "Resume .docx"):
+            exit(0)
 
-    print(f"\nStage 4 complete.")
-    print(f"  Resume: {output_path}")
-    print(f"\nNext steps:")
-    print(f"  1. Open {output_path} in Word")
-    print(f"  2. Review formatting and adjust if needed")
-    print(f"  3. Export to PDF for submission")
-    print(f"  4. Update jobs.csv and tracker with application details")
+        final_content = load_text(input_path)
+        output_path = stage4_generate_docx(final_content, role, resume_output_dir)
+
+        # Run check_resume.py automatically
+        print(f"\n  Running quality check...")
+        try:
+            check_path = output_path.replace(os.sep, '/')
+            result = subprocess.run(
+                ["python", CHECK_RESUME_SCRIPT, check_path],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print("  Check stderr:", result.stderr[:200])
+            if result.returncode != 0:
+                print("  WARNING: Quality check found errors - review before submitting.")
+            else:
+                print("  Quality check passed.")
+        except FileNotFoundError:
+            print(f"  WARNING: check_resume.py not found at {CHECK_RESUME_SCRIPT}")
+            print("  Run manually: python scripts/check_resume.py " + output_path)
+        except Exception as e:
+            print(f"  WARNING: Quality check failed to run: {str(e)}")
+            print("  Run manually: python scripts/check_resume.py " + output_path)
+
+        print(f"\nStage 4 complete.")
+        print(f"  Resume: {output_path}")
+        print(f"\nNext steps:")
+        print(f"  1. Open {output_path} in Word")
+        print(f"  2. Review formatting and adjust if needed")
+        print(f"  3. Export to PDF for submission")
+        print(f"  4. Update jobs.csv and tracker with application details")
+
+
+if __name__ == '__main__':
+    main()

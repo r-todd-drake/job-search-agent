@@ -1,5 +1,7 @@
 # AI Job Search Agent
 
+![Tests](https://github.com/r-todd-drake/job-search-agent/actions/workflows/test.yml/badge.svg)
+
 A multi-phase AI-powered job search automation system built as both a
 practical tool for managing an active job search and a portfolio project
 demonstrating real-world Python development, API integration, and AI agent design.
