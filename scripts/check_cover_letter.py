@@ -364,6 +364,7 @@ def main():
 
     RESULTS_PATH = os.path.join(PACKAGE_DIR, "cl_stage3_review.txt")
 
+    # Capture all output to file – validation errors above still go to terminal
     buffer = io.StringIO()
     old_stdout = sys.stdout
     sys.stdout = buffer
