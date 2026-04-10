@@ -686,7 +686,7 @@ def generate_prep_docx(output_path, role, resume_source, stage_profile,
                 add_bullet(stripped)
             # Story labels (Situation:, Task:, Action:, Result:)
             elif re.match(r'^(Situation|Task|Action|Result|Employer|'
-                          r'Gap|Honest answer|Bridge|Redirect|'
+                          r'Gap|Honest answer|Bridge|Redirect|Peer Frame|'
                           r'If probed|Theme \d|Follow-up):', stripped):
                 p = doc.add_paragraph()
                 p.paragraph_format.space_after = Pt(2)
@@ -714,8 +714,13 @@ def generate_prep_docx(output_path, role, resume_source, stage_profile,
 
     # Section 1
     add_heading("Company & Role Brief", level=1)
-    add_normal("(Web-informed -- verify currency before interview)")
+    add_normal(f"({stage_profile['label']} -- verify currency before interview)")
     parse_and_add_section(section1)
+
+    # Section 1.5
+    add_heading("Introduce Yourself", level=1)
+    add_normal(f"Tailored for {stage_profile['label']} register.")
+    parse_and_add_section(section_intro)
 
     # Section 2
     add_heading("Story Bank", level=1)

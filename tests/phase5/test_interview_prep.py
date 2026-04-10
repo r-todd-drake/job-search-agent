@@ -377,3 +377,25 @@ def test_short_tenure_block_in_output():
 
     # The fixture profile has ## SHORT TENURE EXPLANATION
     assert "SHORT TENURE EXPLANATION" in content
+
+
+def test_team_panel_peer_frame_bold_in_docx():
+    from scripts.phase5_interview_prep import generate_prep
+
+    # Mock response that contains a Peer Frame label
+    mock_with_peer_frame = MOCK_PREP_RESPONSE + "\nPeer Frame: I understand this gap operationally.\n"
+    client = make_mock_client(mock_with_peer_frame)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_team_panel.txt"
+        docx_path = Path(tmpdir) / "interview_prep_team_panel.docx"
+        generate_prep(client, role_data, "team_panel", str(txt_path), str(docx_path))
+        doc = Document(str(docx_path))
+
+    # Find paragraphs that start with "Peer Frame:"
+    peer_frame_paragraphs = [
+        p for p in doc.paragraphs if p.text.startswith("Peer Frame:")
+    ]
+    assert peer_frame_paragraphs, "No 'Peer Frame:' paragraph found in docx"
+    assert peer_frame_paragraphs[0].runs[0].bold, "Peer Frame: label run should be bold"
