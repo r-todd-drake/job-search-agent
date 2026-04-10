@@ -221,6 +221,17 @@ STAGE_PROFILES = {
 VALID_STAGES = list(STAGE_PROFILES.keys())
 
 # ==============================================
+# OUTPUT PATH HELPER
+# ==============================================
+
+def _output_paths(package_dir, stage):
+    """Return (txt_path, docx_path) for the given stage."""
+    return (
+        os.path.join(package_dir, f"interview_prep_{stage}.txt"),
+        os.path.join(package_dir, f"interview_prep_{stage}.docx"),
+    )
+
+# ==============================================
 # SALARY EXTRACTION
 # ==============================================
 
@@ -805,6 +816,8 @@ CLOSING NOTE:
     output_lines.append(f"Role: {role_name}")
     output_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
     output_lines.append(f"Resume source: {resume_source if resume_source else 'Not found'}")
+    output_lines.append(f"Stage: {profile['label']}")
+    output_lines.append(f"Stage note: {profile['description']}")
     output_lines.append("Note: PII stripped from all API calls.")
     output_lines.append("=" * 60)
     output_lines.append("")

@@ -213,6 +213,32 @@ def test_invalid_stage_raises_system_exit(monkeypatch):
         mod.main()
 
 
+def test_stage_specific_filenames():
+    from scripts.phase5_interview_prep import _output_paths
+    for stage in ("recruiter", "hiring_manager", "team_panel"):
+        txt, docx = _output_paths("/some/dir", stage)
+        assert txt.endswith(f"interview_prep_{stage}.txt"), \
+            f"Expected interview_prep_{stage}.txt, got {txt}"
+        assert docx.endswith(f"interview_prep_{stage}.docx"), \
+            f"Expected interview_prep_{stage}.docx, got {docx}"
+
+
+def test_stage_in_output_header():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_recruiter.txt"
+        docx_path = Path(tmpdir) / "interview_prep_recruiter.docx"
+        generate_prep(client, role_data, "recruiter", str(txt_path), str(docx_path))
+        content = txt_path.read_text(encoding="utf-8")
+
+    assert "Stage: Recruiter Screen" in content
+    assert "Short screen" in content
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""
