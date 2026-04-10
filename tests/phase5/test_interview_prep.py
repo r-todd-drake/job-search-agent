@@ -188,6 +188,14 @@ def test_stage_profile_has_required_keys():
             f"Stage '{stage}' questions_prompt missing {{profile_summary}} placeholder"
 
 
+def test_invalid_stage_raises_system_exit(monkeypatch):
+    import scripts.phase5_interview_prep as mod
+    monkeypatch.setattr("sys.argv", ["phase5_interview_prep.py", "--role", "test_role",
+                                      "--interview_stage", "badstage"])
+    with pytest.raises(SystemExit):
+        mod.main()
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""

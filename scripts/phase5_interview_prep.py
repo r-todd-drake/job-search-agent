@@ -913,15 +913,39 @@ def main():
     parser = argparse.ArgumentParser(description='Phase 5 Interview Prep Generator')
     parser.add_argument('--role', type=str, required=True,
                         help='Role package folder name (e.g. Viasat_SE_IS)')
+    parser.add_argument('--interview_stage', type=str, default=None,
+                        choices=VALID_STAGES,
+                        help=f'Interview stage: {", ".join(VALID_STAGES)}')
+    parser.add_argument('--dry_run', action='store_true',
+                        help='Print stage profile and exit without generating output')
     args = parser.parse_args()
 
     role = args.role
+    interview_stage = args.interview_stage
+
+    # Interactive fallback if stage not provided
+    if not interview_stage:
+        print("\nSelect interview stage:")
+        for i, s in enumerate(VALID_STAGES, 1):
+            p = STAGE_PROFILES[s]
+            print(f"  {i}. {s} – {p['label']}: {p['description']}")
+        choice = input("Enter stage name or number (1-3): ").strip().lower()
+        if choice in ("1", "recruiter"):
+            interview_stage = "recruiter"
+        elif choice in ("2", "hiring_manager"):
+            interview_stage = "hiring_manager"
+        elif choice in ("3", "team_panel"):
+            interview_stage = "team_panel"
+        else:
+            print(f"Invalid selection '{choice}'. Valid stages: {', '.join(VALID_STAGES)}")
+            sys.exit(1)
+
     package_dir = os.path.join(JOBS_PACKAGES_DIR, role)
     jd_path = os.path.join(package_dir, "job_description.txt")
     stage4_path = os.path.join(package_dir, "stage4_final.txt")
     stage2_path = os.path.join(package_dir, "stage2_approved.txt")
-    output_txt_path = os.path.join(package_dir, OUTPUT_FILENAME)
-    output_docx_path = os.path.join(package_dir, OUTPUT_DOCX_FILENAME)
+    output_txt_path = os.path.join(package_dir, f"interview_prep_{interview_stage}.txt")
+    output_docx_path = os.path.join(package_dir, f"interview_prep_{interview_stage}.docx")
 
     print("=" * 60)
     print("PHASE 5 \u2013 INTERVIEW PREP GENERATOR v2")
@@ -972,7 +996,7 @@ def main():
 
     # Overwrite protection
     if os.path.exists(output_txt_path):
-        print(f"\nWARNING: {OUTPUT_FILENAME} already exists.")
+        print(f"\nWARNING: interview_prep_{interview_stage}.txt already exists.")
         overwrite = input("  Overwrite? (y/n): ").strip().lower()
         if overwrite != 'y':
             print("  Cancelled. Existing file preserved.")
@@ -988,7 +1012,8 @@ def main():
         "role_name": role,
     }
 
-    generate_prep(client, role_data, output_txt_path, output_docx_path)
+    generate_prep(client, role_data, interview_stage, output_txt_path, output_docx_path,
+                  dry_run=args.dry_run)
 
     print(f"\n{'=' * 60}")
     print("PHASE 5 COMPLETE")
