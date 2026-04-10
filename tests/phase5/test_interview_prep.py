@@ -287,6 +287,21 @@ def test_section1_salary_only_for_hiring_manager():
     assert "SALARY EXPECTATIONS GUIDANCE" not in section1_rec_call
 
 
+def test_intro_monologue_in_output():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
+        content = txt_path.read_text(encoding="utf-8")
+
+    assert "INTRODUCE YOURSELF" in content or "SECTION 1.5" in content
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""

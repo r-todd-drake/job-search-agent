@@ -295,6 +295,39 @@ def _build_section1_prompt(jd, salary_data, profile):
         f"(e.g., 'COMPANY OVERVIEW:'). Include only sections relevant to this stage."
     )
 
+
+def _build_intro_prompt(intro_monologue, profile):
+    """Build the 'Introduce Yourself' tailoring prompt, parameterized by stage profile."""
+    _tailoring = {
+        "recruiter": (
+            "2-3 sentences, high-level",
+            "overall fit and interest in the role -- confirm you are not a risk",
+        ),
+        "hiring_manager": (
+            "3-4 sentences, program-context aware",
+            "program experience and collaborative working style",
+        ),
+        "team_panel": (
+            "4-5 sentences, technically grounded",
+            "specific tools, methodologies, and day-to-day peer-relevant experience",
+        ),
+    }
+    length_guidance, emphasis = _tailoring[profile["section1_focus"]]
+
+    return (
+        f"The candidate has a prepared introduction for 'Tell me about yourself.'\n\n"
+        f"BASE INTRODUCTION:\n{intro_monologue}\n\n"
+        f"Tailor this introduction for a {profile['label']} interview.\n"
+        f"- Length: {length_guidance}\n"
+        f"- Emphasis: {emphasis}\n"
+        f"- Register: appropriate for this audience ({profile['description']})\n\n"
+        f"Rules:\n"
+        f"- Keep all factual content present in the base text\n"
+        f"- Do not add experience, credentials, or claims not in the base text\n"
+        f"- Return the tailored introduction as flowing prose (1-2 short paragraphs max)\n"
+        f"- Do not add headers or labels -- return only the introduction text itself"
+    )
+
 # ==============================================
 # SALARY EXTRACTION
 # ==============================================
@@ -660,6 +693,27 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
         "Web search unavailable -- review company website before interview."
 
     # --------------------------------------------------
+    # SECTION 1.5 -- INTRODUCE YOURSELF
+    # --------------------------------------------------
+    print("Section 1.5: Introduce Yourself (tailoring for stage)...")
+
+    raw_intro = extract_profile_section(raw_profile, "INTRO MONOLOGUE")
+    if raw_intro:
+        intro_prompt = _build_intro_prompt(strip_pii(raw_intro), profile)
+        response_intro = client.messages.create(
+            model=MODEL,
+            max_tokens=500,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": intro_prompt}]
+        )
+        section_intro = response_intro.content[0].text
+    else:
+        section_intro = (
+            "No INTRO MONOLOGUE section found in candidate_profile.md. "
+            "Add one to enable stage-tailored introduction generation."
+        )
+
+    # --------------------------------------------------
     # SECTION 2 -- STORY BANK (LIBRARY-GROUNDED)
     # --------------------------------------------------
     print("Section 2: Story Bank (grounded in resume and library)...")
@@ -859,6 +913,13 @@ CLOSING NOTE:
     output_lines.append("")
 
     output_lines.append("=" * 60)
+    output_lines.append("SECTION 1.5 \u2013 INTRODUCE YOURSELF")
+    output_lines.append(f"({profile['label']} register)")
+    output_lines.append("-" * 60)
+    output_lines.append(section_intro)
+    output_lines.append("")
+
+    output_lines.append("=" * 60)
     output_lines.append("SECTION 2 \u2013 STORY BANK")
     output_lines.append("(Grounded in submitted resume with employer attribution)")
     output_lines.append("REMINDER: Workshop stories in chat before interview.")
@@ -894,7 +955,7 @@ CLOSING NOTE:
     try:
         generate_prep_docx(
             output_docx_path, role_name, resume_source, profile,
-            section1, "", section2, section3, section4,
+            section1, section_intro, section2, section3, section4,
             salary_data
         )
         print(f"  Interview prep .docx written to {output_docx_path}")
