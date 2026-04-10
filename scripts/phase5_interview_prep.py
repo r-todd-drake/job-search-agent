@@ -882,34 +882,10 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("Section 4: Questions to Ask...")
 
-    questions_prompt = f"""Generate thoughtful questions for the candidate to ask
-during a 45-minute phone interview for this role.
-
-JOB DESCRIPTION:
-{jd[:2000]}
-
-CANDIDATE BACKGROUND SUMMARY (PII removed):
-{strip_pii(candidate_profile[:800])}
-
-Generate 8 questions in three categories. Each should demonstrate genuine
-domain knowledge -- not generic interview questions.
-
-QUESTIONS ABOUT THE ROLE & TEAM:
-1. [Question] -- [Why ask this / what expertise it signals]
-2. [Question] -- [Why ask this / what expertise it signals]
-3. [Question] -- [Why ask this / what expertise it signals]
-
-QUESTIONS ABOUT THE PROGRAM & TECHNICAL ENVIRONMENT:
-4. [Question] -- [Why ask this / what expertise it signals]
-5. [Question] -- [Why ask this / what expertise it signals]
-6. [Question] -- [Why ask this / what expertise it signals]
-
-QUESTIONS ABOUT SUCCESS & GROWTH:
-7. [Question] -- [Why ask this / what expertise it signals]
-8. [Question] -- [Why ask this / what expertise it signals]
-
-CLOSING NOTE:
-[1-2 sentences on how to close the interview effectively]"""
+    questions_prompt = profile["questions_prompt"].format(
+        jd=jd[:2000],
+        profile_summary=strip_pii(candidate_profile[:800]),
+    )
 
     response4 = client.messages.create(
         model=MODEL,
