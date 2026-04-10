@@ -400,6 +400,54 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile):
         f"[5-8 questions likely to be asked, with one-line approach each]"
     )
 
+def _build_gap_prompt(jd, gaps_section, candidate_profile, profile):
+    """Build the Section 3 gap prep prompt, parameterized by stage profile."""
+    peer_frame_block = ""
+    if profile["gap_behavior"] == "full_peer":
+        peer_frame_block = f"\n\n{profile['peer_frame_prompt']}"
+
+    gap_depth_note = ""
+    if profile["gap_behavior"] == "note":
+        gap_depth_note = (
+            "\nFor hiring manager stage: for each gap, include a brief note on how "
+            "the gap might surface in a program context and how to address it proactively."
+        )
+
+    return (
+        f"You are doing a two-step gap analysis grounded strictly in the JD text and "
+        f"candidate profile. Follow these steps exactly.\n\n"
+        f"STEP 1 -- EXTRACT ALL JD REQUIREMENTS:\n"
+        f"Read the FULL job description below -- including required qualifications, preferred "
+        f"qualifications, responsibilities, and any other stated criteria. Extract two lists:\n"
+        f"  REQUIRED: skills, experience, tools, or credentials explicitly marked as required\n"
+        f"  PREFERRED: skills or experience explicitly marked as preferred, desired, or a plus\n\n"
+        f"Do not infer requirements from job type, title, seniority, or industry norms.\n"
+        f"Only use what the JD text directly states.\n\n"
+        f"FULL JOB DESCRIPTION:\n{jd}\n\n"
+        f"STEP 2 -- CROSS-REFERENCE AGAINST CANDIDATE PROFILE:\n"
+        f"Compare your extracted lists against the candidate profile below. A gap is valid if:\n"
+        f"  - HARD GAP: JD lists it as REQUIRED and it is absent from the candidate's experience\n"
+        f"  - PREFERRED GAP: JD lists it as PREFERRED and absent -- flag as lower severity\n\n"
+        f"Expect to find 3-5 gaps. If you find zero, re-examine preferred qualifications.\n\n"
+        f"CANDIDATE CONFIRMED GAPS:\n{gaps_section[:1500]}\n\n"
+        f"CANDIDATE FULL PROFILE:\n{candidate_profile[:2000]}\n"
+        f"{gap_depth_note}\n\n"
+        f"For each gap provide a direct, confident talking point -- not apologetic.\n\n"
+        f"Format exactly as:\n\n"
+        f"GAP 1 -- [Topic] [REQUIRED or PREFERRED]:\n"
+        f"Gap: [What the JD states and why it is a gap]\n"
+        f"Honest answer: [What to say -- confident, not apologetic]\n"
+        f"Bridge: [Connection to actual experience]\n"
+        f"Redirect: [Strength to pivot toward]\n\n"
+        f"GAP 2 -- [Topic] [REQUIRED or PREFERRED]:\n"
+        f"[same format]\n\n"
+        f"GAP 3 -- [Topic] [REQUIRED or PREFERRED]:\n"
+        f"[same format]\n\n"
+        f"HARD QUESTIONS TO PREPARE FOR:\n"
+        f"[5 questions that will probe these gaps, with one-sentence approach each]"
+        f"{peer_frame_block}"
+    )
+
 # ==============================================
 # SALARY EXTRACTION
 # ==============================================
@@ -805,66 +853,29 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("Section 3: Gap Preparation...")
 
-    gap_prompt = f"""You are doing a two-step gap analysis grounded strictly in the JD text and
-candidate profile. Follow these steps exactly.
+    short_tenure_raw = extract_profile_section(raw_profile, "SHORT TENURE EXPLANATION")
+    short_tenure_block = ""
+    if short_tenure_raw:
+        short_tenure_block = (
+            "SHORT TENURE EXPLANATION:\n"
+            + strip_pii(short_tenure_raw)
+            + "\n\n" + "=" * 40 + "\n\n"
+        )
 
-STEP 1 -- EXTRACT ALL JD REQUIREMENTS:
-Read the FULL job description below -- including required qualifications, preferred
-qualifications, responsibilities, and any other stated criteria. Extract two lists:
-  REQUIRED: skills, experience, tools, or credentials explicitly marked as required
-  PREFERRED: skills or experience explicitly marked as preferred, desired, or a plus
-
-Do not infer requirements from job type, title, seniority, or industry norms.
-Only use what the JD text directly states.
-
-FULL JOB DESCRIPTION:
-{jd}
-
-STEP 2 -- CROSS-REFERENCE AGAINST CANDIDATE PROFILE:
-Compare your extracted lists against the candidate profile below. A gap is valid if:
-  - HARD GAP: JD lists it as REQUIRED and it is either in the confirmed gaps section
-    OR clearly absent from the candidate's documented experience
-  - PREFERRED GAP: JD lists it as PREFERRED and it is absent from the profile --
-    flag these as "preferred but not held" (lower severity)
-
-Do NOT flag anything based on inference, assumption, or industry norms.
-Only flag what the JD text explicitly states as required or preferred.
-
-Expect to find 3-5 gaps for a typical senior engineering role. If you find zero,
-re-examine the preferred qualifications section -- gaps there count.
-
-CANDIDATE CONFIRMED GAPS:
-{gaps_section[:1500]}
-
-CANDIDATE FULL PROFILE (for cross-referencing skills not in confirmed gaps):
-{candidate_profile[:2000]}
-
-For each gap provide a direct, confident talking point -- not apologetic.
-
-Format exactly as:
-
-GAP 1 -- [Topic] [REQUIRED or PREFERRED]:
-Gap: [What the JD states (quote or close paraphrase) and why it's a gap]
-Honest answer: [What to say -- confident, not apologetic]
-Bridge: [Connection to actual experience]
-Redirect: [Strength to pivot toward]
-
-GAP 2 -- [Topic] [REQUIRED or PREFERRED]:
-[same format]
-
-GAP 3 -- [Topic] [REQUIRED or PREFERRED]:
-[same format]
-
-HARD QUESTIONS TO PREPARE FOR:
-[5 questions that will probe these gaps, with one-sentence approach each]"""
-
-    response3 = client.messages.create(
-        model=MODEL,
-        max_tokens=1200,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": gap_prompt}]
-    )
-    section3 = response3.content[0].text
+    if profile["gap_behavior"] == "omit":
+        section3 = (
+            short_tenure_block
+            + "Gap prep omitted -- do not volunteer gaps in a recruiter screen."
+        )
+    else:
+        gap_prompt = _build_gap_prompt(jd, gaps_section, candidate_profile, profile)
+        response3 = client.messages.create(
+            model=MODEL,
+            max_tokens=1200,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": gap_prompt}]
+        )
+        section3 = short_tenure_block + response3.content[0].text
 
     # --------------------------------------------------
     # SECTION 4 -- QUESTIONS TO ASK

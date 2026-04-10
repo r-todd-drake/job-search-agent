@@ -340,3 +340,40 @@ def test_generate_prep_live():
     assert len(content) > 500
     assert "STAR" in content or "Story" in content
     assert "GAP" in content or "Gap" in content
+
+
+def test_recruiter_skips_gap_api_call():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_recruiter.txt"
+        generate_prep(client, role_data, "recruiter",
+                      str(txt_path),
+                      str(Path(tmpdir) / "interview_prep_recruiter.docx"))
+        content = txt_path.read_text(encoding="utf-8")
+
+    # recruiter: S1=0, S1.5=1, S2=2, S3 SKIPPED, S4=3 -- total 4 calls
+    assert client.messages.create.call_count == 4, (
+        f"Expected 4 API calls for recruiter, got {client.messages.create.call_count}"
+    )
+    assert "do not volunteer gaps" in content.lower()
+
+
+def test_short_tenure_block_in_output():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        generate_prep(client, role_data, "hiring_manager",
+                      str(txt_path),
+                      str(Path(tmpdir) / "interview_prep_hiring_manager.docx"))
+        content = txt_path.read_text(encoding="utf-8")
+
+    # The fixture profile has ## SHORT TENURE EXPLANATION
+    assert "SHORT TENURE EXPLANATION" in content
