@@ -1,25 +1,37 @@
 # ==============================================
 # phase5_interview_prep.py
-# Generates interview preparation materials for
-# a specific job application.
+# Generates stage-aware interview preparation
+# materials for a specific job application.
 #
-# Improvements over v1:
-#   - Web search via Anthropic API for current
-#     company and role information
-#   - Resume pull from stage4_final.txt to ground
-#     stories in what was actually submitted
-#   - Experience library used for employer-attributed
-#     STAR story building
-#   - PII stripped from all API calls
+# Improvements over v2:
+#   - --interview_stage parameter drives all
+#     section content (recruiter / hiring_manager
+#     / team_panel)
+#   - "Introduce Yourself" section tailored per
+#     stage from candidate_profile.md
+#   - Short tenure explanation prepended to
+#     gap prep section at all stages
+#   - Stage-specific questions prompt per audience
+#   - --dry_run flag for profile validation
+#   - Stage-specific output filenames
 #
-# Outputs to data/job_packages/[role]/interview_prep.txt:
-#   Section 1: Company & Role Brief (web-informed)
-#   Section 2: Story Bank (library-grounded, employer-attributed)
-#   Section 3: Gap Preparation
-#   Section 4: Questions to Ask
+# Outputs to data/job_packages/[role]/:
+#   interview_prep_[stage].txt
+#   interview_prep_[stage].docx
+#
+# Sections:
+#   1:   Company & Role Brief (web-informed)
+#   1.5: Introduce Yourself (stage-tailored)
+#   2:   Story Bank (library-grounded)
+#   3:   Gap Preparation (stage-conditional)
+#   4:   Questions to Ask (stage-specific)
 #
 # Usage:
-#   python scripts/phase5_interview_prep.py --role Viasat_SE_IS
+#   python scripts/phase5_interview_prep.py \
+#     --role Viasat_SE_IS \
+#     --interview_stage hiring_manager
+#   python scripts/phase5_interview_prep.py \
+#     --role Viasat_SE_IS --dry_run
 # ==============================================
 
 import os
@@ -907,7 +919,7 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
 
     output_lines = []
     output_lines.append("=" * 60)
-    output_lines.append("INTERVIEW PREP PACKAGE v2")
+    output_lines.append("INTERVIEW PREP PACKAGE v3")
     output_lines.append("=" * 60)
     output_lines.append(f"Role: {role_name}")
     output_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
@@ -1075,7 +1087,7 @@ def main():
     output_docx_path = os.path.join(package_dir, f"interview_prep_{interview_stage}.docx")
 
     print("=" * 60)
-    print("PHASE 5 \u2013 INTERVIEW PREP GENERATOR v2")
+    print("PHASE 5 \u2013 INTERVIEW PREP GENERATOR v3")
     print("=" * 60)
     print(f"Role: {role}")
     print(f"Package: {package_dir}")
