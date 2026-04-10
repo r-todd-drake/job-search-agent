@@ -121,7 +121,7 @@ Draw questions from these categories:
 - Current program pain points -- schedule pressure, architecture debt, stakeholder friction
 - What the team currently lacks and needs most
 - What success looks like at 6 months vs. what disappointment looks like
-- The hiring manager's vision for the MBSE or architecture effort going forward
+- The hiring manager's vision for the technical or engineering effort going forward
 
 Constraints:
 - Maximum 4 questions
@@ -187,7 +187,7 @@ Peer Frame: [2-3 sentence response]"""
 STAGE_PROFILES = {
     "recruiter": {
         "label": "Recruiter Screen",
-        "description": "Short screen -- confirm fit, do not volunteer gaps or technical depth.",
+        "description": "Short screen \u2013 confirm fit, do not volunteer gaps or technical depth.",
         "story_count": "1-2",
         "story_depth": "headline",
         "gap_behavior": "omit",
@@ -197,7 +197,7 @@ STAGE_PROFILES = {
     },
     "hiring_manager": {
         "label": "Hiring Manager Interview",
-        "description": "60+ min interview -- lead with program context awareness and collaborative framing.",
+        "description": "60+ min interview \u2013 lead with program context awareness and collaborative framing.",
         "story_count": "3-4",
         "story_depth": "full",
         "gap_behavior": "note",
@@ -207,7 +207,7 @@ STAGE_PROFILES = {
     },
     "team_panel": {
         "label": "Team Panel Interview",
-        "description": "90 min to 3 hr group interview -- lead with technical specificity and process fluency.",
+        "description": "90 min to 3 hr group interview \u2013 lead with technical specificity and process fluency.",
         "story_count": "4-6",
         "story_depth": "full_technical",
         "gap_behavior": "full_peer",

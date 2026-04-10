@@ -177,6 +177,11 @@ def test_stage_profile_has_required_keys():
     assert STAGE_PROFILES["recruiter"]["gap_behavior"] == "omit"
     assert STAGE_PROFILES["hiring_manager"]["salary_in_section1"] is True
     assert STAGE_PROFILES["team_panel"]["story_depth"] == "full_technical"
+    for stage, profile in STAGE_PROFILES.items():
+        assert "{jd}" in profile["questions_prompt"], \
+            f"Stage '{stage}' questions_prompt missing {{jd}} placeholder"
+        assert "{profile_summary}" in profile["questions_prompt"], \
+            f"Stage '{stage}' questions_prompt missing {{profile_summary}} placeholder"
 
 
 @pytest.mark.live
