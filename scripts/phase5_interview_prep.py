@@ -245,6 +245,56 @@ def extract_profile_section(profile_text, header):
     end = next_header if next_header > 0 else len(profile_text)
     return profile_text[start:end].strip()
 
+
+def _build_section1_prompt(jd, salary_data, profile):
+    """Build the Section 1 company brief prompt, parameterized by stage profile."""
+    _stage_instructions = {
+        "recruiter": (
+            "Focus on:\n"
+            "- Company overview (3-4 sentences): what they do, defense/government focus, scale\n"
+            "- Culture signals: what employees say about the environment and retention\n"
+            "- Recent news: contracts, programs, or announcements relevant to this role\n"
+            "- Interview process context: who typically interviews next, what they evaluate\n"
+            "Omit salary guidance. Do not include detailed program or technical content."
+        ),
+        "hiring_manager": (
+            "Focus on:\n"
+            "- Full company overview (3-4 sentences): mission, defense/government business, scale\n"
+            "- Business unit deep-dive (2-3 sentences): specific unit, programs, stakeholders\n"
+            "- Program pain points: based on JD language, what problems is this role solving?\n"
+            "- Role in context: day-to-day responsibilities inferred from JD\n"
+            "Include salary guidance block."
+        ),
+        "team_panel": (
+            "Focus on:\n"
+            "- Company overview: CONDENSED to 2-3 sentences only -- panel members know the company\n"
+            "- Program-specific context: mission area, technical environment, active programs from JD\n"
+            "- Technical environment: tools, methodologies, and stack signals in JD language\n"
+            "Omit salary guidance. Omit general culture content."
+        ),
+    }
+
+    salary_block = ""
+    if profile["salary_in_section1"]:
+        salary_block = (
+            f"\nSALARY & LEVEL CONTEXT:\n"
+            f"JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}\n"
+            f"[1-2 sentences on what level this represents and where initial offers land.]\n\n"
+            f"SALARY EXPECTATIONS GUIDANCE:\n"
+            f"{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}\n"
+        )
+
+    return (
+        f"Research this company and role, then generate an interview prep brief "
+        f"for a {profile['label']}.\n\n"
+        f"JOB DESCRIPTION:\n{jd[:2500]}\n\n"
+        f"Use the web_search tool to find current information about this company.\n\n"
+        f"Stage-specific instructions:\n{_stage_instructions[profile['section1_focus']]}\n"
+        f"{salary_block}\n"
+        f"Format your brief with ALL-CAPS section headers followed by a colon "
+        f"(e.g., 'COMPANY OVERVIEW:'). Include only sections relevant to this stage."
+    )
+
 # ==============================================
 # SALARY EXTRACTION
 # ==============================================
@@ -591,41 +641,7 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("\nSection 1: Company & Role Brief (searching web)...")
 
-    company_prompt = f"""Research this company and role, then generate an interview prep brief.
-
-JOB DESCRIPTION:
-{jd[:2500]}
-
-Use the web_search tool to find:
-1. Current information about this company's defense/government business
-2. The specific business unit mentioned in the JD
-3. Recent news, programs, or contracts relevant to this interview
-
-Then provide your brief in this exact format:
-
-COMPANY OVERVIEW:
-[3-4 sentences -- what they do, defense/government focus, scale.
-Use current web search results where available.]
-
-BUSINESS UNIT OVERVIEW:
-[2-3 sentences on the specific business unit for this role.]
-
-ROLE IN CONTEXT:
-[2-3 sentences on what this role does day-to-day based on the JD.]
-
-SALARY & LEVEL CONTEXT:
-JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}
-[1-2 sentences on what level this represents and where initial offers typically land.]
-
-SALARY EXPECTATIONS GUIDANCE:
-{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}
-
-KEY TALKING POINTS:
-[3 bullet points -- specific, current, factual things showing you researched the company]
-
-RECENT CONTEXT:
-[1-2 sentences on current business situation or relevant programs.
-Note your source or flag if from training data rather than current search.]"""
+    company_prompt = _build_section1_prompt(jd, salary_data, profile)
 
     response1 = client.messages.create(
         model=MODEL,

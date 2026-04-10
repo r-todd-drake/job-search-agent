@@ -260,6 +260,33 @@ def test_extract_profile_section_last_section():
     assert "contract ended" in result
 
 
+def test_section1_salary_only_for_hiring_manager():
+    from scripts.phase5_interview_prep import generate_prep
+
+    # hiring_manager -- salary guidance should appear in Section 1 API call
+    client_hm = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_prep(client_hm, role_data, "hiring_manager",
+                      str(Path(tmpdir) / "interview_prep_hiring_manager.txt"),
+                      str(Path(tmpdir) / "interview_prep_hiring_manager.docx"))
+
+    hm_calls = client_hm.messages.create.call_args_list
+    section1_call = str(hm_calls[0])
+    assert "SALARY" in section1_call.upper()
+
+    # recruiter -- salary guidance should NOT be in Section 1 API call
+    client_rec = make_mock_client(MOCK_PREP_RESPONSE)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_prep(client_rec, role_data, "recruiter",
+                      str(Path(tmpdir) / "interview_prep_recruiter.txt"),
+                      str(Path(tmpdir) / "interview_prep_recruiter.docx"))
+
+    rec_calls = client_rec.messages.create.call_args_list
+    section1_rec_call = str(rec_calls[0])
+    assert "SALARY EXPECTATIONS GUIDANCE" not in section1_rec_call
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""
