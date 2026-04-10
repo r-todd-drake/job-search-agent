@@ -302,6 +302,24 @@ def test_intro_monologue_in_output():
     assert "INTRODUCE YOURSELF" in content or "SECTION 1.5" in content
 
 
+def test_section2_story_count_in_api_payload():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_prep(client, role_data, "recruiter",
+                      str(Path(tmpdir) / "interview_prep_recruiter.txt"),
+                      str(Path(tmpdir) / "interview_prep_recruiter.docx"))
+
+    # Call order for recruiter: S1=0, S1.5=1, S2=2
+    section2_call = str(client.messages.create.call_args_list[2])
+    assert "1-2" in section2_call
+    assert "headline" in section2_call.lower()
+    assert "Do NOT reference gaps" in section2_call or "Suppress gap" in section2_call or "NOT reference gaps" in section2_call
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""

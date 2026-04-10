@@ -328,6 +328,78 @@ def _build_intro_prompt(intro_monologue, profile):
         f"- Do not add headers or labels -- return only the introduction text itself"
     )
 
+def _build_section2_prompt(jd, story_context, candidate_profile, profile):
+    """Build the Section 2 story bank prompt, parameterized by stage profile."""
+    _depth_instructions = {
+        "headline": (
+            "STORY DEPTH: Headline only.\n"
+            "- Provide story headline + one-sentence result for each story\n"
+            "- Do NOT expand to full STAR format\n"
+            "- Omit 'If probed' branch"
+        ),
+        "full": (
+            "STORY DEPTH: Full STAR with probe branch.\n"
+            "- Full Situation / Task / Action / Result for each story\n"
+            "- Include one 'If probed' branch per story (one additional sentence)"
+        ),
+        "full_technical": (
+            "STORY DEPTH: Full STAR with technical specificity.\n"
+            "- Full Situation / Task / Action / Result for each story\n"
+            "- Use tool-specific language (name tools, models, frameworks used)\n"
+            "- Include peer-credible detail a working engineer would recognize\n"
+            "- Include one 'If probed' branch per story"
+        ),
+    }
+
+    _gap_instructions = {
+        "omit": "GAP FRAMING: Do NOT reference gaps or limitations in any story framing.",
+        "note": (
+            "GAP FRAMING: Where a story might brush against a known gap, "
+            "include a brief one-sentence awareness note."
+        ),
+        "full": "GAP FRAMING: Integrate full gap awareness into story framing where relevant.",
+        "full_peer": (
+            "GAP FRAMING: Integrate full gap awareness into story framing where relevant, "
+            "with peer-level directness."
+        ),
+    }
+
+    role_fit_instruction = (
+        "2 sentences only -- lead with strongest fit signal."
+        if profile["story_depth"] == "headline"
+        else "3-4 honest sentences -- genuine strengths and real gaps."
+    )
+
+    return (
+        f"Generate employer-attributed interview stories for a {profile['label']}.\n\n"
+        f"CANDIDATE PROFILE (PII removed):\n{candidate_profile[:2500]}\n\n"
+        f"RESUME SUBMITTED FOR THIS ROLE -- with employer context:\n{story_context[:3000]}\n\n"
+        f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
+        f"CRITICAL INSTRUCTIONS:\n"
+        f"- Every story MUST be grounded in the bullets shown above\n"
+        f"- Every story MUST include employer attribution "
+        f"(\"During my time at [Employer] as [Title], [dates]...\")\n"
+        f"- Do NOT invent metrics or outcomes\n\n"
+        f"{_depth_instructions[profile['story_depth']]}\n\n"
+        f"{_gap_instructions[profile['gap_behavior']]}\n\n"
+        f"Generate {profile['story_count']} stories. Use this format:\n\n"
+        f"ROLE FIT ASSESSMENT:\n[{role_fit_instruction}]\n\n"
+        f"KEY THEMES TO LEAD WITH:\n"
+        f"Theme 1 -- [Name]: [1-2 sentences]\n"
+        f"Theme 2 -- [Name]: [1-2 sentences]\n\n"
+        f"STORY BANK:\n\n"
+        f"STORY 1 -- [JD Requirement this addresses]:\n"
+        f"Employer: [Company | Title | Dates]\n"
+        f"Situation: [Context]\n"
+        f"Task: [What needed to be done]\n"
+        f"Action: [What YOU did -- first person]\n"
+        f"Result: [Outcome -- qualitative acceptable]\n"
+        f"If probed: [One additional sentence -- omit for headline depth]\n\n"
+        f"[Continue for all stories in the {profile['story_count']} range]\n\n"
+        f"LIKELY INTERVIEW QUESTIONS:\n"
+        f"[5-8 questions likely to be asked, with one-line approach each]"
+    )
+
 # ==============================================
 # SALARY EXTRACTION
 # ==============================================
@@ -718,59 +790,7 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("Section 2: Story Bank (grounded in resume and library)...")
 
-    story_prompt = f"""Generate employer-attributed STAR interview stories for this role.
-
-CANDIDATE PROFILE (PII removed):
-{candidate_profile[:2500]}
-
-RESUME SUBMITTED FOR THIS ROLE -- with employer context:
-{story_context[:3000]}
-
-JOB DESCRIPTION:
-{jd[:2000]}
-
-CRITICAL INSTRUCTIONS:
-- Every story MUST be grounded in the bullets shown above
-- Every story MUST include employer attribution
-  ("During my time at [Employer as [Title], [dates]...")
-- Do NOT invent metrics or outcomes
-- Frame results qualitatively when no specific outcome is documented
-- Stories should directly address specific JD requirements
-
-Provide in this exact format:
-
-ROLE FIT ASSESSMENT:
-[3-4 honest sentences -- strengths and genuine gaps]
-
-KEY THEMES TO LEAD WITH:
-Theme 1 -- [Name]: [1-2 sentences on strongest narrative for this role]
-Theme 2 -- [Name]: [1-2 sentences]
-Theme 3 -- [Name]: [1-2 sentences]
-
-STORY BANK:
-
-STORY 1 -- [JD Requirement this addresses]:
-Employer: [Company name | Title | Dates]
-Situation: [Context -- what program, environment, challenge]
-Task: [What specifically needed to be accomplished]
-Action: [What YOU did -- first person, specific to the bullets provided]
-Result: [Outcome -- qualitative acceptable, no fabricated numbers]
-If probed: [One sentence -- what to add if they ask for more detail]
-
-STORY 2 -- [JD Requirement]:
-[same format]
-
-STORY 3 -- [JD Requirement]:
-[same format]
-
-STORY 4 -- [JD Requirement]:
-[same format]
-
-STORY 5 -- [JD Requirement]:
-[same format]
-
-LIKELY INTERVIEW QUESTIONS:
-[8 questions likely to be asked, with a one-line approach for each]"""
+    story_prompt = _build_section2_prompt(jd, story_context, candidate_profile, profile)
 
     response2 = client.messages.create(
         model=MODEL,
