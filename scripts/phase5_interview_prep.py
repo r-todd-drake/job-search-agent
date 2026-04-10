@@ -75,6 +75,152 @@ You never:
 - Use vague or generic advice"""
 
 # ==============================================
+# STAGE PROFILE CONSTANTS
+# ==============================================
+
+_QUESTIONS_RECRUITER = """Generate 4 questions for the candidate to ask during a recruiter screen.
+
+Signal to convey: I've done my homework and I'm a serious candidate.
+
+JOB DESCRIPTION:
+{jd}
+
+CANDIDATE BACKGROUND SUMMARY (PII removed):
+{profile_summary}
+
+Draw questions from these categories:
+- Company direction, growth areas, or recent news
+- Culture, team environment, what makes people stay at this company
+- Interview process -- who is next, what they evaluate, typical timeline to decision
+- Logistics if not already confirmed (clearance requirements, onsite vs. remote, location)
+
+Constraints:
+- Maximum 4 questions
+- Each question must require insider knowledge to answer -- not answerable from the JD alone
+- Do NOT ask about architecture, technical environment, or program pain points
+- Do NOT raise salary -- let the recruiter raise it first
+
+Format each question as:
+[Number]. [Question] -- [Why ask this / what it signals to the recruiter]
+
+CLOSING NOTE:
+[1 sentence: how to close a recruiter screen effectively]"""
+
+
+_QUESTIONS_HIRING_MANAGER = """Generate 4 questions for the candidate to ask a hiring manager.
+
+Signal to convey: I understand programs and I want to know if this problem is worth solving.
+
+JOB DESCRIPTION:
+{jd}
+
+CANDIDATE BACKGROUND SUMMARY (PII removed):
+{profile_summary}
+
+Draw questions from these categories:
+- Current program pain points -- schedule pressure, architecture debt, stakeholder friction
+- What the team currently lacks and needs most
+- What success looks like at 6 months vs. what disappointment looks like
+- The hiring manager's vision for the MBSE or architecture effort going forward
+
+Constraints:
+- Maximum 4 questions
+- Each question must require insider knowledge to answer -- not answerable from the JD alone
+- Do NOT ask questions the recruiter should have answered (process, timeline, logistics)
+- Questions should signal program-level thinking, not just execution-level
+
+Format each question as:
+[Number]. [Question] -- [Why ask this / what it signals to the hiring manager]
+
+CLOSING NOTE:
+[1 sentence: how to close a hiring manager interview effectively]"""
+
+
+_QUESTIONS_TEAM_PANEL = """Generate 4 questions for the candidate to ask a working-level engineering team panel.
+
+Signal to convey: I've been in this seat before and I will be a peer, not a burden.
+
+JOB DESCRIPTION:
+{jd}
+
+CANDIDATE BACKGROUND SUMMARY (PII removed):
+{profile_summary}
+
+Draw questions from these categories:
+- Day-to-day working environment -- tools in active use, cadence, model governance practices
+- Where the hard interface or integration problems are right now
+- What processes are working well and what is still being figured out
+- How the team handles disagreements on architecture or design decisions
+
+Constraints:
+- Maximum 4 questions
+- Each question must require insider knowledge to answer -- not answerable from the JD alone
+- Do NOT ask questions that signal unfamiliarity with standard domain tools
+- Do NOT ask management-level or strategy questions -- wrong register for a peer panel
+- Tone is collegial and direct -- peer to peer, not candidate to evaluator
+
+Format each question as:
+[Number]. [Question] -- [Why ask this / what it signals to the panel]
+
+CLOSING NOTE:
+[1 sentence: how to close a team panel effectively]"""
+
+
+_PEER_FRAME_INSTRUCTIONS = """For each gap identified above, add a fifth element -- Peer Frame.
+
+The Peer Frame is a 2-3 sentence response calibrated for delivery to a working engineer, not a manager.
+It differs from the Redirect in register: where a Redirect reassures a manager that risk is manageable,
+a Peer Frame signals to a colleague that the candidate understands the operational reality of the gap.
+
+The peer frame should:
+1. Acknowledge the specific gap honestly -- no softening or hedging
+2. Demonstrate understanding of why the gap matters operationally, not just that it exists
+3. Pivot to a question or observation that signals domain fluency
+
+A peer frame that ends with a genuine question is preferred over one that ends with a reassurance.
+Length: 2-3 sentences maximum. Tone: direct and collegial.
+
+Add to each gap entry:
+Peer Frame: [2-3 sentence response]"""
+
+
+STAGE_PROFILES = {
+    "recruiter": {
+        "label": "Recruiter Screen",
+        "description": "Short screen -- confirm fit, do not volunteer gaps or technical depth.",
+        "story_count": "1-2",
+        "story_depth": "headline",
+        "gap_behavior": "omit",
+        "salary_in_section1": False,
+        "section1_focus": "recruiter",
+        "questions_prompt": _QUESTIONS_RECRUITER,
+    },
+    "hiring_manager": {
+        "label": "Hiring Manager Interview",
+        "description": "60+ min interview -- lead with program context awareness and collaborative framing.",
+        "story_count": "3-4",
+        "story_depth": "full",
+        "gap_behavior": "note",
+        "salary_in_section1": True,
+        "section1_focus": "hiring_manager",
+        "questions_prompt": _QUESTIONS_HIRING_MANAGER,
+    },
+    "team_panel": {
+        "label": "Team Panel Interview",
+        "description": "90 min to 3 hr group interview -- lead with technical specificity and process fluency.",
+        "story_count": "4-6",
+        "story_depth": "full_technical",
+        "gap_behavior": "full_peer",
+        "salary_in_section1": False,
+        "section1_focus": "team_panel",
+        "questions_prompt": _QUESTIONS_TEAM_PANEL,
+        "peer_frame_prompt": _PEER_FRAME_INSTRUCTIONS,
+    },
+}
+
+VALID_STAGES = list(STAGE_PROFILES.keys())
+
+# ==============================================
 # SALARY EXTRACTION
 # ==============================================
 

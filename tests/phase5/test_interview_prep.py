@@ -162,6 +162,23 @@ def test_no_module_level_execution_on_import():
     import scripts.phase5_interview_prep  # noqa: F401
 
 
+def test_stage_profile_has_required_keys():
+    from scripts.phase5_interview_prep import STAGE_PROFILES, VALID_STAGES
+
+    required_keys = {
+        "label", "description", "story_count", "story_depth",
+        "gap_behavior", "salary_in_section1", "section1_focus", "questions_prompt",
+    }
+    assert set(VALID_STAGES) == {"recruiter", "hiring_manager", "team_panel"}
+    for stage, profile in STAGE_PROFILES.items():
+        missing = required_keys - profile.keys()
+        assert not missing, f"Stage '{stage}' missing keys: {missing}"
+    assert "peer_frame_prompt" in STAGE_PROFILES["team_panel"]
+    assert STAGE_PROFILES["recruiter"]["gap_behavior"] == "omit"
+    assert STAGE_PROFILES["hiring_manager"]["salary_in_section1"] is True
+    assert STAGE_PROFILES["team_panel"]["story_depth"] == "full_technical"
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""
