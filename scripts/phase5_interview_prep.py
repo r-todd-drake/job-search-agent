@@ -1,25 +1,37 @@
 # ==============================================
 # phase5_interview_prep.py
-# Generates interview preparation materials for
-# a specific job application.
+# Generates stage-aware interview preparation
+# materials for a specific job application.
 #
-# Improvements over v1:
-#   - Web search via Anthropic API for current
-#     company and role information
-#   - Resume pull from stage4_final.txt to ground
-#     stories in what was actually submitted
-#   - Experience library used for employer-attributed
-#     STAR story building
-#   - PII stripped from all API calls
+# Improvements over v2:
+#   - --interview_stage parameter drives all
+#     section content (recruiter / hiring_manager
+#     / team_panel)
+#   - "Introduce Yourself" section tailored per
+#     stage from candidate_profile.md
+#   - Short tenure explanation prepended to
+#     gap prep section at all stages
+#   - Stage-specific questions prompt per audience
+#   - --dry_run flag for profile validation
+#   - Stage-specific output filenames
 #
-# Outputs to data/job_packages/[role]/interview_prep.txt:
-#   Section 1: Company & Role Brief (web-informed)
-#   Section 2: Story Bank (library-grounded, employer-attributed)
-#   Section 3: Gap Preparation
-#   Section 4: Questions to Ask
+# Outputs to data/job_packages/[role]/:
+#   interview_prep_[stage].txt
+#   interview_prep_[stage].docx
+#
+# Sections:
+#   1:   Company & Role Brief (web-informed)
+#   1.5: Introduce Yourself (stage-tailored)
+#   2:   Story Bank (library-grounded)
+#   3:   Gap Preparation (stage-conditional)
+#   4:   Questions to Ask (stage-specific)
 #
 # Usage:
-#   python scripts/phase5_interview_prep.py --role Viasat_SE_IS
+#   python scripts/phase5_interview_prep.py \
+#     --role Viasat_SE_IS \
+#     --interview_stage hiring_manager
+#   python scripts/phase5_interview_prep.py \
+#     --role Viasat_SE_IS --dry_run
 # ==============================================
 
 import os
@@ -73,6 +85,359 @@ You never:
 - Invent metrics, outcomes, or experience not in the provided background
 - Suggest the candidate overstate their role or involvement
 - Use vague or generic advice"""
+
+# ==============================================
+# STAGE PROFILE CONSTANTS
+# ==============================================
+
+_QUESTIONS_RECRUITER = """
+Generate exactly 4 questions for a candidate to ask at the end of a recruiter screen.
+The questions should signal that the candidate is serious, prepared, and professional
+without asking technical or program-specific questions the recruiter cannot answer.
+
+Question categories to cover:
+1. Company direction, growth areas, or recent news the candidate can reference naturally
+2. Culture, team environment, or what makes people stay at the company
+3. Interview process -- who is next in the process, what will they be evaluating, timeline to decision
+4. One logistics or role clarification question if anything material remains unaddressed (clearance, location, remote/onsite)
+
+Constraints:
+- Questions must be answerable by a recruiter without program or technical knowledge
+- Do not ask about architecture, tooling, program pain points, or technical environment
+- Do not ask questions already answered in the job description
+- Tone: engaged, collegial, unhurried -- not transactional
+- Format: numbered list, each question followed by one sentence explaining what it signals to the interviewer
+"""
+
+
+_QUESTIONS_HIRING_MANAGER = """
+Generate exactly 4 questions for a candidate to ask at the end of a hiring manager interview
+for a defense systems engineering role. The questions should signal program awareness,
+results orientation, and genuine interest in the manager's vision.
+
+Question categories to cover:
+1. Current program pain points -- where is the pressure coming from (schedule, architecture debt, stakeholder friction)?
+2. What the team needs that it does not currently have -- what gap does this hire fill?
+3. What success looks like at 6 months versus what disappointment looks like -- what are the real expectations?
+4. The hiring manager's vision for where the technical effort (MBSE, architecture, or the relevant discipline) goes from here
+
+Constraints:
+- Questions must require insider knowledge to answer well -- not answerable from the job description alone
+- Do not ask about company culture, interview process, or logistics -- those belong in the recruiter screen
+- Do not ask questions that make the candidate sound uncertain about fit or qualifications
+- Tone: peer-level engagement with someone senior -- collaborative, direct, curious about the problem
+- Format: numbered list, each question followed by one sentence explaining what it signals to the interviewer
+"""
+
+
+_QUESTIONS_TEAM_PANEL = """
+Generate exactly 4 questions for a candidate to ask at the end of a team panel interview
+for a defense systems engineering role. The questions should signal technical credibility,
+process fluency, and peer-level awareness of where the hard work actually lives.
+
+Question categories to cover:
+1. Day-to-day working environment -- tools cadence, model governance, or workflow specifics
+   that only someone who has done this work before would think to ask about
+2. Where the hard interface or integration problems are concentrated right now
+3. What processes are working well and what is still being figured out -- invites honest answer
+4. How the team handles disagreements on architecture or design decisions -- signals maturity
+   and interest in team dynamics at a working level
+
+Constraints:
+- Questions must require hands-on program knowledge to answer -- not answerable from the JD alone
+- Do not ask about company direction, culture, salary, or interview process
+- Do not ask questions that sound like a candidate evaluating risk -- ask like a peer evaluating the work
+- Avoid questions that could be read as critical of the program or the team
+- Tone: direct, collegial, technically confident -- peer to peer, not candidate to evaluator
+- Format: numbered list, each question followed by one sentence explaining what it signals to the interviewer
+"""
+
+
+_PEER_FRAME_INSTRUCTIONS = """
+For the gap identified above, generate a Peer Frame response suitable for delivery
+to a working-level engineer in a team panel interview.
+
+The Peer Frame must:
+1. Acknowledge the specific gap honestly -- no softening, no hedging
+2. Demonstrate that the candidate understands why this gap matters operationally,
+   not just that the gap exists -- show awareness of where the friction point actually lives
+3. Pivot to a question or observation that signals domain fluency -- the candidate
+   should sound like someone who has worked adjacent to this problem before
+
+Tone: direct and collegial -- peer to peer, not candidate to evaluator.
+Do not use polished redirect language or reassurance framing -- those belong in
+the hiring manager response, not here.
+A Peer Frame that ends with a genuine question is strongly preferred over one
+that ends with a reassurance statement.
+
+Length: 2-3 sentences maximum.
+Label the output: Peer Frame:
+"""
+
+
+STAGE_PROFILES = {
+    "recruiter": {
+        "label": "Recruiter Screen",
+        "description": "Short screen \u2013 confirm fit, do not volunteer gaps or technical depth.",
+        "story_count": "1-2",
+        "story_depth": "headline",
+        "gap_behavior": "omit",
+        "salary_in_section1": False,
+        "section1_focus": "recruiter",
+        "questions_prompt": _QUESTIONS_RECRUITER,
+    },
+    "hiring_manager": {
+        "label": "Hiring Manager Interview",
+        "description": "60+ min interview \u2013 lead with program context awareness and collaborative framing.",
+        "story_count": "3-4",
+        "story_depth": "full",
+        "gap_behavior": "note",
+        "salary_in_section1": True,
+        "section1_focus": "hiring_manager",
+        "questions_prompt": _QUESTIONS_HIRING_MANAGER,
+    },
+    "team_panel": {
+        "label": "Team Panel Interview",
+        "description": "90 min to 3 hr group interview \u2013 lead with technical specificity and process fluency.",
+        "story_count": "4-6",
+        "story_depth": "full_technical",
+        "gap_behavior": "full_peer",
+        "salary_in_section1": False,
+        "section1_focus": "team_panel",
+        "questions_prompt": _QUESTIONS_TEAM_PANEL,
+        "peer_frame_prompt": _PEER_FRAME_INSTRUCTIONS,
+    },
+}
+
+VALID_STAGES = list(STAGE_PROFILES.keys())
+
+# ==============================================
+# OUTPUT PATH HELPER
+# ==============================================
+
+def _output_paths(package_dir, stage):
+    """Return (txt_path, docx_path) for the given stage."""
+    return (
+        os.path.join(package_dir, f"interview_prep_{stage}.txt"),
+        os.path.join(package_dir, f"interview_prep_{stage}.docx"),
+    )
+
+
+def extract_profile_section(profile_text, header):
+    """
+    Extract a ## HEADER section from candidate_profile.md text.
+    Returns the section body (stripped), or empty string if header not found.
+    """
+    marker = f"## {header}"
+    if marker not in profile_text:
+        return ""
+    start = profile_text.find(marker) + len(marker)
+    next_header = profile_text.find("\n## ", start)
+    end = next_header if next_header > 0 else len(profile_text)
+    return profile_text[start:end].strip()
+
+
+def _build_section1_prompt(jd, salary_data, profile):
+    """Build the Section 1 company brief prompt, parameterized by stage profile."""
+    _stage_instructions = {
+        "recruiter": (
+            "Focus on:\n"
+            "- Company overview (3-4 sentences): what they do, defense/government focus, scale\n"
+            "- Culture signals: what employees say about the environment and retention\n"
+            "- Recent news: contracts, programs, or announcements relevant to this role\n"
+            "- Interview process context: who typically interviews next, what they evaluate\n"
+            "Omit salary guidance. Do not include detailed program or technical content."
+        ),
+        "hiring_manager": (
+            "Focus on:\n"
+            "- Full company overview (3-4 sentences): mission, defense/government business, scale\n"
+            "- Business unit deep-dive (2-3 sentences): specific unit, programs, stakeholders\n"
+            "- Program pain points: based on JD language, what problems is this role solving?\n"
+            "- Role in context: day-to-day responsibilities inferred from JD\n"
+            "Include salary guidance block."
+        ),
+        "team_panel": (
+            "Focus on:\n"
+            "- Company overview: CONDENSED to 2-3 sentences only -- panel members know the company\n"
+            "- Program-specific context: mission area, technical environment, active programs from JD\n"
+            "- Technical environment: tools, methodologies, and stack signals in JD language\n"
+            "Omit salary guidance. Omit general culture content."
+        ),
+    }
+
+    salary_block = ""
+    if profile["salary_in_section1"]:
+        salary_block = (
+            f"\nSALARY & LEVEL CONTEXT:\n"
+            f"JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}\n"
+            f"[1-2 sentences on what level this represents and where initial offers land.]\n\n"
+            f"SALARY EXPECTATIONS GUIDANCE:\n"
+            f"{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}\n"
+        )
+
+    return (
+        f"Research this company and role, then generate an interview prep brief "
+        f"for a {profile['label']}.\n\n"
+        f"JOB DESCRIPTION:\n{jd[:2500]}\n\n"
+        f"Use the web_search tool to find current information about this company.\n\n"
+        f"Stage-specific instructions:\n{_stage_instructions[profile['section1_focus']]}\n"
+        f"{salary_block}\n"
+        f"Format your brief with ALL-CAPS section headers followed by a colon "
+        f"(e.g., 'COMPANY OVERVIEW:'). Include only sections relevant to this stage."
+    )
+
+
+def _build_intro_prompt(intro_monologue, profile):
+    """Build the 'Introduce Yourself' tailoring prompt, parameterized by stage profile."""
+    _tailoring = {
+        "recruiter": (
+            "2-3 sentences, high-level",
+            "overall fit and interest in the role -- confirm you are not a risk",
+        ),
+        "hiring_manager": (
+            "3-4 sentences, program-context aware",
+            "program experience and collaborative working style",
+        ),
+        "team_panel": (
+            "4-5 sentences, technically grounded",
+            "specific tools, methodologies, and day-to-day peer-relevant experience",
+        ),
+    }
+    length_guidance, emphasis = _tailoring[profile["section1_focus"]]
+
+    return (
+        f"The candidate has a prepared introduction for 'Tell me about yourself.'\n\n"
+        f"BASE INTRODUCTION:\n{intro_monologue}\n\n"
+        f"Tailor this introduction for a {profile['label']} interview.\n"
+        f"- Length: {length_guidance}\n"
+        f"- Emphasis: {emphasis}\n"
+        f"- Register: appropriate for this audience ({profile['description']})\n\n"
+        f"Rules:\n"
+        f"- Keep all factual content present in the base text\n"
+        f"- Do not add experience, credentials, or claims not in the base text\n"
+        f"- Return the tailored introduction as flowing prose (1-2 short paragraphs max)\n"
+        f"- Do not add headers or labels -- return only the introduction text itself"
+    )
+
+def _build_section2_prompt(jd, story_context, candidate_profile, profile):
+    """Build the Section 2 story bank prompt, parameterized by stage profile."""
+    _depth_instructions = {
+        "headline": (
+            "STORY DEPTH: Headline only.\n"
+            "- Provide story headline + one-sentence result for each story\n"
+            "- Do NOT expand to full STAR format\n"
+            "- Omit 'If probed' branch"
+        ),
+        "full": (
+            "STORY DEPTH: Full STAR with probe branch.\n"
+            "- Full Situation / Task / Action / Result for each story\n"
+            "- Include one 'If probed' branch per story (one additional sentence)"
+        ),
+        "full_technical": (
+            "STORY DEPTH: Full STAR with technical specificity.\n"
+            "- Full Situation / Task / Action / Result for each story\n"
+            "- Use tool-specific language (name tools, models, frameworks used)\n"
+            "- Include peer-credible detail a working engineer would recognize\n"
+            "- Include one 'If probed' branch per story"
+        ),
+    }
+
+    _gap_instructions = {
+        "omit": "GAP FRAMING: Do NOT reference gaps or limitations in any story framing.",
+        "note": (
+            "GAP FRAMING: Where a story might brush against a known gap, "
+            "include a brief one-sentence awareness note."
+        ),
+        "full": "GAP FRAMING: Integrate full gap awareness into story framing where relevant.",
+        "full_peer": (
+            "GAP FRAMING: Integrate full gap awareness into story framing where relevant, "
+            "with peer-level directness."
+        ),
+    }
+
+    role_fit_instruction = (
+        "2 sentences only -- lead with strongest fit signal."
+        if profile["story_depth"] == "headline"
+        else "3-4 honest sentences -- genuine strengths and real gaps."
+    )
+
+    return (
+        f"Generate employer-attributed interview stories for a {profile['label']}.\n\n"
+        f"CANDIDATE PROFILE (PII removed):\n{candidate_profile[:2500]}\n\n"
+        f"RESUME SUBMITTED FOR THIS ROLE -- with employer context:\n{story_context[:3000]}\n\n"
+        f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
+        f"CRITICAL INSTRUCTIONS:\n"
+        f"- Every story MUST be grounded in the bullets shown above\n"
+        f"- Every story MUST include employer attribution "
+        f"(\"During my time at [Employer] as [Title], [dates]...\")\n"
+        f"- Do NOT invent metrics or outcomes\n\n"
+        f"{_depth_instructions[profile['story_depth']]}\n\n"
+        f"{_gap_instructions[profile['gap_behavior']]}\n\n"
+        f"Generate {profile['story_count']} stories. Use this format:\n\n"
+        f"ROLE FIT ASSESSMENT:\n[{role_fit_instruction}]\n\n"
+        f"KEY THEMES TO LEAD WITH:\n"
+        f"Theme 1 -- [Name]: [1-2 sentences]\n"
+        f"Theme 2 -- [Name]: [1-2 sentences]\n\n"
+        f"STORY BANK:\n\n"
+        f"STORY 1 -- [JD Requirement this addresses]:\n"
+        f"Employer: [Company | Title | Dates]\n"
+        f"Situation: [Context]\n"
+        f"Task: [What needed to be done]\n"
+        f"Action: [What YOU did -- first person]\n"
+        f"Result: [Outcome -- qualitative acceptable]\n"
+        f"If probed: [One additional sentence -- omit for headline depth]\n\n"
+        f"[Continue for all stories in the {profile['story_count']} range]\n\n"
+        f"LIKELY INTERVIEW QUESTIONS:\n"
+        f"[5-8 questions likely to be asked, with one-line approach each]"
+    )
+
+def _build_gap_prompt(jd, gaps_section, candidate_profile, profile):
+    """Build the Section 3 gap prep prompt, parameterized by stage profile."""
+    peer_frame_block = ""
+    if profile["gap_behavior"] == "full_peer":
+        peer_frame_block = f"\n\n{profile['peer_frame_prompt']}"
+
+    gap_depth_note = ""
+    if profile["gap_behavior"] == "note":
+        gap_depth_note = (
+            "\nFor hiring manager stage: for each gap, include a brief note on how "
+            "the gap might surface in a program context and how to address it proactively."
+        )
+
+    return (
+        f"You are doing a two-step gap analysis grounded strictly in the JD text and "
+        f"candidate profile. Follow these steps exactly.\n\n"
+        f"STEP 1 -- EXTRACT ALL JD REQUIREMENTS:\n"
+        f"Read the FULL job description below -- including required qualifications, preferred "
+        f"qualifications, responsibilities, and any other stated criteria. Extract two lists:\n"
+        f"  REQUIRED: skills, experience, tools, or credentials explicitly marked as required\n"
+        f"  PREFERRED: skills or experience explicitly marked as preferred, desired, or a plus\n\n"
+        f"Do not infer requirements from job type, title, seniority, or industry norms.\n"
+        f"Only use what the JD text directly states.\n\n"
+        f"FULL JOB DESCRIPTION:\n{jd}\n\n"
+        f"STEP 2 -- CROSS-REFERENCE AGAINST CANDIDATE PROFILE:\n"
+        f"Compare your extracted lists against the candidate profile below. A gap is valid if:\n"
+        f"  - HARD GAP: JD lists it as REQUIRED and it is absent from the candidate's experience\n"
+        f"  - PREFERRED GAP: JD lists it as PREFERRED and absent -- flag as lower severity\n\n"
+        f"Expect to find 3-5 gaps. If you find zero, re-examine preferred qualifications.\n\n"
+        f"CANDIDATE CONFIRMED GAPS:\n{gaps_section[:1500]}\n\n"
+        f"CANDIDATE FULL PROFILE:\n{candidate_profile[:2000]}\n"
+        f"{gap_depth_note}\n\n"
+        f"For each gap provide a direct, confident talking point -- not apologetic.\n\n"
+        f"Format exactly as:\n\n"
+        f"GAP 1 -- [Topic] [REQUIRED or PREFERRED]:\n"
+        f"Gap: [What the JD states and why it is a gap]\n"
+        f"Honest answer: [What to say -- confident, not apologetic]\n"
+        f"Bridge: [Connection to actual experience]\n"
+        f"Redirect: [Strength to pivot toward]\n\n"
+        f"GAP 2 -- [Topic] [REQUIRED or PREFERRED]:\n"
+        f"[same format]\n\n"
+        f"GAP 3 -- [Topic] [REQUIRED or PREFERRED]:\n"
+        f"[same format]\n\n"
+        f"HARD QUESTIONS TO PREPARE FOR:\n"
+        f"[5 questions that will probe these gaps, with one-sentence approach each]"
+        f"{peer_frame_block}"
+    )
 
 # ==============================================
 # SALARY EXTRACTION
@@ -258,8 +623,8 @@ def build_story_context(library, resume_data, jd_lower):
 # DOCX GENERATION
 # ==============================================
 
-def generate_prep_docx(output_path, role, resume_source,
-                        section1, section2, section3, section4,
+def generate_prep_docx(output_path, role, resume_source, stage_profile,
+                        section1, section_intro, section2, section3, section4,
                         salary_data):
     """
     Generate a clean formatted .docx interview prep document.
@@ -312,7 +677,7 @@ def generate_prep_docx(output_path, role, resume_source,
                 add_bullet(stripped)
             # Story labels (Situation:, Task:, Action:, Result:)
             elif re.match(r'^(Situation|Task|Action|Result|Employer|'
-                          r'Gap|Honest answer|Bridge|Redirect|'
+                          r'Gap|Honest answer|Bridge|Redirect|Peer Frame|'
                           r'If probed|Theme \d|Follow-up):', stripped):
                 p = doc.add_paragraph()
                 p.paragraph_format.space_after = Pt(2)
@@ -331,6 +696,8 @@ def generate_prep_docx(output_path, role, resume_source,
 
     # Metadata
     add_normal(f"Role: {role}")
+    add_normal(f"Stage: {stage_profile['label']}")
+    add_normal(f"Stage note: {stage_profile['description']}")
     add_normal(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
     if resume_source:
         add_normal(f"Resume source: {resume_source}")
@@ -338,8 +705,13 @@ def generate_prep_docx(output_path, role, resume_source,
 
     # Section 1
     add_heading("Company & Role Brief", level=1)
-    add_normal("(Web-informed -- verify currency before interview)")
+    add_normal(f"({stage_profile['label']} -- verify currency before interview)")
     parse_and_add_section(section1)
+
+    # Section 1.5
+    add_heading("Introduce Yourself", level=1)
+    add_normal(f"Tailored for {stage_profile['label']} register.")
+    parse_and_add_section(section_intro)
 
     # Section 2
     add_heading("Story Bank", level=1)
@@ -365,13 +737,29 @@ def generate_prep_docx(output_path, role, resume_source,
 # CORE GENERATION FUNCTION
 # ==============================================
 
-def generate_prep(client, role_data, output_txt_path, output_docx_path):
+def generate_prep(client, role_data, interview_stage, output_txt_path, output_docx_path,
+                  dry_run=False):
     """
     Generate interview prep package from role data.
     role_data keys: jd_text, stage_text, library, candidate_profile, role_name.
+    interview_stage: one of VALID_STAGES ('recruiter', 'hiring_manager', 'team_panel').
+    dry_run: if True, print stage profile and return without API calls or file writes.
     Writes both .txt and .docx output files.
     All PII stripped from API payloads.
     """
+    profile = STAGE_PROFILES[interview_stage]
+
+    if dry_run:
+        print("\nDRY RUN -- Stage profile that will be applied:")
+        print(f"  Stage:       {profile['label']}")
+        print(f"  Description: {profile['description']}")
+        print(f"  Story count: {profile['story_count']}")
+        print(f"  Story depth: {profile['story_depth']}")
+        print(f"  Gap behavior:{profile['gap_behavior']}")
+        print(f"  Salary in S1:{profile['salary_in_section1']}")
+        print("\nNo API calls made. No files written.")
+        return
+
     jd = role_data["jd_text"]
     raw_stage = role_data.get("stage_text", "")
     library = role_data["library"]
@@ -402,41 +790,7 @@ def generate_prep(client, role_data, output_txt_path, output_docx_path):
     # --------------------------------------------------
     print("\nSection 1: Company & Role Brief (searching web)...")
 
-    company_prompt = f"""Research this company and role, then generate an interview prep brief.
-
-JOB DESCRIPTION:
-{jd[:2500]}
-
-Use the web_search tool to find:
-1. Current information about this company's defense/government business
-2. The specific business unit mentioned in the JD
-3. Recent news, programs, or contracts relevant to this interview
-
-Then provide your brief in this exact format:
-
-COMPANY OVERVIEW:
-[3-4 sentences -- what they do, defense/government focus, scale.
-Use current web search results where available.]
-
-BUSINESS UNIT OVERVIEW:
-[2-3 sentences on the specific business unit for this role.]
-
-ROLE IN CONTEXT:
-[2-3 sentences on what this role does day-to-day based on the JD.]
-
-SALARY & LEVEL CONTEXT:
-JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}
-[1-2 sentences on what level this represents and where initial offers typically land.]
-
-SALARY EXPECTATIONS GUIDANCE:
-{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}
-
-KEY TALKING POINTS:
-[3 bullet points -- specific, current, factual things showing you researched the company]
-
-RECENT CONTEXT:
-[1-2 sentences on current business situation or relevant programs.
-Note your source or flag if from training data rather than current search.]"""
+    company_prompt = _build_section1_prompt(jd, salary_data, profile)
 
     response1 = client.messages.create(
         model=MODEL,
@@ -455,63 +809,32 @@ Note your source or flag if from training data rather than current search.]"""
         "Web search unavailable -- review company website before interview."
 
     # --------------------------------------------------
+    # SECTION 1.5 -- INTRODUCE YOURSELF
+    # --------------------------------------------------
+    print("Section 1.5: Introduce Yourself (tailoring for stage)...")
+
+    raw_intro = extract_profile_section(raw_profile, "INTRO MONOLOGUE")
+    if raw_intro:
+        intro_prompt = _build_intro_prompt(strip_pii(raw_intro), profile)
+        response_intro = client.messages.create(
+            model=MODEL,
+            max_tokens=500,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": intro_prompt}]
+        )
+        section_intro = response_intro.content[0].text
+    else:
+        section_intro = (
+            "No INTRO MONOLOGUE section found in candidate_profile.md. "
+            "Add one to enable stage-tailored introduction generation."
+        )
+
+    # --------------------------------------------------
     # SECTION 2 -- STORY BANK (LIBRARY-GROUNDED)
     # --------------------------------------------------
     print("Section 2: Story Bank (grounded in resume and library)...")
 
-    story_prompt = f"""Generate employer-attributed STAR interview stories for this role.
-
-CANDIDATE PROFILE (PII removed):
-{candidate_profile[:2500]}
-
-RESUME SUBMITTED FOR THIS ROLE -- with employer context:
-{story_context[:3000]}
-
-JOB DESCRIPTION:
-{jd[:2000]}
-
-CRITICAL INSTRUCTIONS:
-- Every story MUST be grounded in the bullets shown above
-- Every story MUST include employer attribution
-  ("During my time at [Employer as [Title], [dates]...")
-- Do NOT invent metrics or outcomes
-- Frame results qualitatively when no specific outcome is documented
-- Stories should directly address specific JD requirements
-
-Provide in this exact format:
-
-ROLE FIT ASSESSMENT:
-[3-4 honest sentences -- strengths and genuine gaps]
-
-KEY THEMES TO LEAD WITH:
-Theme 1 -- [Name]: [1-2 sentences on strongest narrative for this role]
-Theme 2 -- [Name]: [1-2 sentences]
-Theme 3 -- [Name]: [1-2 sentences]
-
-STORY BANK:
-
-STORY 1 -- [JD Requirement this addresses]:
-Employer: [Company name | Title | Dates]
-Situation: [Context -- what program, environment, challenge]
-Task: [What specifically needed to be accomplished]
-Action: [What YOU did -- first person, specific to the bullets provided]
-Result: [Outcome -- qualitative acceptable, no fabricated numbers]
-If probed: [One sentence -- what to add if they ask for more detail]
-
-STORY 2 -- [JD Requirement]:
-[same format]
-
-STORY 3 -- [JD Requirement]:
-[same format]
-
-STORY 4 -- [JD Requirement]:
-[same format]
-
-STORY 5 -- [JD Requirement]:
-[same format]
-
-LIKELY INTERVIEW QUESTIONS:
-[8 questions likely to be asked, with a one-line approach for each]"""
+    story_prompt = _build_section2_prompt(jd, story_context, candidate_profile, profile)
 
     response2 = client.messages.create(
         model=MODEL,
@@ -526,100 +849,40 @@ LIKELY INTERVIEW QUESTIONS:
     # --------------------------------------------------
     print("Section 3: Gap Preparation...")
 
-    gap_prompt = f"""You are doing a two-step gap analysis grounded strictly in the JD text and
-candidate profile. Follow these steps exactly.
+    short_tenure_raw = extract_profile_section(raw_profile, "SHORT TENURE EXPLANATION")
+    short_tenure_block = ""
+    if short_tenure_raw:
+        short_tenure_block = (
+            "SHORT TENURE EXPLANATION:\n"
+            + strip_pii(short_tenure_raw)
+            + "\n\n" + "=" * 40 + "\n\n"
+        )
 
-STEP 1 -- EXTRACT ALL JD REQUIREMENTS:
-Read the FULL job description below -- including required qualifications, preferred
-qualifications, responsibilities, and any other stated criteria. Extract two lists:
-  REQUIRED: skills, experience, tools, or credentials explicitly marked as required
-  PREFERRED: skills or experience explicitly marked as preferred, desired, or a plus
-
-Do not infer requirements from job type, title, seniority, or industry norms.
-Only use what the JD text directly states.
-
-FULL JOB DESCRIPTION:
-{jd}
-
-STEP 2 -- CROSS-REFERENCE AGAINST CANDIDATE PROFILE:
-Compare your extracted lists against the candidate profile below. A gap is valid if:
-  - HARD GAP: JD lists it as REQUIRED and it is either in the confirmed gaps section
-    OR clearly absent from the candidate's documented experience
-  - PREFERRED GAP: JD lists it as PREFERRED and it is absent from the profile --
-    flag these as "preferred but not held" (lower severity)
-
-Do NOT flag anything based on inference, assumption, or industry norms.
-Only flag what the JD text explicitly states as required or preferred.
-
-Expect to find 3-5 gaps for a typical senior engineering role. If you find zero,
-re-examine the preferred qualifications section -- gaps there count.
-
-CANDIDATE CONFIRMED GAPS:
-{gaps_section[:1500]}
-
-CANDIDATE FULL PROFILE (for cross-referencing skills not in confirmed gaps):
-{candidate_profile[:2000]}
-
-For each gap provide a direct, confident talking point -- not apologetic.
-
-Format exactly as:
-
-GAP 1 -- [Topic] [REQUIRED or PREFERRED]:
-Gap: [What the JD states (quote or close paraphrase) and why it's a gap]
-Honest answer: [What to say -- confident, not apologetic]
-Bridge: [Connection to actual experience]
-Redirect: [Strength to pivot toward]
-
-GAP 2 -- [Topic] [REQUIRED or PREFERRED]:
-[same format]
-
-GAP 3 -- [Topic] [REQUIRED or PREFERRED]:
-[same format]
-
-HARD QUESTIONS TO PREPARE FOR:
-[5 questions that will probe these gaps, with one-sentence approach each]"""
-
-    response3 = client.messages.create(
-        model=MODEL,
-        max_tokens=1200,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": gap_prompt}]
-    )
-    section3 = response3.content[0].text
+    if profile["gap_behavior"] == "omit":
+        section3 = (
+            short_tenure_block
+            + "Gap prep omitted -- do not volunteer gaps in a recruiter screen."
+        )
+    else:
+        gap_prompt = _build_gap_prompt(jd, gaps_section, candidate_profile, profile)
+        response3 = client.messages.create(
+            model=MODEL,
+            max_tokens=1200,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": gap_prompt}]
+        )
+        section3 = short_tenure_block + response3.content[0].text
 
     # --------------------------------------------------
     # SECTION 4 -- QUESTIONS TO ASK
     # --------------------------------------------------
     print("Section 4: Questions to Ask...")
 
-    questions_prompt = f"""Generate thoughtful questions for the candidate to ask
-during a 45-minute phone interview for this role.
-
-JOB DESCRIPTION:
-{jd[:2000]}
-
-CANDIDATE BACKGROUND SUMMARY (PII removed):
-{strip_pii(candidate_profile[:800])}
-
-Generate 8 questions in three categories. Each should demonstrate genuine
-domain knowledge -- not generic interview questions.
-
-QUESTIONS ABOUT THE ROLE & TEAM:
-1. [Question] -- [Why ask this / what expertise it signals]
-2. [Question] -- [Why ask this / what expertise it signals]
-3. [Question] -- [Why ask this / what expertise it signals]
-
-QUESTIONS ABOUT THE PROGRAM & TECHNICAL ENVIRONMENT:
-4. [Question] -- [Why ask this / what expertise it signals]
-5. [Question] -- [Why ask this / what expertise it signals]
-6. [Question] -- [Why ask this / what expertise it signals]
-
-QUESTIONS ABOUT SUCCESS & GROWTH:
-7. [Question] -- [Why ask this / what expertise it signals]
-8. [Question] -- [Why ask this / what expertise it signals]
-
-CLOSING NOTE:
-[1-2 sentences on how to close the interview effectively]"""
+    context_block = (
+        f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
+        f"CANDIDATE BACKGROUND (PII removed):\n{strip_pii(candidate_profile[:800])}\n\n"
+    )
+    questions_prompt = context_block + profile["questions_prompt"]
 
     response4 = client.messages.create(
         model=MODEL,
@@ -636,11 +899,13 @@ CLOSING NOTE:
 
     output_lines = []
     output_lines.append("=" * 60)
-    output_lines.append("INTERVIEW PREP PACKAGE v2")
+    output_lines.append("INTERVIEW PREP PACKAGE v3")
     output_lines.append("=" * 60)
     output_lines.append(f"Role: {role_name}")
     output_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
     output_lines.append(f"Resume source: {resume_source if resume_source else 'Not found'}")
+    output_lines.append(f"Stage: {profile['label']}")
+    output_lines.append(f"Stage note: {profile['description']}")
     output_lines.append("Note: PII stripped from all API calls.")
     output_lines.append("=" * 60)
     output_lines.append("")
@@ -649,6 +914,13 @@ CLOSING NOTE:
     output_lines.append("(Web-informed -- verify currency before interview)")
     output_lines.append("-" * 60)
     output_lines.append(section1)
+    output_lines.append("")
+
+    output_lines.append("=" * 60)
+    output_lines.append("SECTION 1.5 \u2013 INTRODUCE YOURSELF")
+    output_lines.append(f"({profile['label']} register)")
+    output_lines.append("-" * 60)
+    output_lines.append(section_intro)
     output_lines.append("")
 
     output_lines.append("=" * 60)
@@ -686,8 +958,8 @@ CLOSING NOTE:
     # Generate docx
     try:
         generate_prep_docx(
-            output_docx_path, role_name, resume_source,
-            section1, section2, section3, section4,
+            output_docx_path, role_name, resume_source, profile,
+            section1, section_intro, section2, section3, section4,
             salary_data
         )
         print(f"  Interview prep .docx written to {output_docx_path}")
@@ -760,18 +1032,42 @@ def main():
     parser = argparse.ArgumentParser(description='Phase 5 Interview Prep Generator')
     parser.add_argument('--role', type=str, required=True,
                         help='Role package folder name (e.g. Viasat_SE_IS)')
+    parser.add_argument('--interview_stage', type=str, default=None,
+                        choices=VALID_STAGES,
+                        help=f'Interview stage: {", ".join(VALID_STAGES)}')
+    parser.add_argument('--dry_run', action='store_true',
+                        help='Print stage profile and exit without generating output')
     args = parser.parse_args()
 
     role = args.role
+    interview_stage = args.interview_stage
+
+    # Interactive fallback if stage not provided
+    if not interview_stage:
+        print("\nSelect interview stage:")
+        for i, s in enumerate(VALID_STAGES, 1):
+            p = STAGE_PROFILES[s]
+            print(f"  {i}. {s} – {p['label']}: {p['description']}")
+        choice = input("Enter stage name or number (1-3): ").strip().lower()
+        if choice in ("1", "recruiter"):
+            interview_stage = "recruiter"
+        elif choice in ("2", "hiring_manager"):
+            interview_stage = "hiring_manager"
+        elif choice in ("3", "team_panel"):
+            interview_stage = "team_panel"
+        else:
+            print(f"Invalid selection '{choice}'. Valid stages: {', '.join(VALID_STAGES)}")
+            sys.exit(1)
+
     package_dir = os.path.join(JOBS_PACKAGES_DIR, role)
     jd_path = os.path.join(package_dir, "job_description.txt")
     stage4_path = os.path.join(package_dir, "stage4_final.txt")
     stage2_path = os.path.join(package_dir, "stage2_approved.txt")
-    output_txt_path = os.path.join(package_dir, OUTPUT_FILENAME)
-    output_docx_path = os.path.join(package_dir, OUTPUT_DOCX_FILENAME)
+    output_txt_path = os.path.join(package_dir, f"interview_prep_{interview_stage}.txt")
+    output_docx_path = os.path.join(package_dir, f"interview_prep_{interview_stage}.docx")
 
     print("=" * 60)
-    print("PHASE 5 \u2013 INTERVIEW PREP GENERATOR v2")
+    print("PHASE 5 \u2013 INTERVIEW PREP GENERATOR v3")
     print("=" * 60)
     print(f"Role: {role}")
     print(f"Package: {package_dir}")
@@ -819,7 +1115,7 @@ def main():
 
     # Overwrite protection
     if os.path.exists(output_txt_path):
-        print(f"\nWARNING: {OUTPUT_FILENAME} already exists.")
+        print(f"\nWARNING: interview_prep_{interview_stage}.txt already exists.")
         overwrite = input("  Overwrite? (y/n): ").strip().lower()
         if overwrite != 'y':
             print("  Cancelled. Existing file preserved.")
@@ -835,7 +1131,8 @@ def main():
         "role_name": role,
     }
 
-    generate_prep(client, role_data, output_txt_path, output_docx_path)
+    generate_prep(client, role_data, interview_stage, output_txt_path, output_docx_path,
+                  dry_run=args.dry_run)
 
     print(f"\n{'=' * 60}")
     print("PHASE 5 COMPLETE")
