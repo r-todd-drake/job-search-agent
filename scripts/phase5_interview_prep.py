@@ -404,8 +404,8 @@ def build_story_context(library, resume_data, jd_lower):
 # DOCX GENERATION
 # ==============================================
 
-def generate_prep_docx(output_path, role, resume_source,
-                        section1, section2, section3, section4,
+def generate_prep_docx(output_path, role, resume_source, stage_profile,
+                        section1, section_intro, section2, section3, section4,
                         salary_data):
     """
     Generate a clean formatted .docx interview prep document.
@@ -477,6 +477,8 @@ def generate_prep_docx(output_path, role, resume_source,
 
     # Metadata
     add_normal(f"Role: {role}")
+    add_normal(f"Stage: {stage_profile['label']}")
+    add_normal(f"Stage note: {stage_profile['description']}")
     add_normal(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
     if resume_source:
         add_normal(f"Resume source: {resume_source}")
@@ -511,13 +513,18 @@ def generate_prep_docx(output_path, role, resume_source,
 # CORE GENERATION FUNCTION
 # ==============================================
 
-def generate_prep(client, role_data, output_txt_path, output_docx_path):
+def generate_prep(client, role_data, interview_stage, output_txt_path, output_docx_path,
+                  dry_run=False):
     """
     Generate interview prep package from role data.
     role_data keys: jd_text, stage_text, library, candidate_profile, role_name.
+    interview_stage: one of VALID_STAGES ('recruiter', 'hiring_manager', 'team_panel').
+    dry_run: if True, print stage profile and return without API calls or file writes.
     Writes both .txt and .docx output files.
     All PII stripped from API payloads.
     """
+    profile = STAGE_PROFILES[interview_stage]
+
     jd = role_data["jd_text"]
     raw_stage = role_data.get("stage_text", "")
     library = role_data["library"]
@@ -832,8 +839,8 @@ CLOSING NOTE:
     # Generate docx
     try:
         generate_prep_docx(
-            output_docx_path, role_name, resume_source,
-            section1, section2, section3, section4,
+            output_docx_path, role_name, resume_source, profile,
+            section1, "", section2, section3, section4,
             salary_data
         )
         print(f"  Interview prep .docx written to {output_docx_path}")

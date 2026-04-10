@@ -17,6 +17,10 @@ Acme Defense Systems is a defense contractor focused on autonomous maritime syst
 Role: Senior Systems Engineer supporting MBSE and DoDAF development.
 Salary guidance: $150,000 - $180,000.
 
+## SECTION 1.5: INTRODUCE YOURSELF
+I am a senior systems engineer with 20 years of defense SE experience.
+I specialize in MBSE and DoDAF architectural development.
+
 ## SECTION 2: STORY BANK
 STAR Story 1 - MBSE Leadership
 Situation: Led MBSE development for autonomous surface vessel program.
@@ -41,8 +45,8 @@ REQUIRED: All required qualifications met.
 PREFERRED: JADC2 experience limited -- acknowledge and reframe.
 
 ## SECTION 4: QUESTIONS TO ASK
-- What is the acquisition phase for this program?
-- How is MBSE integrated into the program baseline?
+1. What is the acquisition phase for this program?
+2. How is MBSE integrated into the program baseline?
 """
 
 
@@ -71,9 +75,9 @@ def test_generate_prep_creates_both_output_files():
     role_data = make_role_data()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        txt_path = Path(tmpdir) / "interview_prep.txt"
-        docx_path = Path(tmpdir) / "interview_prep.docx"
-        generate_prep(client, role_data, str(txt_path), str(docx_path))
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
         assert txt_path.exists()
         assert docx_path.exists()
 
@@ -85,9 +89,9 @@ def test_generate_prep_txt_has_required_sections():
     role_data = make_role_data()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        txt_path = Path(tmpdir) / "interview_prep.txt"
-        docx_path = Path(tmpdir) / "interview_prep.docx"
-        generate_prep(client, role_data, str(txt_path), str(docx_path))
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
         content = txt_path.read_text(encoding="utf-8")
 
     assert "COMPANY" in content or "BRIEF" in content
@@ -103,9 +107,9 @@ def test_generate_prep_star_stories_reference_resume_content():
     role_data = make_role_data()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        txt_path = Path(tmpdir) / "interview_prep.txt"
-        docx_path = Path(tmpdir) / "interview_prep.docx"
-        generate_prep(client, role_data, str(txt_path), str(docx_path))
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
         content = txt_path.read_text(encoding="utf-8")
 
     assert "Cameo Systems Modeler" in content or "MBSE" in content
@@ -134,9 +138,9 @@ def test_generate_prep_no_pii_in_api_payload(pii_values, monkeypatch):
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        txt_path = Path(tmpdir) / "interview_prep.txt"
-        docx_path = Path(tmpdir) / "interview_prep.docx"
-        generate_prep(client, role_data, str(txt_path), str(docx_path))
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
 
     call_args = client.messages.create.call_args
     full_payload = str(call_args)
@@ -151,9 +155,9 @@ def test_generate_prep_docx_readable():
     role_data = make_role_data()
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        txt_path = Path(tmpdir) / "interview_prep.txt"
-        docx_path = Path(tmpdir) / "interview_prep.docx"
-        generate_prep(client, role_data, str(txt_path), str(docx_path))
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
         doc = Document(str(docx_path))
         assert len(doc.paragraphs) > 0
 
@@ -196,9 +200,9 @@ def test_generate_prep_live():
     role_data["role_name"] = "acme_sse_test"
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        txt_path = Path(tmpdir) / "interview_prep.txt"
-        docx_path = Path(tmpdir) / "interview_prep.docx"
-        generate_prep(client, role_data, str(txt_path), str(docx_path))
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager", str(txt_path), str(docx_path))
         content = txt_path.read_text(encoding="utf-8")
 
     assert len(content) > 500
