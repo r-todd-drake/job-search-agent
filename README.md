@@ -28,7 +28,7 @@ for every role in the pipeline.
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
-| 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
+| 5 | Interview preparation — stage-aware prep packages (recruiter / hiring manager / team panel) | 🔧 Prototype |
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
@@ -68,7 +68,8 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
    → Run check_cover_letter.py --role [role] after editing Stage 2
    → Stage through to docx via --stage 4
 6. Run phase5_interview_prep.py when interview is scheduled
-   → Generates .txt and .docx prep package
+   → Specify --interview_stage (recruiter, hiring_manager, team_panel)
+   → Generates stage-specific .txt and .docx prep package
    → Workshop stories in Claude web chat before interview
 7. Submit, update status to APPLIED, move to tracker
 ```
@@ -135,22 +136,35 @@ Stage 4 (automated)  →  [Role]_CoverLetter.docx
 
 ## Phase 5 — Interview Prep
 
-Single command generates a complete prep package:
+Single command generates a stage-appropriate prep package:
 
 ```bash
-python scripts/phase5_interview_prep.py --role [role_folder]
+python scripts/phase5_interview_prep.py --role [role_folder] --interview_stage [stage]
 ```
 
-Outputs to `data/job_packages/[role]/`:
-- `interview_prep.txt` — for VS Code review and story workshopping
-- `interview_prep.docx` — formatted Word document for reading and printing
+Valid stages: `recruiter`, `hiring_manager`, `team_panel`
 
-Package contains:
-- Company & role brief with current web-searched information
-- Salary expectations guidance with anchor and floor
-- Employer-attributed STAR stories grounded in submitted resume bullets
-- Two-tier gap preparation: REQUIRED vs PREFERRED, sourced from full JD text
-- Thoughtful questions to ask organized by category
+If `--interview_stage` is omitted the script prompts interactively. Use `--dry_run` to
+validate stage config without making API calls.
+
+Outputs to `data/job_packages/[role]/`:
+- `interview_prep_[stage].txt` — for VS Code review and story workshopping
+- `interview_prep_[stage].docx` — formatted Word document for reading and printing
+
+Running multiple stages for the same role produces separate files without collision.
+
+**Package sections by stage:**
+
+| Section | Recruiter | Hiring Manager | Team Panel |
+|---------|-----------|----------------|------------|
+| 1 — Company & Role Brief | Culture, process, recent news | Full brief + salary guidance | Condensed + technical environment |
+| 1.5 — Introduce Yourself | Concise fit signal (2–3 sentences) | Program-context aware (3–4 sentences) | Technically grounded, peer register |
+| 2 — Story Bank | 1–2 stories, headline only | 3–4 stories, full STAR + probe branch | 4–6 stories, full STAR + technical specificity |
+| 3 — Gap Preparation | Omitted (short tenure block only) | Full four-element format | Full five-element format + Peer Frame |
+| 4 — Questions to Ask | Process, culture, logistics | Program pain points, success criteria | Day-to-day tools, integration problems |
+
+Stage label and description are written to the output file header so the register is
+immediately clear when opening the package.
 
 ---
 
@@ -260,7 +274,7 @@ python scripts/check_resume.py --role [role]
 python scripts/phase4_cover_letter.py --stage 1 --role [role]
 python -m scripts.check_cover_letter --role [role]
 python scripts/phase4_cover_letter.py --stage 4 --role [role]
-python scripts/phase5_interview_prep.py --role [role]
+python scripts/phase5_interview_prep.py --role [role] --interview_stage [recruiter|hiring_manager|team_panel]
 ```
 
 ---
@@ -292,7 +306,7 @@ Job_search_agent/
 │   ├── phase3_compile_library.py
 │   ├── phase4_resume_generator.py        # Four-stage resume generation
 │   ├── phase4_cover_letter.py            # Staged cover letter generator
-│   ├── phase5_interview_prep.py          # Web search + resume-grounded stories
+│   ├── phase5_interview_prep.py          # Stage-aware interview prep (recruiter/HM/team panel)
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
@@ -320,8 +334,10 @@ Job_search_agent/
 
 | Item | Description |
 |------|-------------|
+| Phase 5 validation | Confirm stage-aware output quality against a live interview prep run |
 | Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
+| Pipeline report | Pull interview stage from job_pipeline.xlsx into pipeline_report.py output |
 | Library workflow | Structured process for adding resume-tailoring bullets back into experience library |
 | candidate_profile.md | Rebuild from current library — update lapsed certifications and confirmed skills |
 
