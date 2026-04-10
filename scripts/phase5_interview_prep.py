@@ -525,6 +525,17 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     """
     profile = STAGE_PROFILES[interview_stage]
 
+    if dry_run:
+        print("\nDRY RUN -- Stage profile that will be applied:")
+        print(f"  Stage:       {profile['label']}")
+        print(f"  Description: {profile['description']}")
+        print(f"  Story count: {profile['story_count']}")
+        print(f"  Story depth: {profile['story_depth']}")
+        print(f"  Gap behavior:{profile['gap_behavior']}")
+        print(f"  Salary in S1:{profile['salary_in_section1']}")
+        print("\nNo API calls made. No files written.")
+        return
+
     jd = role_data["jd_text"]
     raw_stage = role_data.get("stage_text", "")
     library = role_data["library"]

@@ -162,6 +162,23 @@ def test_generate_prep_docx_readable():
         assert len(doc.paragraphs) > 0
 
 
+def test_dry_run_no_api_calls():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_hiring_manager.txt"
+        docx_path = Path(tmpdir) / "interview_prep_hiring_manager.docx"
+        generate_prep(client, role_data, "hiring_manager",
+                      str(txt_path), str(docx_path), dry_run=True)
+        assert not txt_path.exists(), "dry_run must not write output files"
+
+    assert client.messages.create.call_count == 0, \
+        f"dry_run must make no API calls, got {client.messages.create.call_count}"
+
+
 def test_no_module_level_execution_on_import():
     import scripts.phase5_interview_prep  # noqa: F401
 
