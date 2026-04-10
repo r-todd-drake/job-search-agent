@@ -239,6 +239,27 @@ def test_stage_in_output_header():
     assert "Short screen" in content
 
 
+def test_extract_profile_section_found():
+    from scripts.phase5_interview_prep import extract_profile_section
+    text = "## INTRO MONOLOGUE\nHello world.\n## OTHER SECTION\nOther content."
+    result = extract_profile_section(text, "INTRO MONOLOGUE")
+    assert "Hello world" in result
+    assert "OTHER SECTION" not in result
+
+
+def test_extract_profile_section_missing():
+    from scripts.phase5_interview_prep import extract_profile_section
+    result = extract_profile_section("## OTHER SECTION\nStuff.", "INTRO MONOLOGUE")
+    assert result == ""
+
+
+def test_extract_profile_section_last_section():
+    from scripts.phase5_interview_prep import extract_profile_section
+    text = "## SHORT TENURE EXPLANATION\nI left because the contract ended."
+    result = extract_profile_section(text, "SHORT TENURE EXPLANATION")
+    assert "contract ended" in result
+
+
 @pytest.mark.live
 def test_generate_prep_live():
     """Tier 2: real API call with web search."""

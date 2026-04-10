@@ -231,6 +231,20 @@ def _output_paths(package_dir, stage):
         os.path.join(package_dir, f"interview_prep_{stage}.docx"),
     )
 
+
+def extract_profile_section(profile_text, header):
+    """
+    Extract a ## HEADER section from candidate_profile.md text.
+    Returns the section body (stripped), or empty string if header not found.
+    """
+    marker = f"## {header}"
+    if marker not in profile_text:
+        return ""
+    start = profile_text.find(marker) + len(marker)
+    next_header = profile_text.find("\n## ", start)
+    end = next_header if next_header > 0 else len(profile_text)
+    return profile_text[start:end].strip()
+
 # ==============================================
 # SALARY EXTRACTION
 # ==============================================
