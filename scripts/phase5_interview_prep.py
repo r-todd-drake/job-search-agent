@@ -90,110 +90,89 @@ You never:
 # STAGE PROFILE CONSTANTS
 # ==============================================
 
-_QUESTIONS_RECRUITER = """Generate 4 questions for the candidate to ask during a recruiter screen.
+_QUESTIONS_RECRUITER = """
+Generate exactly 4 questions for a candidate to ask at the end of a recruiter screen.
+The questions should signal that the candidate is serious, prepared, and professional
+without asking technical or program-specific questions the recruiter cannot answer.
 
-Signal to convey: I've done my homework and I'm a serious candidate.
-
-JOB DESCRIPTION:
-{jd}
-
-CANDIDATE BACKGROUND SUMMARY (PII removed):
-{profile_summary}
-
-Draw questions from these categories:
-- Company direction, growth areas, or recent news
-- Culture, team environment, what makes people stay at this company
-- Interview process -- who is next, what they evaluate, typical timeline to decision
-- Logistics if not already confirmed (clearance requirements, onsite vs. remote, location)
+Question categories to cover:
+1. Company direction, growth areas, or recent news the candidate can reference naturally
+2. Culture, team environment, or what makes people stay at the company
+3. Interview process -- who is next in the process, what will they be evaluating, timeline to decision
+4. One logistics or role clarification question if anything material remains unaddressed (clearance, location, remote/onsite)
 
 Constraints:
-- Maximum 4 questions
-- Each question must require insider knowledge to answer -- not answerable from the JD alone
-- Do NOT ask about architecture, technical environment, or program pain points
-- Do NOT raise salary -- let the recruiter raise it first
-
-Format each question as:
-[Number]. [Question] -- [Why ask this / what it signals to the recruiter]
-
-CLOSING NOTE:
-[1 sentence: how to close a recruiter screen effectively]"""
+- Questions must be answerable by a recruiter without program or technical knowledge
+- Do not ask about architecture, tooling, program pain points, or technical environment
+- Do not ask questions already answered in the job description
+- Tone: engaged, collegial, unhurried -- not transactional
+- Format: numbered list, each question followed by one sentence explaining what it signals to the interviewer
+"""
 
 
-_QUESTIONS_HIRING_MANAGER = """Generate 4 questions for the candidate to ask a hiring manager.
+_QUESTIONS_HIRING_MANAGER = """
+Generate exactly 4 questions for a candidate to ask at the end of a hiring manager interview
+for a defense systems engineering role. The questions should signal program awareness,
+results orientation, and genuine interest in the manager's vision.
 
-Signal to convey: I understand programs and I want to know if this problem is worth solving.
-
-JOB DESCRIPTION:
-{jd}
-
-CANDIDATE BACKGROUND SUMMARY (PII removed):
-{profile_summary}
-
-Draw questions from these categories:
-- Current program pain points -- schedule pressure, architecture debt, stakeholder friction
-- What the team currently lacks and needs most
-- What success looks like at 6 months vs. what disappointment looks like
-- The hiring manager's vision for the technical or engineering effort going forward
+Question categories to cover:
+1. Current program pain points -- where is the pressure coming from (schedule, architecture debt, stakeholder friction)?
+2. What the team needs that it does not currently have -- what gap does this hire fill?
+3. What success looks like at 6 months versus what disappointment looks like -- what are the real expectations?
+4. The hiring manager's vision for where the technical effort (MBSE, architecture, or the relevant discipline) goes from here
 
 Constraints:
-- Maximum 4 questions
-- Each question must require insider knowledge to answer -- not answerable from the JD alone
-- Do NOT ask questions the recruiter should have answered (process, timeline, logistics)
-- Questions should signal program-level thinking, not just execution-level
-
-Format each question as:
-[Number]. [Question] -- [Why ask this / what it signals to the hiring manager]
-
-CLOSING NOTE:
-[1 sentence: how to close a hiring manager interview effectively]"""
+- Questions must require insider knowledge to answer well -- not answerable from the job description alone
+- Do not ask about company culture, interview process, or logistics -- those belong in the recruiter screen
+- Do not ask questions that make the candidate sound uncertain about fit or qualifications
+- Tone: peer-level engagement with someone senior -- collaborative, direct, curious about the problem
+- Format: numbered list, each question followed by one sentence explaining what it signals to the interviewer
+"""
 
 
-_QUESTIONS_TEAM_PANEL = """Generate 4 questions for the candidate to ask a working-level engineering team panel.
+_QUESTIONS_TEAM_PANEL = """
+Generate exactly 4 questions for a candidate to ask at the end of a team panel interview
+for a defense systems engineering role. The questions should signal technical credibility,
+process fluency, and peer-level awareness of where the hard work actually lives.
 
-Signal to convey: I've been in this seat before and I will be a peer, not a burden.
-
-JOB DESCRIPTION:
-{jd}
-
-CANDIDATE BACKGROUND SUMMARY (PII removed):
-{profile_summary}
-
-Draw questions from these categories:
-- Day-to-day working environment -- tools in active use, cadence, model governance practices
-- Where the hard interface or integration problems are right now
-- What processes are working well and what is still being figured out
-- How the team handles disagreements on architecture or design decisions
+Question categories to cover:
+1. Day-to-day working environment -- tools cadence, model governance, or workflow specifics
+   that only someone who has done this work before would think to ask about
+2. Where the hard interface or integration problems are concentrated right now
+3. What processes are working well and what is still being figured out -- invites honest answer
+4. How the team handles disagreements on architecture or design decisions -- signals maturity
+   and interest in team dynamics at a working level
 
 Constraints:
-- Maximum 4 questions
-- Each question must require insider knowledge to answer -- not answerable from the JD alone
-- Do NOT ask questions that signal unfamiliarity with standard domain tools
-- Do NOT ask management-level or strategy questions -- wrong register for a peer panel
-- Tone is collegial and direct -- peer to peer, not candidate to evaluator
-
-Format each question as:
-[Number]. [Question] -- [Why ask this / what it signals to the panel]
-
-CLOSING NOTE:
-[1 sentence: how to close a team panel effectively]"""
+- Questions must require hands-on program knowledge to answer -- not answerable from the JD alone
+- Do not ask about company direction, culture, salary, or interview process
+- Do not ask questions that sound like a candidate evaluating risk -- ask like a peer evaluating the work
+- Avoid questions that could be read as critical of the program or the team
+- Tone: direct, collegial, technically confident -- peer to peer, not candidate to evaluator
+- Format: numbered list, each question followed by one sentence explaining what it signals to the interviewer
+"""
 
 
-_PEER_FRAME_INSTRUCTIONS = """For each gap identified above, add a fifth element -- Peer Frame.
+_PEER_FRAME_INSTRUCTIONS = """
+For the gap identified above, generate a Peer Frame response suitable for delivery
+to a working-level engineer in a team panel interview.
 
-The Peer Frame is a 2-3 sentence response calibrated for delivery to a working engineer, not a manager.
-It differs from the Redirect in register: where a Redirect reassures a manager that risk is manageable,
-a Peer Frame signals to a colleague that the candidate understands the operational reality of the gap.
+The Peer Frame must:
+1. Acknowledge the specific gap honestly -- no softening, no hedging
+2. Demonstrate that the candidate understands why this gap matters operationally,
+   not just that the gap exists -- show awareness of where the friction point actually lives
+3. Pivot to a question or observation that signals domain fluency -- the candidate
+   should sound like someone who has worked adjacent to this problem before
 
-The peer frame should:
-1. Acknowledge the specific gap honestly -- no softening or hedging
-2. Demonstrate understanding of why the gap matters operationally, not just that it exists
-3. Pivot to a question or observation that signals domain fluency
+Tone: direct and collegial -- peer to peer, not candidate to evaluator.
+Do not use polished redirect language or reassurance framing -- those belong in
+the hiring manager response, not here.
+A Peer Frame that ends with a genuine question is strongly preferred over one
+that ends with a reassurance statement.
 
-A peer frame that ends with a genuine question is preferred over one that ends with a reassurance.
-Length: 2-3 sentences maximum. Tone: direct and collegial.
-
-Add to each gap entry:
-Peer Frame: [2-3 sentence response]"""
+Length: 2-3 sentences maximum.
+Label the output: Peer Frame:
+"""
 
 
 STAGE_PROFILES = {
@@ -899,10 +878,11 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("Section 4: Questions to Ask...")
 
-    questions_prompt = profile["questions_prompt"].format(
-        jd=jd[:2000],
-        profile_summary=strip_pii(candidate_profile[:800]),
+    context_block = (
+        f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
+        f"CANDIDATE BACKGROUND (PII removed):\n{strip_pii(candidate_profile[:800])}\n\n"
     )
+    questions_prompt = context_block + profile["questions_prompt"]
 
     response4 = client.messages.create(
         model=MODEL,
