@@ -28,7 +28,7 @@ for every role in the pipeline.
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
-| 5 | Interview preparation — web-informed brief, story bank, gap prep | 🔧 Prototype |
+| 5 | Interview preparation — web-informed brief, story bank, gap prep, stage-aware output | 🔧 Prototype |
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
@@ -68,7 +68,8 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
    → Run check_cover_letter.py --role [role] after editing Stage 2
    → Stage through to docx via --stage 4
 6. Run phase5_interview_prep.py when interview is scheduled
-   → Generates .txt and .docx prep package
+   → Specify --interview_stage (recruiter / hiring_manager / team_panel)
+   → Generates .txt and .docx prep package tailored to interview type
    → Workshop stories in Claude web chat before interview
 7. Submit, update status to APPLIED, move to tracker
 ```
@@ -135,11 +136,16 @@ Stage 4 (automated)  →  [Role]_CoverLetter.docx
 
 ## Phase 5 — Interview Prep
 
-Single command generates a complete prep package:
+Single command generates a complete, stage-aware prep package:
 
 ```bash
-python scripts/phase5_interview_prep.py --role [role_folder]
+python scripts/phase5_interview_prep.py --role [role_folder] --interview_stage [stage]
 ```
+
+`--interview_stage` accepts: `recruiter` | `hiring_manager` | `team_panel`
+
+Each stage produces output calibrated to that audience — story depth, gap handling,
+salary framing, and questions to ask all vary by interview type.
 
 Outputs to `data/job_packages/[role]/`:
 - `interview_prep.txt` — for VS Code review and story workshopping
@@ -260,7 +266,7 @@ python scripts/check_resume.py --role [role]
 python scripts/phase4_cover_letter.py --stage 1 --role [role]
 python -m scripts.check_cover_letter --role [role]
 python scripts/phase4_cover_letter.py --stage 4 --role [role]
-python scripts/phase5_interview_prep.py --role [role]
+python scripts/phase5_interview_prep.py --role [role] --interview_stage [stage]
 ```
 
 ---
@@ -272,14 +278,24 @@ Job_search_agent/
 ├── .github/workflows/test.yml            # GitHub Actions CI — mock suite on every push
 ├── context/                              # Context data store
 │   ├── PROJECT_CONTEXT.md                # Lean index — load this first
-│   ├── DECISIONS_LOG.md                  # Coding conventions + architecture
-│   ├── PARKING_LOT.md                    # Outstanding work items
+│   ├── DECISIONS_LOG.md                  # Coding conventions + architecture decisions
+│   ├── PARKING_LOT.md                    # Outstanding work items and priorities
 │   ├── CANDIDATE_BACKGROUND.md           # Career background (local only)
-│   └── PIPELINE_STATUS.md               # Active applications (local only)
+│   └── PIPELINE_STATUS.md                # Active applications (local only)
 ├── data/
 │   ├── jobs.csv                          # Pipeline — status + req number tracking
-│   ├── job_packages/[role]/              # JD, stage files, interview prep
+│   ├── job_packages/[role]/              # JD, stage files, interview prep (active)
+│   │   └── inactive/[role]/              # Rejected / ghosted / withdrawn roles
 │   └── experience_library/              # Library source, JSON, candidate profile
+├── docs/
+│   ├── features/                         # Requirements artifacts per capability
+│   │   ├── README.md                     # Feature folder process and conventions
+│   │   ├── user_story_template.md        # Template for new proposals
+│   │   └── completed/                    # Built and tested features
+│   ├── superpowers/
+│   │   ├── specs/                        # Design specs (how to build it)
+│   │   └── plans/                        # Implementation plans (how to execute)
+│   └── capabilities.md                   # Script-to-phase traceability (in progress)
 ├── resumes/tailored/                     # Generated resumes (local only)
 ├── templates/resume_template.docx        # Resume template (local only)
 ├── scripts/
@@ -292,7 +308,7 @@ Job_search_agent/
 │   ├── phase3_compile_library.py
 │   ├── phase4_resume_generator.py        # Four-stage resume generation
 │   ├── phase4_cover_letter.py            # Staged cover letter generator
-│   ├── phase5_interview_prep.py          # Web search + resume-grounded stories
+│   ├── phase5_interview_prep.py          # Stage-aware prep: web search + resume-grounded stories
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
@@ -302,7 +318,7 @@ Job_search_agent/
 │   ├── conftest.py                       # Shared fixtures and fictional test identity
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
 │   ├── utils/                            # pii_filter, library_parser tests
-│   ├── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
+│   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
 ├── example_data/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
@@ -320,10 +336,13 @@ Job_search_agent/
 
 | Item | Description |
 |------|-------------|
+| Phase 5 updates | Reconcile duplicate salary guidance, fix fabricated MBSE gap redirect, remove lapsed Security+ language |
+| candidate_profile.md rebuild | Rebuild from current library — flag lapsed certifications, add confirmed HAIPE experience |
+| Phase 5 Stage 2 | Revision stage — accepts workshop notes and produces a clean updated prep package |
+| library_parser.py bug | Last bullet in employer section silently dropped before PROFESSIONAL SUMMARIES — data integrity fix |
 | Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
-| Library workflow | Structured process for adding resume-tailoring bullets back into experience library |
-| candidate_profile.md | Rebuild from current library — update lapsed certifications and confirmed skills |
+| Experience library workflow | Structured process for adding resume-tailoring bullets back into the library |
 
 ---
 
