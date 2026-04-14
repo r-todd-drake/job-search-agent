@@ -65,6 +65,118 @@ def build_parser():
 
 
 # ==============================================
+# VALIDATION AND OUTPUT HELPERS
+# ==============================================
+
+def validate_required(data: dict) -> list:
+    """Check that required fields are non-null. Returns list of error strings."""
+    errors = []
+    if not data.get('metadata', {}).get('interview_date'):
+        errors.append('interview_date: missing required value')
+    if not data.get('metadata', {}).get('format'):
+        errors.append('format: missing required value')
+    if not data.get('advancement_read', {}).get('assessment'):
+        errors.append('assessment: missing required value')
+    return errors
+
+
+def validate_enums(data: dict) -> list:
+    """Check that enum fields contain valid values. Skips null. Returns list of error strings."""
+    errors = []
+    fmt = data.get('metadata', {}).get('format')
+    if fmt is not None and fmt not in VALID_FORMATS:
+        errors.append(
+            f"format: '{fmt}' is not valid. Accepted: {', '.join(VALID_FORMATS)}"
+        )
+    assessment = data.get('advancement_read', {}).get('assessment')
+    if assessment is not None and assessment not in VALID_ASSESSMENTS:
+        errors.append(
+            f"assessment: '{assessment}' is not valid. Accepted: {', '.join(VALID_ASSESSMENTS)}"
+        )
+    for i, story in enumerate(data.get('stories_used', []) or []):
+        landed = story.get('landed')
+        if landed is not None and landed not in VALID_LANDED:
+            errors.append(
+                f"landed (story {i + 1}): '{landed}' is not valid. Accepted: {', '.join(VALID_LANDED)}"
+            )
+    for i, gap in enumerate(data.get('gaps_surfaced', []) or []):
+        rf = gap.get('response_felt')
+        if rf is not None and rf not in VALID_RESPONSE_FELT:
+            errors.append(
+                f"response_felt (gap {i + 1}): '{rf}' is not valid. Accepted: {', '.join(VALID_RESPONSE_FELT)}"
+            )
+    return errors
+
+
+def cast_salary_fields(data: dict) -> tuple:
+    """Cast salary fields to int. Returns (updated_data, list of error strings)."""
+    errors = []
+    salary = data.get('salary_exchange', {}) or {}
+    updated = dict(salary)
+    for field in SALARY_FIELDS:
+        val = salary.get(field)
+        if val is None:
+            continue
+        try:
+            updated[field] = int(val)
+        except (ValueError, TypeError):
+            errors.append(f"{field}: expected a number, got '{val}'")
+    result = dict(data)
+    result['salary_exchange'] = updated
+    return result, errors
+
+
+def build_output_filename(stage: str, interview_date: str, produced_date: str) -> str:
+    return f"debrief_{stage}_{interview_date}_filed-{produced_date}.json"
+
+
+def build_json_output(data: dict) -> dict:
+    """Build the canonical JSON output dict from validated data."""
+    return {
+        'metadata': {
+            'role': data['metadata'].get('role'),
+            'stage': data['metadata'].get('stage'),
+            'company': data['metadata'].get('company'),
+            'interviewer_name': data['metadata'].get('interviewer_name'),
+            'interviewer_title': data['metadata'].get('interviewer_title'),
+            'interview_date': data['metadata'].get('interview_date'),
+            'format': data['metadata'].get('format'),
+            'produced_date': data['metadata'].get('produced_date'),
+        },
+        'advancement_read': {
+            'assessment': data['advancement_read'].get('assessment'),
+            'notes': data['advancement_read'].get('notes'),
+        },
+        'stories_used': [
+            {
+                'tags': s.get('tags') or [],
+                'framing': s.get('framing'),
+                'landed': s.get('landed'),
+                'library_id': s.get('library_id'),
+            }
+            for s in (data.get('stories_used') or [])
+        ],
+        'gaps_surfaced': [
+            {
+                'gap_label': g.get('gap_label'),
+                'response_given': g.get('response_given'),
+                'response_felt': g.get('response_felt'),
+            }
+            for g in (data.get('gaps_surfaced') or [])
+        ],
+        'salary_exchange': {
+            'range_given_min': data.get('salary_exchange', {}).get('range_given_min'),
+            'range_given_max': data.get('salary_exchange', {}).get('range_given_max'),
+            'candidate_anchor': data.get('salary_exchange', {}).get('candidate_anchor'),
+            'candidate_floor': data.get('salary_exchange', {}).get('candidate_floor'),
+            'notes': data.get('salary_exchange', {}).get('notes'),
+        },
+        'what_i_said': data.get('what_i_said'),
+        'open_notes': data.get('open_notes'),
+    }
+
+
+# ==============================================
 # MODE STUBS (implemented in later tasks)
 # ==============================================
 
