@@ -18,8 +18,8 @@
   - **Continuity -- What I Said**: free-text section capturing any specific claims, commitments, framings, or positions given to this interviewer that should not be contradicted in future stages (e.g., years of experience cited, availability date, relocation stance, interest level framing)
   - **Open Notes**: unstructured free-text field for anything else worth capturing
 
-**Debrief Script (`phase_debrief.py`)**
-- Script exists at `scripts/phase_debrief.py`
+**Debrief Script (`phase5_debrief.py`)**
+- Script exists at `scripts/phase5_debrief.py`
 - Accepts `--role [role-slug]` and `--stage [stage]` as arguments
 - On launch, presents each template section interactively as a guided questionnaire
 - For structured fields (advancement read, landed, response_felt), presents valid options and validates input

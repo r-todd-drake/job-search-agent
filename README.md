@@ -71,7 +71,7 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
    → Specify --interview_stage (recruiter, hiring_manager, team_panel)
    → Generates stage-specific .txt and .docx prep package
    → Workshop stories in Claude web chat before interview
-7. Run phase_debrief.py after each interview
+7. Run phase5_debrief.py after each interview
    → --interactive for guided capture with optional AI follow-up questions
    → --init / --convert for YAML-based offline workflow
    → Saves structured JSON to data/debriefs/[role]/
@@ -179,11 +179,11 @@ stories used, gaps surfaced, salary exchange, and continuity notes.
 
 ```bash
 # Guided questionnaire (recommended — AI follow-up questions per section)
-python scripts/phase_debrief.py --role [role] --stage [stage] --interactive
+python scripts/phase5_debrief.py --role [role] --stage [stage] --interactive
 
 # YAML-based workflow (fill the draft, then convert)
-python scripts/phase_debrief.py --role [role] --stage [stage] --init
-python scripts/phase_debrief.py --role [role] --stage [stage] --convert
+python scripts/phase5_debrief.py --role [role] --stage [stage] --init
+python scripts/phase5_debrief.py --role [role] --stage [stage] --convert
 ```
 
 Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
@@ -277,7 +277,7 @@ CANDIDATE_LOCATION=City, ST
 
 ### 4. Add your data
 - Experience library: `data/experience_library/experience_library.md`
-- Resume template: `templates/resume_template.docx`
+- Resume template: `templates_local/resume_template.docx`
 - Tracker: `data/tracker/job_pipeline.xlsx`
 
 ### 5. Build the experience library
@@ -314,9 +314,9 @@ python scripts/phase4_cover_letter.py --stage 1 --role [role]
 python -m scripts.check_cover_letter --role [role]
 python scripts/phase4_cover_letter.py --stage 4 --role [role]
 python scripts/phase5_interview_prep.py --role [role] --interview_stage [recruiter|hiring_manager|team_panel]
-python scripts/phase_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
-python scripts/phase_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
-python scripts/phase_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
+python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
+python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
+python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
 ```
 
 ---
@@ -348,7 +348,10 @@ Job_search_agent/
 │   │   └── plans/                        # Implementation plans (how to execute)
 │   └── capabilities.md                   # Script-to-phase traceability (in progress)
 ├── resumes/tailored/                     # Generated resumes (local only)
-├── templates/resume_template.docx        # Resume template (local only)
+├── templates/                            # Script input templates (tracked — YAML, plain-text)
+│   └── interview_debrief_template.yaml   # Debrief YAML template for --init mode
+├── templates_local/                      # Binary/personal templates (local only)
+│   └── resume_template.docx              # Resume template (local only)
 ├── scripts/
 │   ├── pipeline_report.py                # Pipeline metrics + duplicate req detection
 │   ├── phase2_job_ranking.py             # Keyword scoring + req number tracking
@@ -360,7 +363,7 @@ Job_search_agent/
 │   ├── phase4_resume_generator.py        # Four-stage resume generation
 │   ├── phase4_cover_letter.py            # Staged cover letter generator
 │   ├── phase5_interview_prep.py          # Stage-aware interview prep (recruiter/HM/team panel)
-│   ├── phase_debrief.py                  # Post-interview debrief capture (--init/--convert/--interactive)
+│   ├── phase5_debrief.py                  # Post-interview debrief capture (--init/--convert/--interactive)
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/

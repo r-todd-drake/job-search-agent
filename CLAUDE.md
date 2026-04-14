@@ -58,3 +58,7 @@ See README.md for full structure.
 2. Use Plan mode to discuss the proposed solution, including architecture and how to verify and test the solution, before writing any code.
 Do not begin development until there is high confidence the approach meets the stated requirement. Ask clarifying questions to close any gaps.
 3. Run a syntax check after development is complete.
+
+## Script Templates
+- `templates/` is the canonical home for all script input templates (tracked — plain-text and YAML only, no PII, no binaries).
+- `templates_local/` holds binary and personal templates (gitignored — e.g. `resume_template.docx`).

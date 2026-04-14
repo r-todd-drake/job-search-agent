@@ -6,7 +6,7 @@
 data/
 resumes/
 outputs/
-templates/
+templates_local/
 
 # Personal configuration and context files
 .env
