@@ -23,6 +23,7 @@ from datetime import date
 
 import yaml
 from dotenv import load_dotenv
+from anthropic import Anthropic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
@@ -43,6 +44,26 @@ VALID_ASSESSMENTS = ["for_sure", "maybe", "doubt_it", "definitely_not"]
 VALID_LANDED = ["yes", "partially", "no"]
 VALID_RESPONSE_FELT = ["strong", "adequate", "weak"]
 SALARY_FIELDS = ["range_given_min", "range_given_max", "candidate_anchor", "candidate_floor"]
+
+FOLLOWUP_SYSTEM_PROMPT = (
+    "You are a debrief assistant. Given a candidate's response to a post-interview "
+    "debrief section, decide if one targeted follow-up question would capture something "
+    "valuable. If yes, return the question only. If no, return nothing. "
+    "Do not assess, score, or infer anything about the interview outcome."
+)
+
+
+def get_followup_question(client, section_name: str, response: str) -> str:
+    """Call Claude to decide if a follow-up question is warranted. Returns question or empty string."""
+    user_content = f"Section: {section_name}\nResponse: {strip_pii(response)}"
+    message = client.messages.create(
+        model=MODEL,
+        max_tokens=256,
+        system=FOLLOWUP_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_content}]
+    )
+    return message.content[0].text.strip()
+
 
 # ==============================================
 # ARGPARSE
@@ -427,7 +448,8 @@ def main():
     elif args.convert:
         run_convert(args.role, args.stage, DEBRIEFS_DIR)
     elif args.interactive:
-        run_interactive(args.role, args.stage, DEBRIEFS_DIR)
+        client = Anthropic()
+        run_interactive(args.role, args.stage, DEBRIEFS_DIR, client=client)
 
 
 if __name__ == "__main__":
