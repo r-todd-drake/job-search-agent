@@ -50,3 +50,7 @@ Thumbs.db
 
 # Archived files
 .archive/
+
+# mempalace files
+entities.json
+mempalace.yaml
