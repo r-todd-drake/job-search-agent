@@ -617,3 +617,66 @@ def test_run_interactive_draft_conflict_warning(tmp_path, monkeypatch, capsys):
     assert 'draft already exists' in captured.out.lower()
     # (b) session proceeded -- JSON output was written
     assert len(list((tmp_path / 'TestRole').glob('*.json'))) == 1
+
+
+# ---- get_followup_question / AI integration ----
+
+from unittest.mock import MagicMock
+
+
+def test_get_followup_question_returns_question():
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="What was the most challenging moment?")]
+    )
+    result = pd.get_followup_question(mock_client, 'advancement_read', 'assessment: maybe')
+    assert result == "What was the most challenging moment?"
+
+
+def test_get_followup_question_returns_empty():
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="")]
+    )
+    result = pd.get_followup_question(mock_client, 'stories_used', 'Led EO rewrite')
+    assert result == ""
+
+
+def test_get_followup_question_strips_whitespace():
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="  Was salary discussed?  ")]
+    )
+    result = pd.get_followup_question(mock_client, 'salary_exchange', 'min=145000')
+    assert result == "Was salary discussed?"
+
+
+def test_run_interactive_with_client_calls_followup(tmp_path, monkeypatch):
+    mock_client = MagicMock()
+    # Return a question for every section
+    mock_client.messages.create.return_value = MagicMock(
+        content=[MagicMock(text="What would you do differently?")]
+    )
+    monkeypatch.setattr('builtins.input', _make_inputs(
+        'Viasat', 'Jane', 'Dir', '2026-04-10', 'video',
+        'maybe', 'Felt strong.',
+        'follow-up answer for advancement_read',
+        'leadership', 'Led EO rewrite', 'yes', 'n',
+        'follow-up answer for stories_used',
+        'no SCIF exp', 'acknowledged', 'adequate', 'n',
+        'follow-up answer for gaps_surfaced',
+        '', '', '', '', '',
+        'follow-up answer for salary_exchange',
+        'Cited 12 years.',
+        'follow-up answer for what_i_said',
+        '',
+    ))
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=mock_client)
+    assert mock_client.messages.create.called
+
+
+def test_run_interactive_client_none_no_followup(tmp_path, monkeypatch):
+    # client=None should complete with no AI calls -- default_inputs has no extra answers
+    monkeypatch.setattr('builtins.input', _default_inputs())
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    assert len(list((tmp_path / 'TestRole').glob('*.json'))) == 1
