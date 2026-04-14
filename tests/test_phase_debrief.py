@@ -346,3 +346,149 @@ def test_run_init_prints_draft_path(tmp_path, capsys):
     pd.run_init('TestRole', 'hiring_manager', _make_template(tmp_path), str(tmp_path))
     captured = capsys.readouterr()
     assert 'debrief_hiring_manager_draft.yaml' in captured.out
+
+
+# ---- run_convert ----
+
+VALID_FILLED_YAML = """
+metadata:
+  role: TestRole
+  stage: hiring_manager
+  company: Viasat
+  interviewer_name: Jane Smith
+  interviewer_title: Director
+  interview_date: '2026-04-10'
+  format: video
+  produced_date: '2026-04-13'
+advancement_read:
+  assessment: maybe
+  notes: Felt strong overall.
+stories_used:
+  - tags: [leadership]
+    framing: Led EO rewrite
+    landed: yes
+    library_id: null
+gaps_surfaced:
+  - gap_label: no SCIF experience
+    response_given: Acknowledged and redirected
+    response_felt: adequate
+salary_exchange:
+  range_given_min: 145000
+  range_given_max: 165000
+  candidate_anchor: null
+  candidate_floor: null
+  notes: null
+what_i_said: Cited 12 years experience.
+open_notes: null
+"""
+
+UNQUOTED_DATES_YAML = """
+metadata:
+  role: TestRole
+  stage: hiring_manager
+  company: Viasat
+  interviewer_name: Jane Smith
+  interviewer_title: Director
+  interview_date: 2026-04-10
+  format: video
+  produced_date: 2026-04-13
+advancement_read:
+  assessment: maybe
+  notes: null
+stories_used: []
+gaps_surfaced: []
+salary_exchange:
+  range_given_min: null
+  range_given_max: null
+  candidate_anchor: null
+  candidate_floor: null
+  notes: null
+what_i_said: null
+open_notes: null
+"""
+
+
+def _write_draft(debriefs_dir, role, stage, content):
+    role_dir = os.path.join(str(debriefs_dir), role)
+    os.makedirs(role_dir, exist_ok=True)
+    draft_path = os.path.join(role_dir, f"debrief_{stage}_draft.yaml")
+    with open(draft_path, 'w') as f:
+        f.write(content)
+
+
+def test_run_convert_happy_path(tmp_path):
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', VALID_FILLED_YAML)
+    pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    output = tmp_path / 'TestRole' / 'debrief_hiring_manager_2026-04-10_filed-2026-04-13.json'
+    assert output.exists()
+    with open(output) as f:
+        data = json.load(f)
+    assert data['metadata']['role'] == 'TestRole'
+    assert data['advancement_read']['assessment'] == 'maybe'
+    assert data['stories_used'][0]['landed'] == 'yes'
+    assert data['salary_exchange']['range_given_min'] == 145000
+    assert isinstance(data['salary_exchange']['range_given_min'], int)
+
+
+def test_run_convert_unquoted_dates(tmp_path):
+    """PyYAML parses unquoted dates as datetime.date -- run_convert must cast to str."""
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', UNQUOTED_DATES_YAML)
+    pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    output = tmp_path / 'TestRole' / 'debrief_hiring_manager_2026-04-10_filed-2026-04-13.json'
+    assert output.exists()
+    with open(output) as f:
+        data = json.load(f)
+    assert data['metadata']['interview_date'] == '2026-04-10'
+    assert data['metadata']['produced_date'] == '2026-04-13'
+
+
+def test_run_convert_missing_interview_date(tmp_path, capsys):
+    content = VALID_FILLED_YAML.replace("interview_date: '2026-04-10'", "interview_date: null")
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'interview_date: missing required value' in capsys.readouterr().out
+
+
+def test_run_convert_invalid_format(tmp_path, capsys):
+    content = VALID_FILLED_YAML.replace("format: video", "format: zoom")
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'zoom' in capsys.readouterr().out
+
+
+def test_run_convert_non_numeric_salary(tmp_path, capsys):
+    content = VALID_FILLED_YAML.replace("range_given_min: 145000", "range_given_min: competitive")
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'range_given_min' in capsys.readouterr().out
+
+
+def test_run_convert_no_partial_write(tmp_path):
+    content = VALID_FILLED_YAML.replace("interview_date: '2026-04-10'", "interview_date: null")
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert list((tmp_path / 'TestRole').glob('*.json')) == []
+
+
+def test_run_convert_missing_draft_message(tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert '--init' in capsys.readouterr().out
+
+
+def test_run_convert_validation_failed_message(tmp_path, capsys):
+    content = VALID_FILLED_YAML.replace("interview_date: '2026-04-10'", "interview_date: null")
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'Validation failed' in capsys.readouterr().out
+
+
+def test_run_convert_success_message(tmp_path, capsys):
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', VALID_FILLED_YAML)
+    pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'Debrief saved to' in capsys.readouterr().out

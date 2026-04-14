@@ -126,6 +126,15 @@ def cast_salary_fields(data: dict) -> tuple:
     return result, errors
 
 
+def _normalize_yaml_booleans(data: dict) -> None:
+    """Fix YAML boolean coercion for enum fields. PyYAML parses `yes`/`no` as True/False.
+    Mutates data in place."""
+    bool_map = {True: 'yes', False: 'no'}
+    for story in data.get('stories_used', []) or []:
+        if story.get('landed') in bool_map:
+            story['landed'] = bool_map[story['landed']]
+
+
 def build_output_filename(stage: str, interview_date: str, produced_date: str) -> str:
     return f"debrief_{stage}_{interview_date}_filed-{produced_date}.json"
 
@@ -202,7 +211,37 @@ def run_init(role, stage, template_path, debriefs_dir):
 
 
 def run_convert(role, stage, debriefs_dir):
-    pass
+    draft_path = os.path.join(debriefs_dir, role, f"debrief_{stage}_draft.yaml")
+    if not os.path.exists(draft_path):
+        print(f"No draft found at {draft_path}. Run --init first.")
+        sys.exit(1)
+    with open(draft_path, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
+    # Cast date fields to str -- PyYAML parses unquoted dates as datetime.date objects
+    if data['metadata'].get('interview_date') is not None:
+        data['metadata']['interview_date'] = str(data['metadata']['interview_date'])
+    if data['metadata'].get('produced_date') is not None:
+        data['metadata']['produced_date'] = str(data['metadata']['produced_date'])
+    # Normalize YAML boolean coercion -- `yes`/`no` parse as True/False in PyYAML
+    _normalize_yaml_booleans(data)
+    errors = []
+    errors.extend(validate_required(data))
+    errors.extend(validate_enums(data))
+    data, salary_errors = cast_salary_fields(data)
+    errors.extend(salary_errors)
+    if errors:
+        for err in errors:
+            print(err)
+        print("Validation failed -- no file written. Fix the above and re-run --convert.")
+        sys.exit(1)
+    output = build_json_output(data)
+    interview_date = data['metadata']['interview_date']
+    produced_date = data['metadata']['produced_date']
+    filename = build_output_filename(stage, interview_date, produced_date)
+    output_path = os.path.join(debriefs_dir, role, filename)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(output, f, indent=2, ensure_ascii=False)
+    print(f"Debrief saved to {output_path}")
 
 
 def run_interactive(role, stage, debriefs_dir, client=None):
