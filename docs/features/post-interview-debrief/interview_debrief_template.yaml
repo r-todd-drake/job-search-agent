@@ -18,7 +18,7 @@ advancement_read:
 stories_used:
   - tags: []                     # e.g. [leadership, cross-functional]
     framing: null                # brief description of how it was told
-    landed: null                 # yes | partially | no
+    landed: null                 # 'yes' | partially | 'no' -- quote yes/no to avoid YAML boolean parsing
     library_id: null             # optional -- link to interview_library.json entry once in library
 
 gaps_surfaced:
