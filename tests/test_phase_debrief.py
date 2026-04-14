@@ -492,3 +492,128 @@ def test_run_convert_success_message(tmp_path, capsys):
     _write_draft(tmp_path, 'TestRole', 'hiring_manager', VALID_FILLED_YAML)
     pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
     assert 'Debrief saved to' in capsys.readouterr().out
+
+
+# ---- run_interactive ----
+
+def _make_inputs(*args):
+    """Return a callable that iterates through the provided input sequence."""
+    it = iter(args)
+    return lambda _: next(it)
+
+
+def _default_inputs():
+    """Full valid input sequence for a single-story, single-gap session."""
+    return _make_inputs(
+        'Viasat',           # company
+        'Jane Smith',        # interviewer_name
+        'Director',          # interviewer_title
+        '2026-04-10',        # interview_date
+        'video',             # format
+        'maybe',             # assessment
+        'Felt strong.',      # assessment notes
+        # story 1
+        'leadership',        # tags
+        'Led EO rewrite',    # framing
+        'yes',               # landed
+        'n',                 # add another story?
+        # gap 1
+        'no SCIF exp',       # gap_label
+        'acknowledged gap',  # response_given
+        'adequate',          # response_felt
+        'n',                 # add another gap?
+        # salary (all skipped)
+        '', '', '', '', '',
+        # what_i_said
+        'Cited 12 years.',
+        # open_notes
+        '',
+    )
+
+
+def test_run_interactive_creates_json(tmp_path, monkeypatch):
+    monkeypatch.setattr('builtins.input', _default_inputs())
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    assert len(list((tmp_path / 'TestRole').glob('*.json'))) == 1
+
+
+def test_run_interactive_json_content(tmp_path, monkeypatch):
+    monkeypatch.setattr('builtins.input', _default_inputs())
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    output_file = list((tmp_path / 'TestRole').glob('*.json'))[0]
+    with open(output_file) as f:
+        data = json.load(f)
+    assert data['metadata']['company'] == 'Viasat'
+    assert data['advancement_read']['assessment'] == 'maybe'
+    assert len(data['stories_used']) == 1
+    assert data['stories_used'][0]['landed'] == 'yes'
+    assert data['stories_used'][0]['library_id'] is None
+    assert len(data['gaps_surfaced']) == 1
+    assert data['what_i_said'] == 'Cited 12 years.'
+
+
+def test_run_interactive_enum_reprompt(tmp_path, monkeypatch):
+    monkeypatch.setattr('builtins.input', _make_inputs(
+        'Viasat', 'Jane', 'Dir', '2026-04-10',
+        'zoom',    # invalid format -- should reprompt
+        'video',   # valid
+        'maybe', 'Notes.',
+        'leadership', 'framing', 'yes', 'n',
+        'no SCIF', 'response', 'adequate', 'n',
+        '', '', '', '', '',
+        'Said something.',
+        '',
+    ))
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    output_file = list((tmp_path / 'TestRole').glob('*.json'))[0]
+    with open(output_file) as f:
+        data = json.load(f)
+    assert data['metadata']['format'] == 'video'
+
+
+def test_run_interactive_multiple_stories(tmp_path, monkeypatch):
+    monkeypatch.setattr('builtins.input', _make_inputs(
+        'Viasat', 'Jane', 'Dir', '2026-04-10', 'video', 'maybe', '',
+        'leadership', 'Led EO rewrite', 'yes',
+        'y',                              # add another story
+        'cross-functional', 'Built stakeholder map', 'partially',
+        'n',
+        'gap', 'response', 'strong', 'n',
+        '', '', '', '', '',
+        '',
+        '',
+    ))
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    output_file = list((tmp_path / 'TestRole').glob('*.json'))[0]
+    with open(output_file) as f:
+        data = json.load(f)
+    assert len(data['stories_used']) == 2
+
+
+def test_run_interactive_ctrl_c_no_file(tmp_path, monkeypatch):
+    monkeypatch.setattr('builtins.input', lambda _: (_ for _ in ()).throw(KeyboardInterrupt()))
+    with pytest.raises(SystemExit) as exc:
+        pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    assert exc.value.code == 0
+    assert list(tmp_path.glob('**/*.json')) == []
+
+
+def test_run_interactive_draft_conflict_warning(tmp_path, monkeypatch, capsys):
+    """Asserts: (a) warning message printed, (b) session proceeds when user confirms y."""
+    (tmp_path / 'TestRole').mkdir()
+    (tmp_path / 'TestRole' / 'debrief_hiring_manager_draft.yaml').write_text('existing')
+    monkeypatch.setattr('builtins.input', _make_inputs(
+        'y',            # confirm conflict warning -- session must proceed after this
+        'Viasat', 'Jane', 'Dir', '2026-04-10', 'video', 'maybe', '',
+        'leadership', 'framing', 'yes', 'n',
+        'gap', 'response', 'adequate', 'n',
+        '', '', '', '', '',
+        '',
+        '',
+    ))
+    pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
+    captured = capsys.readouterr()
+    # (a) warning message printed
+    assert 'draft already exists' in captured.out.lower()
+    # (b) session proceeded -- JSON output was written
+    assert len(list((tmp_path / 'TestRole').glob('*.json'))) == 1

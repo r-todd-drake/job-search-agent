@@ -244,8 +244,176 @@ def run_convert(role, stage, debriefs_dir):
     print(f"Debrief saved to {output_path}")
 
 
+def _prompt_enum(prompt_text, valid_values):
+    """Loop until user enters a valid enum value."""
+    while True:
+        val = input(f"{prompt_text} ({'/'.join(valid_values)}): ").strip()
+        if val in valid_values:
+            return val
+        print(f"  Invalid -- accepted values: {', '.join(valid_values)}")
+
+
+def _prompt_optional(prompt_text):
+    """Return None if user enters nothing, otherwise return stripped string."""
+    val = input(f"{prompt_text} (press Enter to skip): ").strip()
+    return val if val else None
+
+
+def _prompt_optional_int(prompt_text):
+    """Return None if skipped, int if valid, loops on invalid non-empty input."""
+    while True:
+        raw = input(f"{prompt_text} (press Enter to skip): ").strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            print("  Expected a number. Try again or press Enter to skip.")
+
+
 def run_interactive(role, stage, debriefs_dir, client=None):
-    pass
+    try:
+        draft_path = os.path.join(debriefs_dir, role, f"debrief_{stage}_draft.yaml")
+        if os.path.exists(draft_path):
+            print(
+                f"A draft already exists for {role}/{stage}. "
+                f"--interactive will create a separate JSON output and will not use the draft."
+            )
+            response = input("Continue? (y/n): ").strip().lower()
+            if response != 'y':
+                print("Cancelled.")
+                sys.exit(0)
+
+        print(f"\n=== Post-Interview Debrief: {role} / {stage} ===\n")
+
+        # -- metadata --
+        print("-- Interview Details --")
+        company = _prompt_optional("Company")
+        interviewer_name = _prompt_optional("Interviewer name")
+        interviewer_title = _prompt_optional("Interviewer title")
+        interview_date = input("Interview date (YYYY-MM-DD): ").strip()
+        fmt = _prompt_enum("Format", VALID_FORMATS)
+        produced_date = str(date.today())
+
+        # -- advancement_read --
+        print("\n-- Advancement Read --")
+        assessment = _prompt_enum("Assessment", VALID_ASSESSMENTS)
+        assessment_notes = _prompt_optional("Notes")
+        if client:
+            followup = get_followup_question(
+                client, 'advancement_read', f"assessment: {assessment}. notes: {assessment_notes}"
+            )
+            if followup:
+                extra = input(f"  {followup} ").strip()
+                if extra:
+                    assessment_notes = f"{assessment_notes or ''}. Follow-up: {extra}".strip('. ')
+
+        # -- stories_used --
+        print("\n-- Stories Used --")
+        stories = []
+        while True:
+            print(f"  Story {len(stories) + 1}:")
+            tags_raw = input("    Tags (comma-separated, e.g. leadership,cross-functional): ").strip()
+            tags = [t.strip() for t in tags_raw.split(',') if t.strip()] if tags_raw else []
+            framing = input("    How was it framed? ").strip() or None
+            landed = _prompt_enum("    Landed", VALID_LANDED)
+            stories.append({'tags': tags, 'framing': framing, 'landed': landed, 'library_id': None})
+            if input("  Add another story? (y/n): ").strip().lower() != 'y':
+                break
+        if client and stories:
+            followup = get_followup_question(
+                client, 'stories_used', '; '.join(s.get('framing') or '' for s in stories)
+            )
+            if followup:
+                input(f"  {followup} ")
+
+        # -- gaps_surfaced --
+        print("\n-- Gaps Surfaced --")
+        gaps = []
+        while True:
+            print(f"  Gap {len(gaps) + 1}:")
+            gap_label = input("    Gap label: ").strip() or None
+            response_given = input("    How did you respond? ").strip() or None
+            response_felt = _prompt_enum("    Response felt", VALID_RESPONSE_FELT)
+            gaps.append({
+                'gap_label': gap_label,
+                'response_given': response_given,
+                'response_felt': response_felt
+            })
+            if input("  Add another gap? (y/n): ").strip().lower() != 'y':
+                break
+        if client and gaps:
+            followup = get_followup_question(
+                client, 'gaps_surfaced', '; '.join(g.get('gap_label') or '' for g in gaps)
+            )
+            if followup:
+                input(f"  {followup} ")
+
+        # -- salary_exchange --
+        print("\n-- Salary Exchange (all optional) --")
+        range_min = _prompt_optional_int("Range given -- minimum")
+        range_max = _prompt_optional_int("Range given -- maximum")
+        anchor = _prompt_optional_int("Your anchor (if provided)")
+        floor = _prompt_optional_int("Your floor (if disclosed)")
+        salary_notes = _prompt_optional("Salary notes")
+        if client:
+            followup = get_followup_question(
+                client, 'salary_exchange',
+                f"min={range_min}, max={range_max}, anchor={anchor}, floor={floor}"
+            )
+            if followup:
+                input(f"  {followup} ")
+
+        # -- what_i_said --
+        print("\n-- Continuity: What I Said --")
+        what_i_said = _prompt_optional("Claims, commitments, or framings to stay consistent on")
+        if client and what_i_said:
+            followup = get_followup_question(client, 'what_i_said', what_i_said)
+            if followup:
+                extra = input(f"  {followup} ").strip()
+                if extra:
+                    what_i_said = f"{what_i_said}. {extra}"
+
+        # -- open_notes --
+        print("\n-- Open Notes --")
+        open_notes = _prompt_optional("Anything else worth capturing")
+
+        data = {
+            'metadata': {
+                'role': role, 'stage': stage, 'company': company,
+                'interviewer_name': interviewer_name, 'interviewer_title': interviewer_title,
+                'interview_date': interview_date, 'format': fmt,
+                'produced_date': produced_date,
+            },
+            'advancement_read': {'assessment': assessment, 'notes': assessment_notes},
+            'stories_used': stories,
+            'gaps_surfaced': gaps,
+            'salary_exchange': {
+                'range_given_min': range_min, 'range_given_max': range_max,
+                'candidate_anchor': anchor, 'candidate_floor': floor, 'notes': salary_notes,
+            },
+            'what_i_said': what_i_said,
+            'open_notes': open_notes,
+        }
+
+        errors = validate_required(data)
+        errors.extend(validate_enums(data))
+        if errors:
+            for err in errors:
+                print(err)
+            print("Validation failed -- no file written. Fix the above and re-run --interactive.")
+            sys.exit(1)
+
+        output = build_json_output(data)
+        os.makedirs(os.path.join(debriefs_dir, role), exist_ok=True)
+        filename = build_output_filename(stage, interview_date, produced_date)
+        output_path = os.path.join(debriefs_dir, role, filename)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(output, f, indent=2, ensure_ascii=False)
+        print(f"\nDebrief saved to {output_path}")
+
+    except KeyboardInterrupt:
+        sys.exit(0)
 
 
 # ==============================================
