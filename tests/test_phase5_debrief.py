@@ -2,7 +2,7 @@ import pytest
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import scripts.phase_debrief as pd
+import scripts.phase5_debrief as pd
 
 
 def test_argparse_init():

@@ -1,5 +1,5 @@
 # ==============================================
-# phase_debrief.py
+# phase5_debrief.py
 # Post-interview debrief capture.
 #
 # Modes:
@@ -10,9 +10,9 @@
 # Output: data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json
 #
 # Usage:
-#   python scripts/phase_debrief.py --role Viasat_SE_IS --stage hiring_manager --init
-#   python scripts/phase_debrief.py --role Viasat_SE_IS --stage hiring_manager --convert
-#   python scripts/phase_debrief.py --role Viasat_SE_IS --stage hiring_manager --interactive
+#   python scripts/phase5_debrief.py --role Viasat_SE_IS --stage hiring_manager --init
+#   python scripts/phase5_debrief.py --role Viasat_SE_IS --stage hiring_manager --convert
+#   python scripts/phase5_debrief.py --role Viasat_SE_IS --stage hiring_manager --interactive
 # ==============================================
 
 import os
@@ -34,7 +34,7 @@ load_dotenv()
 # CONFIGURATION
 # ==============================================
 
-TEMPLATE_PATH = "docs/features/post-interview-debrief/interview_debrief_template.yaml"
+TEMPLATE_PATH = "templates/interview_debrief_template.yaml"
 DEBRIEFS_DIR = "data/debriefs"
 MODEL = "claude-haiku-4-5-20251001"
 
