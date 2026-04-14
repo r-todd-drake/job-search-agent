@@ -3,6 +3,7 @@
 **Date:** 2026-04-13
 **Feature:** A (of 3-part sequence: A=capture, B=library extraction, C=Phase 5 integration)
 **Proposal:** `docs/features/post-interview-debrief/proposal.md`
+**Review status:** All items resolved — ready to build
 
 ---
 
@@ -69,6 +70,7 @@ stories_used:
   - tags: []                     # e.g. [leadership, cross-functional]
     framing: null                # brief description of how it was told
     landed: null                 # yes | partially | no
+    library_id: null             # optional -- link to interview_library.json entry once in library
 
 gaps_surfaced:
   - gap_label: null              # e.g. "no cleared SCIF experience"
@@ -76,16 +78,18 @@ gaps_surfaced:
     response_felt: null          # strong | adequate | weak
 
 salary_exchange:                 # all fields optional
-  range_given_min: null
-  range_given_max: null
-  candidate_anchor: null
-  candidate_floor: null
+  range_given_min: null          # numeric, not string -- e.g. 145000
+  range_given_max: null          # numeric, not string
+  candidate_anchor: null         # numeric, not string
+  candidate_floor: null          # numeric, not string
   notes: null
 
 what_i_said: null                # free text -- claims, commitments, framings to stay consistent on
 
 open_notes: null                 # anything else worth capturing
 ```
+
+> ✅ RESOLVED: Added optional `library_id` field to `stories_used` entries. Null by default. Provides a hard link back to `interview_library.json` once a story is in the library. Feature C may use this for deterministic matching rather than fuzzy framing-text matching.
 
 **Enum values:**
 - `stage`: `recruiter_screen` | `hiring_manager` | `panel` | `final`
@@ -113,26 +117,68 @@ python scripts/phase_debrief.py --role ROLE --stage STAGE --interactive
 - Copies reference template, pre-fills `role`, `stage`, `produced_date`
 - Prints the path to the created draft
 
+> ✅ RESOLVED: One draft slot per role/stage combination is an accepted constraint. A second `--init` for the same role/stage triggers the overwrite warning. Multiple simultaneous panel debriefs for the same role are out of scope for MVP. Documented here so CC does not add sequence-suffix logic.
+
 ### `--convert` behavior
 
 - Reads `data/debriefs/[role]/debrief_[stage]_draft.yaml`
 - **Required field validation:** `interview_date`, `metadata.format`, `advancement_read.assessment` -- names missing field, exits without writing
 - **Enum validation:** `format`, `assessment`, `landed`, `response_felt` -- names field, lists accepted values, exits without writing
+- **Salary type casting:** explicitly casts `range_given_min`, `range_given_max`, `candidate_anchor`, `candidate_floor` to `int` before writing JSON -- rejects non-numeric values with a validation error
 - No partial writes -- JSON only written if all validation passes
 - Builds filename from `interview_date` and `produced_date` fields in the YAML
 - Writes JSON to `data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json`
 - Prints confirmation with output path
 
+> ✅ RESOLVED: Salary fields must be explicitly cast to `int` in the converter before JSON is written. YAML accepts both `145000` and `"145000"` as valid -- without casting, Feature C receives inconsistent types. Non-numeric salary values produce a validation error and block output.
+
+### Terminal output -- canonical message patterns
+
+> ✅ RESOLVED: The following message patterns are required. CC must implement these verbatim -- do not substitute alternate wording or leave as placeholders.
+
+**Validation errors:**
+```
+[field]: missing required value
+[field]: '[value]' is not valid. Accepted: [list]
+[field]: expected a number, got '[value]'
+```
+
+**Overwrite warning (`--init`):**
+```
+Draft already exists at [path]. Overwrite? (y/n):
+```
+
+**Success confirmation:**
+```
+Debrief saved to [path]
+```
+
+**Partial write blocked:**
+```
+Validation failed -- no file written. Fix the above and re-run --convert.
+```
+
+**`--interactive` draft conflict warning:**
+```
+A draft already exists for [role]/[stage]. --interactive will create a separate JSON output and will not use the draft. Continue? (y/n):
+```
+
 ### `--interactive` behavior
 
 - Walks through each section as a guided questionnaire
 - Enum fields: displays valid options, re-prompts on invalid input (loops, does not exit)
-- List sections (`stories_used`, `gaps_surfaced`): after each entry asks "Add another? (y/n)"
+- List sections (`stories_used`, `gaps_surfaced`): after each entry asks `"Add another? (y/n)"`
 - After each section response, calls Claude to decide if a follow-up question is warranted
 - Claude returns a question string or empty -- if empty, moves on silently
 - Follow-up asked at most once per section, never chained
+- On Ctrl-C or EOF: discards session silently, no file written, no prompt
+- Checks for existing draft on launch -- if found, displays conflict warning before proceeding (see Terminal output above)
 - Applies same validation rules as `--convert` before writing
 - Writes same JSON output schema as A1
+
+> ✅ RESOLVED: Mid-session quit (Ctrl-C or EOF) discards silently -- no file written, no save prompt. The A1 YAML template path already covers the use case of stopping and returning later. No additional handling needed.
+
+> ✅ RESOLVED: If a draft YAML exists for the same role/stage when `--interactive` is launched, display the conflict warning and require confirmation before proceeding. `--interactive` does not read or use the existing draft -- it produces a separate JSON output independently.
 
 ### AI follow-up system prompt (A2)
 
@@ -164,7 +210,8 @@ python scripts/phase_debrief.py --role ROLE --stage STAGE --interactive
     {
       "tags": ["leadership", "cross-functional"],
       "framing": "Led EO rewrite across three orgs under a hard deadline",
-      "landed": "yes"
+      "landed": "yes",
+      "library_id": null
     }
   ],
   "gaps_surfaced": [
@@ -188,8 +235,9 @@ python scripts/phase_debrief.py --role ROLE --stage STAGE --interactive
 
 **Schema rules:**
 - All fields present even when null -- Feature C reads without defensive checks
-- Salary values stored as numbers, not strings
+- Salary values stored as integers, not strings
 - `stories_used` and `gaps_surfaced` always arrays, even if empty (`[]`)
+- `library_id` present in every `stories_used` entry, null until explicitly linked
 
 ---
 
@@ -200,6 +248,7 @@ python scripts/phase_debrief.py --role ROLE --stage STAGE --interactive
 - AI assessment, scoring, or sentiment analysis of interview outcomes
 - Integration with calendar, email, or external systems
 - Multi-interviewer panel capture in a single session
+- Multiple simultaneous drafts for the same role/stage -- one draft slot per stage is an accepted MVP constraint
 - Editing or amending a previously saved debrief file
 
 ---
