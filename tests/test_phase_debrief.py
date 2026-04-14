@@ -258,3 +258,91 @@ def test_build_json_output_salary_null_fields_present():
     for field in ['range_given_min', 'range_given_max', 'candidate_anchor',
                   'candidate_floor', 'notes']:
         assert field in result['salary_exchange']
+
+
+# ---- run_init ----
+
+import yaml
+from datetime import date as date_type
+
+MINIMAL_TEMPLATE = """
+metadata:
+  role: null
+  stage: null
+  company: null
+  interviewer_name: null
+  interviewer_title: null
+  interview_date: null
+  format: null
+  produced_date: null
+advancement_read:
+  assessment: null
+  notes: null
+stories_used:
+  - tags: []
+    framing: null
+    landed: null
+    library_id: null
+gaps_surfaced:
+  - gap_label: null
+    response_given: null
+    response_felt: null
+salary_exchange:
+  range_given_min: null
+  range_given_max: null
+  candidate_anchor: null
+  candidate_floor: null
+  notes: null
+what_i_said: null
+open_notes: null
+"""
+
+
+def _make_template(tmp_path):
+    t = tmp_path / "template.yaml"
+    t.write_text(MINIMAL_TEMPLATE)
+    return str(t)
+
+
+def test_run_init_creates_role_directory(tmp_path):
+    pd.run_init('TestRole', 'hiring_manager', _make_template(tmp_path), str(tmp_path))
+    assert (tmp_path / 'TestRole').is_dir()
+
+
+def test_run_init_creates_draft_file(tmp_path):
+    pd.run_init('TestRole', 'hiring_manager', _make_template(tmp_path), str(tmp_path))
+    assert (tmp_path / 'TestRole' / 'debrief_hiring_manager_draft.yaml').exists()
+
+
+def test_run_init_prefills_role_stage_date(tmp_path):
+    pd.run_init('TestRole', 'hiring_manager', _make_template(tmp_path), str(tmp_path))
+    draft = tmp_path / 'TestRole' / 'debrief_hiring_manager_draft.yaml'
+    with open(draft) as f:
+        data = yaml.safe_load(f)
+    assert data['metadata']['role'] == 'TestRole'
+    assert data['metadata']['stage'] == 'hiring_manager'
+    assert data['metadata']['produced_date'] == str(date_type.today())
+
+
+def test_run_init_overwrite_confirmed(tmp_path, monkeypatch):
+    template = _make_template(tmp_path)
+    pd.run_init('TestRole', 'hiring_manager', template, str(tmp_path))
+    monkeypatch.setattr('builtins.input', lambda _: 'y')
+    pd.run_init('TestRole', 'hiring_manager', template, str(tmp_path))
+    assert (tmp_path / 'TestRole' / 'debrief_hiring_manager_draft.yaml').exists()
+
+
+def test_run_init_overwrite_cancelled_preserves_content(tmp_path, monkeypatch):
+    template = _make_template(tmp_path)
+    pd.run_init('TestRole', 'hiring_manager', template, str(tmp_path))
+    draft = tmp_path / 'TestRole' / 'debrief_hiring_manager_draft.yaml'
+    draft.write_text("sentinel content")
+    monkeypatch.setattr('builtins.input', lambda _: 'n')
+    pd.run_init('TestRole', 'hiring_manager', template, str(tmp_path))
+    assert draft.read_text() == "sentinel content"
+
+
+def test_run_init_prints_draft_path(tmp_path, capsys):
+    pd.run_init('TestRole', 'hiring_manager', _make_template(tmp_path), str(tmp_path))
+    captured = capsys.readouterr()
+    assert 'debrief_hiring_manager_draft.yaml' in captured.out
