@@ -181,7 +181,24 @@ def build_json_output(data: dict) -> dict:
 # ==============================================
 
 def run_init(role, stage, template_path, debriefs_dir):
-    pass
+    role_dir = os.path.join(debriefs_dir, role)
+    os.makedirs(role_dir, exist_ok=True)
+    draft_path = os.path.join(role_dir, f"debrief_{stage}_draft.yaml")
+    if os.path.exists(draft_path):
+        response = input(
+            f"Draft already exists at {draft_path}. Overwrite? (y/n): "
+        ).strip().lower()
+        if response != 'y':
+            print("Cancelled. Existing draft preserved.")
+            return
+    with open(template_path, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
+    data['metadata']['role'] = role
+    data['metadata']['stage'] = stage
+    data['metadata']['produced_date'] = str(date.today())
+    with open(draft_path, 'w', encoding='utf-8') as f:
+        yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    print(f"Draft created at {draft_path}")
 
 
 def run_convert(role, stage, debriefs_dir):
