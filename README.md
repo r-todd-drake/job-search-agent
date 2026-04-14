@@ -71,7 +71,11 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
    → Specify --interview_stage (recruiter, hiring_manager, team_panel)
    → Generates stage-specific .txt and .docx prep package
    → Workshop stories in Claude web chat before interview
-7. Submit, update status to APPLIED, move to tracker
+7. Run phase_debrief.py after each interview
+   → --interactive for guided capture with optional AI follow-up questions
+   → --init / --convert for YAML-based offline workflow
+   → Saves structured JSON to data/debriefs/[role]/
+8. Submit, update status to APPLIED, move to tracker
 ```
 
 ---
@@ -165,6 +169,41 @@ Running multiple stages for the same role produces separate files without collis
 
 Stage label and description are written to the output file header so the register is
 immediately clear when opening the package.
+
+---
+
+## Post-Interview Debrief
+
+Captures structured debrief data immediately after each interview — advancement read,
+stories used, gaps surfaced, salary exchange, and continuity notes.
+
+```bash
+# Guided questionnaire (recommended — AI follow-up questions per section)
+python scripts/phase_debrief.py --role [role] --stage [stage] --interactive
+
+# YAML-based workflow (fill the draft, then convert)
+python scripts/phase_debrief.py --role [role] --stage [stage] --init
+python scripts/phase_debrief.py --role [role] --stage [stage] --convert
+```
+
+Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
+
+Output: `data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json`
+
+**Captured fields:**
+
+| Section | Fields |
+|---------|--------|
+| Metadata | company, interviewer name/title, date, format, stage |
+| Advancement read | assessment (for_sure / maybe / doubt_it / definitely_not), notes |
+| Stories used | tags, framing, landed (yes / partially / no), library_id (for future linking) |
+| Gaps surfaced | gap label, response given, response felt (strong / adequate / weak) |
+| Salary exchange | range given, candidate anchor/floor, notes |
+| Continuity | what I said — claims and framings to stay consistent on |
+| Open notes | anything else worth capturing |
+
+`--interactive` mode calls the Claude API to generate one optional follow-up question
+per section. All responses are PII-stripped before the API call.
 
 ---
 
@@ -275,6 +314,9 @@ python scripts/phase4_cover_letter.py --stage 1 --role [role]
 python -m scripts.check_cover_letter --role [role]
 python scripts/phase4_cover_letter.py --stage 4 --role [role]
 python scripts/phase5_interview_prep.py --role [role] --interview_stage [recruiter|hiring_manager|team_panel]
+python scripts/phase_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
+python scripts/phase_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
+python scripts/phase_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
 ```
 
 ---
@@ -294,6 +336,7 @@ Job_search_agent/
 │   ├── jobs.csv                          # Pipeline — status + req number tracking
 │   ├── job_packages/[role]/              # JD, stage files, interview prep (active)
 │   │   └── inactive/[role]/              # Rejected / ghosted / withdrawn roles
+│   ├── debriefs/[role]/                  # Post-interview debrief JSON (local only)
 │   └── experience_library/              # Library source, JSON, candidate profile
 ├── docs/
 │   ├── features/                         # Requirements artifacts per capability
@@ -317,6 +360,7 @@ Job_search_agent/
 │   ├── phase4_resume_generator.py        # Four-stage resume generation
 │   ├── phase4_cover_letter.py            # Staged cover letter generator
 │   ├── phase5_interview_prep.py          # Stage-aware interview prep (recruiter/HM/team panel)
+│   ├── phase_debrief.py                  # Post-interview debrief capture (--init/--convert/--interactive)
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
