@@ -1,0 +1,38 @@
+# Post-Interview Debrief
+# Fill in all fields. Leave optional fields as null if not applicable.
+
+metadata:
+  role: null                     # pre-filled by --init
+  stage: null                    # pre-filled by --init
+  company: null                  # e.g. "Viasat"
+  interviewer_name: null         # e.g. "Jane Smith"
+  interviewer_title: null        # e.g. "Director of Systems Engineering"
+  interview_date: null           # YYYY-MM-DD -- drives output filename
+  format: null                   # phone | video | onsite
+  produced_date: null            # pre-filled by --init
+
+advancement_read:
+  assessment: null               # for_sure | maybe | doubt_it | definitely_not
+  notes: null
+
+stories_used:
+  - tags: []                     # e.g. [leadership, cross-functional]
+    framing: null                # brief description of how it was told
+    landed: null                 # yes | partially | no
+    library_id: null             # optional -- link to interview_library.json entry once in library
+
+gaps_surfaced:
+  - gap_label: null              # e.g. "no cleared SCIF experience"
+    response_given: null
+    response_felt: null          # strong | adequate | weak
+
+salary_exchange:                 # all fields optional
+  range_given_min: null          # numeric -- e.g. 145000
+  range_given_max: null          # numeric
+  candidate_anchor: null         # numeric
+  candidate_floor: null          # numeric
+  notes: null
+
+what_i_said: null                # free text -- claims, commitments, framings to stay consistent on
+
+open_notes: null                 # anything else worth capturing
