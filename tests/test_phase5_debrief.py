@@ -213,8 +213,9 @@ def test_build_output_filename():
 def _base_data():
     return {
         'metadata': {
-            'role': 'TestRole', 'stage': 'hiring_manager', 'company': 'Viasat',
-            'interviewer_name': None, 'interviewer_title': None,
+            'role': 'TestRole', 'stage': 'hiring_manager', 'panel_label': None,
+            'company': 'Viasat',
+            'interviewers': [{'name': 'Jane Smith', 'title': 'Director', 'notes': None}],
             'interview_date': '2026-04-10', 'format': 'video',
             'produced_date': '2026-04-13'
         },
@@ -269,9 +270,12 @@ MINIMAL_TEMPLATE = """
 metadata:
   role: null
   stage: null
+  panel_label: null
   company: null
-  interviewer_name: null
-  interviewer_title: null
+  interviewers:
+    - name: null
+      title: null
+      notes: null
   interview_date: null
   format: null
   produced_date: null
@@ -354,9 +358,12 @@ VALID_FILLED_YAML = """
 metadata:
   role: TestRole
   stage: hiring_manager
+  panel_label: null
   company: Viasat
-  interviewer_name: Jane Smith
-  interviewer_title: Director
+  interviewers:
+    - name: Jane Smith
+      title: Director
+      notes: null
   interview_date: '2026-04-10'
   format: video
   produced_date: '2026-04-13'
@@ -386,9 +393,12 @@ UNQUOTED_DATES_YAML = """
 metadata:
   role: TestRole
   stage: hiring_manager
+  panel_label: null
   company: Viasat
-  interviewer_name: Jane Smith
-  interviewer_title: Director
+  interviewers:
+    - name: Jane Smith
+      title: Director
+      notes: null
   interview_date: 2026-04-10
   format: video
   produced_date: 2026-04-13
@@ -506,8 +516,10 @@ def _default_inputs():
     """Full valid input sequence for a single-story, single-gap session."""
     return _make_inputs(
         'Viasat',           # company
-        'Jane Smith',        # interviewer_name
-        'Director',          # interviewer_title
+        'Jane Smith',        # interviewer name
+        'Director',          # interviewer title
+        '',                  # interviewer notes (skip)
+        'n',                 # add another interviewer?
         '2026-04-10',        # interview_date
         'video',             # format
         'maybe',             # assessment
@@ -554,7 +566,10 @@ def test_run_interactive_json_content(tmp_path, monkeypatch):
 
 def test_run_interactive_enum_reprompt(tmp_path, monkeypatch):
     monkeypatch.setattr('builtins.input', _make_inputs(
-        'Viasat', 'Jane', 'Dir', '2026-04-10',
+        'Viasat',
+        'Jane', 'Dir', '',  # interviewer: name, title, notes
+        'n',                # add another interviewer?
+        '2026-04-10',
         'zoom',    # invalid format -- should reprompt
         'video',   # valid
         'maybe', 'Notes.',
@@ -573,7 +588,10 @@ def test_run_interactive_enum_reprompt(tmp_path, monkeypatch):
 
 def test_run_interactive_multiple_stories(tmp_path, monkeypatch):
     monkeypatch.setattr('builtins.input', _make_inputs(
-        'Viasat', 'Jane', 'Dir', '2026-04-10', 'video', 'maybe', '',
+        'Viasat',
+        'Jane', 'Dir', '',  # interviewer
+        'n',                # add another interviewer?
+        '2026-04-10', 'video', 'maybe', '',
         'leadership', 'Led EO rewrite', 'yes',
         'y',                              # add another story
         'cross-functional', 'Built stakeholder map', 'partially',
@@ -604,7 +622,10 @@ def test_run_interactive_draft_conflict_warning(tmp_path, monkeypatch, capsys):
     (tmp_path / 'TestRole' / 'debrief_hiring_manager_draft.yaml').write_text('existing')
     monkeypatch.setattr('builtins.input', _make_inputs(
         'y',            # confirm conflict warning -- session must proceed after this
-        'Viasat', 'Jane', 'Dir', '2026-04-10', 'video', 'maybe', '',
+        'Viasat',
+        'Jane', 'Dir', '',  # interviewer
+        'n',                # add another interviewer?
+        '2026-04-10', 'video', 'maybe', '',
         'leadership', 'framing', 'yes', 'n',
         'gap', 'response', 'adequate', 'n',
         '', '', '', '', '',
@@ -658,7 +679,10 @@ def test_run_interactive_with_client_calls_followup(tmp_path, monkeypatch):
         content=[MagicMock(text="What would you do differently?")]
     )
     monkeypatch.setattr('builtins.input', _make_inputs(
-        'Viasat', 'Jane', 'Dir', '2026-04-10', 'video',
+        'Viasat',
+        'Jane', 'Dir', '',  # interviewer
+        'n',                # add another interviewer?
+        '2026-04-10', 'video',
         'maybe', 'Felt strong.',
         'follow-up answer for advancement_read',
         'leadership', 'Led EO rewrite', 'yes', 'n',
@@ -680,3 +704,104 @@ def test_run_interactive_client_none_no_followup(tmp_path, monkeypatch):
     monkeypatch.setattr('builtins.input', _default_inputs())
     pd.run_interactive('TestRole', 'hiring_manager', str(tmp_path), client=None)
     assert len(list((tmp_path / 'TestRole').glob('*.json'))) == 1
+
+
+# ---- Amendment tests: interviewers array, panel_label, filename pattern ----
+
+# New YAML constant with amended schema -- used for validation rejection tests
+# before VALID_FILLED_YAML is updated.
+AMENDED_VALID_YAML = """
+metadata:
+  role: TestRole
+  stage: hiring_manager
+  panel_label: null
+  company: Viasat
+  interviewers:
+    - name: Jane Smith
+      title: Director
+      notes: null
+  interview_date: '2026-04-10'
+  format: video
+  produced_date: '2026-04-13'
+advancement_read:
+  assessment: maybe
+  notes: Felt strong overall.
+stories_used:
+  - tags: [leadership]
+    framing: Led EO rewrite
+    landed: yes
+    library_id: null
+gaps_surfaced:
+  - gap_label: no SCIF experience
+    response_given: Acknowledged and redirected
+    response_felt: adequate
+salary_exchange:
+  range_given_min: 145000
+  range_given_max: 165000
+  candidate_anchor: null
+  candidate_floor: null
+  notes: null
+what_i_said: Cited 12 years experience.
+open_notes: null
+"""
+
+
+def test_single_interviewer_in_output():
+    data = _base_data()
+    result = pd.build_json_output(data)
+    assert len(result['metadata']['interviewers']) == 1
+    assert result['metadata']['interviewers'][0]['name'] == 'Jane Smith'
+    assert result['metadata']['interviewers'][0]['title'] == 'Director'
+    assert result['metadata']['interviewers'][0]['notes'] is None
+
+
+def test_multiple_interviewers_in_output():
+    data = _base_data()
+    data['metadata']['interviewers'] = [
+        {'name': 'Jane Smith', 'title': 'Director', 'notes': 'Asked about MBSE'},
+        {'name': 'Bob Jones', 'title': 'Senior SE', 'notes': 'Mentioned interface pain points'},
+    ]
+    result = pd.build_json_output(data)
+    assert len(result['metadata']['interviewers']) == 2
+    assert result['metadata']['interviewers'][0]['name'] == 'Jane Smith'
+    assert result['metadata']['interviewers'][1]['name'] == 'Bob Jones'
+    assert result['metadata']['interviewers'][1]['notes'] == 'Mentioned interface pain points'
+
+
+def test_panel_label_present_in_metadata_and_filename():
+    filename = pd.build_output_filename('panel', '2026-04-20', '2026-04-20', panel_label='se_team')
+    assert filename == 'debrief_panel_se_team_2026-04-20_filed-2026-04-20.json'
+    data = _base_data()
+    data['metadata']['panel_label'] = 'se_team'
+    output = pd.build_json_output(data)
+    assert output['metadata']['panel_label'] == 'se_team'
+
+
+def test_panel_label_absent_in_metadata_and_filename():
+    filename = pd.build_output_filename('panel', '2026-04-20', '2026-04-20')
+    assert filename == 'debrief_panel_2026-04-20_filed-2026-04-20.json'
+    data = _base_data()
+    output = pd.build_json_output(data)
+    assert output['metadata']['panel_label'] is None
+
+
+def test_run_convert_rejects_empty_interviewers(tmp_path, capsys):
+    content = AMENDED_VALID_YAML.replace(
+        '  interviewers:\n    - name: Jane Smith\n      title: Director\n      notes: null',
+        '  interviewers: []'
+    )
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'interviewers' in capsys.readouterr().out
+
+
+def test_run_convert_rejects_all_null_interviewer_names(tmp_path, capsys):
+    content = AMENDED_VALID_YAML.replace(
+        '    - name: Jane Smith',
+        '    - name: null'
+    )
+    _write_draft(tmp_path, 'TestRole', 'hiring_manager', content)
+    with pytest.raises(SystemExit):
+        pd.run_convert('TestRole', 'hiring_manager', str(tmp_path))
+    assert 'interviewers' in capsys.readouterr().out

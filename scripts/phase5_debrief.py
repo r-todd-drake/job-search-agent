@@ -75,6 +75,10 @@ def build_parser():
     parser.add_argument(
         "--stage", required=True, choices=VALID_STAGES, help="Interview stage"
     )
+    parser.add_argument(
+        "--panel_label", default=None,
+        help="Panel label for multi-panel sessions (e.g. se_team)"
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--init", action="store_true", default=False,
                       help="Create YAML draft")
@@ -129,6 +133,14 @@ def validate_enums(data: dict) -> list:
     return errors
 
 
+def validate_interviewers(data: dict) -> list:
+    """Check that interviewers array has at least one entry with a non-null name. Returns list of error strings."""
+    interviewers = data.get('metadata', {}).get('interviewers') or []
+    if not interviewers or not any(i.get('name') for i in interviewers):
+        return ['interviewers: at least one interviewer with a non-null name is required']
+    return []
+
+
 def cast_salary_fields(data: dict) -> tuple:
     """Cast salary fields to int. Returns (updated_data, list of error strings)."""
     errors = []
@@ -156,19 +168,29 @@ def _normalize_yaml_booleans(data: dict) -> None:
             story['landed'] = bool_map[story['landed']]
 
 
-def build_output_filename(stage: str, interview_date: str, produced_date: str) -> str:
+def build_output_filename(stage: str, interview_date: str, produced_date: str, panel_label: str = None) -> str:
+    if panel_label:
+        return f"debrief_{stage}_{panel_label}_{interview_date}_filed-{produced_date}.json"
     return f"debrief_{stage}_{interview_date}_filed-{produced_date}.json"
 
 
 def build_json_output(data: dict) -> dict:
     """Build the canonical JSON output dict from validated data."""
+    interviewers = data.get('metadata', {}).get('interviewers') or []
     return {
         'metadata': {
             'role': data['metadata'].get('role'),
             'stage': data['metadata'].get('stage'),
+            'panel_label': data['metadata'].get('panel_label'),
             'company': data['metadata'].get('company'),
-            'interviewer_name': data['metadata'].get('interviewer_name'),
-            'interviewer_title': data['metadata'].get('interviewer_title'),
+            'interviewers': [
+                {
+                    'name': i.get('name'),
+                    'title': i.get('title'),
+                    'notes': i.get('notes'),
+                }
+                for i in interviewers
+            ],
             'interview_date': data['metadata'].get('interview_date'),
             'format': data['metadata'].get('format'),
             'produced_date': data['metadata'].get('produced_date'),
@@ -210,7 +232,7 @@ def build_json_output(data: dict) -> dict:
 # MODE STUBS (implemented in later tasks)
 # ==============================================
 
-def run_init(role, stage, template_path, debriefs_dir):
+def run_init(role, stage, template_path, debriefs_dir, panel_label=None):
     role_dir = os.path.join(debriefs_dir, role)
     os.makedirs(role_dir, exist_ok=True)
     draft_path = os.path.join(role_dir, f"debrief_{stage}_draft.yaml")
@@ -226,6 +248,7 @@ def run_init(role, stage, template_path, debriefs_dir):
     data['metadata']['role'] = role
     data['metadata']['stage'] = stage
     data['metadata']['produced_date'] = str(date.today())
+    data['metadata']['panel_label'] = panel_label
     with open(draft_path, 'w', encoding='utf-8') as f:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
     print(f"Draft created at {draft_path}")
@@ -248,6 +271,7 @@ def run_convert(role, stage, debriefs_dir):
     errors = []
     errors.extend(validate_required(data))
     errors.extend(validate_enums(data))
+    errors.extend(validate_interviewers(data))
     data, salary_errors = cast_salary_fields(data)
     errors.extend(salary_errors)
     if errors:
@@ -258,7 +282,8 @@ def run_convert(role, stage, debriefs_dir):
     output = build_json_output(data)
     interview_date = data['metadata']['interview_date']
     produced_date = data['metadata']['produced_date']
-    filename = build_output_filename(stage, interview_date, produced_date)
+    panel_label = data['metadata'].get('panel_label')
+    filename = build_output_filename(stage, interview_date, produced_date, panel_label=panel_label)
     output_path = os.path.join(debriefs_dir, role, filename)
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
@@ -292,7 +317,7 @@ def _prompt_optional_int(prompt_text):
             print("  Expected a number. Try again or press Enter to skip.")
 
 
-def run_interactive(role, stage, debriefs_dir, client=None):
+def run_interactive(role, stage, debriefs_dir, client=None, panel_label=None):
     try:
         draft_path = os.path.join(debriefs_dir, role, f"debrief_{stage}_draft.yaml")
         if os.path.exists(draft_path):
@@ -310,8 +335,22 @@ def run_interactive(role, stage, debriefs_dir, client=None):
         # -- metadata --
         print("-- Interview Details --")
         company = _prompt_optional("Company")
-        interviewer_name = _prompt_optional("Interviewer name")
-        interviewer_title = _prompt_optional("Interviewer title")
+        print("\n-- Interviewers --")
+        interviewers = []
+        while True:
+            print(f"  Interviewer {len(interviewers) + 1}:")
+            name = _prompt_optional("    Name")
+            title = _prompt_optional("    Title")
+            notes = _prompt_optional(
+                "    Notes (questions asked, background, programs mentioned, anything for personalized follow-up)"
+            )
+            interviewers.append({'name': name, 'title': title, 'notes': notes})
+            if not any(i.get('name') for i in interviewers):
+                print("  At least one interviewer name is required.")
+                interviewers.clear()
+                continue
+            if input("  Add another interviewer? (y/n): ").strip().lower() != 'y':
+                break
         interview_date = input("Interview date (YYYY-MM-DD): ").strip()
         fmt = _prompt_enum("Format", VALID_FORMATS)
         produced_date = str(date.today())
@@ -401,8 +440,9 @@ def run_interactive(role, stage, debriefs_dir, client=None):
 
         data = {
             'metadata': {
-                'role': role, 'stage': stage, 'company': company,
-                'interviewer_name': interviewer_name, 'interviewer_title': interviewer_title,
+                'role': role, 'stage': stage, 'panel_label': panel_label,
+                'company': company,
+                'interviewers': interviewers,
                 'interview_date': interview_date, 'format': fmt,
                 'produced_date': produced_date,
             },
@@ -427,7 +467,7 @@ def run_interactive(role, stage, debriefs_dir, client=None):
 
         output = build_json_output(data)
         os.makedirs(os.path.join(debriefs_dir, role), exist_ok=True)
-        filename = build_output_filename(stage, interview_date, produced_date)
+        filename = build_output_filename(stage, interview_date, produced_date, panel_label=panel_label)
         output_path = os.path.join(debriefs_dir, role, filename)
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(output, f, indent=2, ensure_ascii=False)
@@ -444,12 +484,12 @@ def run_interactive(role, stage, debriefs_dir, client=None):
 def main():
     args = build_parser().parse_args()
     if args.init:
-        run_init(args.role, args.stage, TEMPLATE_PATH, DEBRIEFS_DIR)
+        run_init(args.role, args.stage, TEMPLATE_PATH, DEBRIEFS_DIR, panel_label=args.panel_label)
     elif args.convert:
         run_convert(args.role, args.stage, DEBRIEFS_DIR)
     elif args.interactive:
         client = Anthropic()
-        run_interactive(args.role, args.stage, DEBRIEFS_DIR, client=client)
+        run_interactive(args.role, args.stage, DEBRIEFS_DIR, client=client, panel_label=args.panel_label)
 
 
 if __name__ == "__main__":
