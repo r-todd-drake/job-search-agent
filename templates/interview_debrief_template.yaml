@@ -4,9 +4,12 @@
 metadata:
   role: null                     # pre-filled by --init
   stage: null                    # pre-filled by --init
+  panel_label: null              # optional -- e.g. "se_team" or "business_leaders"
   company: null                  # e.g. "Viasat"
-  interviewer_name: null         # e.g. "Jane Smith"
-  interviewer_title: null        # e.g. "Director of Systems Engineering"
+  interviewers:
+    - name: null
+      title: null
+      notes: null                # questions asked, background, programs mentioned, shared experiences
   interview_date: null           # YYYY-MM-DD -- drives output filename
   format: null                   # phone | video | onsite
   produced_date: null            # pre-filled by --init
