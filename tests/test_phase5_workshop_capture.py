@@ -95,65 +95,65 @@ def test_extract_detects_italic_paragraphs(tmp_path):
 
 # ── _split_sections ───────────────────────────────────────────────────────────
 
-def _paras(texts):
-    """Helper: build paragraph tuples with default style and not italic."""
-    return [(t, "Normal", False) for t in texts]
+def _paras(texts, style="Normal"):
+    """Helper: build paragraph tuples with given style and not italic."""
+    return [(t, style, False) for t in texts]
 
 
 def test_split_sections_finds_story_bank():
-    paras = _paras([
-        "Interview Prep Package",
-        "Story Bank",
-        "STORY 1 -- MBSE:",
-        "Situation: context here.",
-        "Gap Preparation",
-        "GAP 1 -- Networking [REQUIRED]:",
-    ])
+    paras = (
+        _paras(["Interview Prep Package"], style="Heading 1") +
+        _paras(["Story Bank"], style="Heading 1") +
+        _paras(["STORY 1 -- MBSE:"]) +
+        _paras(["Situation: context here."]) +
+        _paras(["Gap Preparation"], style="Heading 1") +
+        _paras(["GAP 1 -- Networking [REQUIRED]:"])
+    )
     sections = wc._split_sections(paras)
     assert any("STORY 1" in t for t, _, _ in sections["story_bank"])
 
 
 def test_split_sections_finds_gap_prep():
-    paras = _paras([
-        "Story Bank",
-        "STORY 1 -- MBSE:",
-        "Gap Preparation",
-        "GAP 1 -- Networking [REQUIRED]:",
-        "Honest answer: here.",
-    ])
+    paras = (
+        _paras(["Story Bank"], style="Heading 1") +
+        _paras(["STORY 1 -- MBSE:"]) +
+        _paras(["Gap Preparation"], style="Heading 1") +
+        _paras(["GAP 1 -- Networking [REQUIRED]:"]) +
+        _paras(["Honest answer: here."])
+    )
     sections = wc._split_sections(paras)
     assert any("GAP 1" in t for t, _, _ in sections["gap_prep"])
 
 
 def test_split_sections_finds_questions():
-    paras = _paras([
-        "Gap Preparation",
-        "GAP 1 -- Topic [REQUIRED]:",
-        "Questions to Ask",
-        "1. What does success look like at 6 months?",
-    ])
+    paras = (
+        _paras(["Gap Preparation"], style="Heading 1") +
+        _paras(["GAP 1 -- Topic [REQUIRED]:"]) +
+        _paras(["Questions to Ask"], style="Heading 1") +
+        _paras(["1. What does success look like at 6 months?"])
+    )
     sections = wc._split_sections(paras)
     assert any("success" in t for t, _, _ in sections["questions"])
 
 
 def test_split_sections_excludes_other_sections():
-    paras = _paras([
-        "Company Role Brief",
-        "Company overview here.",
-        "Story Bank",
-        "STORY 1 -- MBSE:",
-    ])
+    paras = (
+        _paras(["Company Role Brief"], style="Heading 1") +
+        _paras(["Company overview here."]) +
+        _paras(["Story Bank"], style="Heading 1") +
+        _paras(["STORY 1 -- MBSE:"])
+    )
     sections = wc._split_sections(paras)
     assert not any("overview" in t for t, _, _ in sections["story_bank"])
 
 
 def test_split_sections_content_with_salary_word_not_false_positive():
-    paras = _paras([
-        "Story Bank",
-        "STORY 1 -- Background:",
-        "Situation: I negotiated salary and benefits package for the team.",
-        "Task: T.", "Action: A.", "Result: R.",
-    ])
+    paras = (
+        _paras(["Story Bank"], style="Heading 1") +
+        _paras(["STORY 1 -- Background:"]) +
+        _paras(["They asked about salary."]) +
+        _paras(["I provided a market range."])
+    )
     sections = wc._split_sections(paras)
     # Content paragraph mentioning "salary" should NOT reset the section
     assert any("salary" in t.lower() for t, _, _ in sections["story_bank"])
