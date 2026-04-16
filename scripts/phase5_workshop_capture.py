@@ -141,3 +141,72 @@ def _split_sections(paragraphs):
             sections[current].append((text, style, is_italic))
 
     return sections
+
+
+# ==============================================
+# STORY PARSER
+# ==============================================
+
+def _parse_stories(paragraphs):
+    """
+    Parse story bank paragraphs into a list of story dicts.
+    Each dict has: employer, title_held, dates, situation, task,
+                   action, result, if_probed, _header (raw story heading).
+    Italic paragraphs are skipped (coaching / delivery notes).
+    """
+    STORY_FIELDS = {
+        "Situation:": "situation",
+        "Task:":      "task",
+        "Action:":    "action",
+        "Result:":    "result",
+        "If probed:": "if_probed",
+    }
+    stories = []
+    current = None
+    current_field = None
+
+    for text, style, is_italic in paragraphs:
+        if is_italic:
+            continue
+
+        if re.match(r'^STORY\s+\d+\s*[-\u2013]', text, re.IGNORECASE):
+            if current:
+                stories.append(current)
+            current = {
+                "employer": "", "title_held": "", "dates": "",
+                "situation": "", "task": "", "action": "", "result": "",
+                "if_probed": None, "_header": text
+            }
+            current_field = None
+            continue
+
+        if current is None:
+            continue
+
+        if text.startswith("Employer:"):
+            value = text[len("Employer:"):].strip()
+            parts = [p.strip() for p in value.split("|")]
+            current["employer"]   = parts[0] if len(parts) > 0 else ""
+            current["title_held"] = parts[1] if len(parts) > 1 else ""
+            current["dates"]      = parts[2] if len(parts) > 2 else ""
+            current_field = None
+            continue
+
+        matched = False
+        for label, field in STORY_FIELDS.items():
+            if text.startswith(label):
+                current[field] = text[len(label):].strip()
+                current_field = field
+                matched = True
+                break
+
+        if not matched and current_field:
+            # Continuation line for the current field
+            if current[current_field] is None:
+                current[current_field] = text
+            elif current[current_field]:
+                current[current_field] += " " + text
+
+    if current:
+        stories.append(current)
+    return stories

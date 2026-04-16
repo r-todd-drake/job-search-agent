@@ -157,3 +157,92 @@ def test_split_sections_content_with_salary_word_not_false_positive():
     sections = wc._split_sections(paras)
     # Content paragraph mentioning "salary" should NOT reset the section
     assert any("salary" in t.lower() for t, _, _ in sections["story_bank"])
+
+
+# ── _parse_stories ────────────────────────────────────────────────────────────
+
+def _story_paras(lines):
+    """Build paragraph tuples for story bank content."""
+    return [(line, "Normal", False) for line in lines]
+
+
+def test_parse_stories_extracts_employer_title_dates():
+    paras = _story_paras([
+        "STORY 1 -- MBSE Toolchain [Systems Engineering]:",
+        "Employer: G2 OPS | Systems Engineer | 2021-2023",
+        "Situation: Context here.",
+        "Task: What needed doing.",
+        "Action: What I did.",
+        "Result: The outcome.",
+    ])
+    stories = wc._parse_stories(paras)
+    assert len(stories) == 1
+    assert stories[0]["employer"] == "G2 OPS"
+    assert stories[0]["title_held"] == "Systems Engineer"
+    assert stories[0]["dates"] == "2021-2023"
+
+
+def test_parse_stories_extracts_star_components():
+    paras = _story_paras([
+        "STORY 1 -- Requirement:",
+        "Employer: ACME | Engineer | 2022-2023",
+        "Situation: Sat text.",
+        "Task: Task text.",
+        "Action: Action text.",
+        "Result: Result text.",
+    ])
+    s = wc._parse_stories(paras)[0]
+    assert s["situation"] == "Sat text."
+    assert s["task"] == "Task text."
+    assert s["action"] == "Action text."
+    assert s["result"] == "Result text."
+
+
+def test_parse_stories_extracts_if_probed():
+    paras = _story_paras([
+        "STORY 1 -- Requirement:",
+        "Employer: ACME | Engineer | 2022",
+        "Situation: S.", "Task: T.", "Action: A.", "Result: R.",
+        "If probed: One more sentence.",
+    ])
+    s = wc._parse_stories(paras)[0]
+    assert s["if_probed"] == "One more sentence."
+
+
+def test_parse_stories_if_probed_none_when_absent():
+    paras = _story_paras([
+        "STORY 1 -- Requirement:",
+        "Employer: ACME | Engineer | 2022",
+        "Situation: S.", "Task: T.", "Action: A.", "Result: R.",
+    ])
+    s = wc._parse_stories(paras)[0]
+    assert s["if_probed"] is None
+
+
+def test_parse_stories_skips_italic_paragraphs():
+    paras = [
+        ("STORY 1 -- Requirement:", "Normal", False),
+        ("Employer: ACME | Engineer | 2022", "Normal", False),
+        ("Signals: do not include this line.", "Normal", True),   # italic
+        ("Situation: Real situation.", "Normal", False),
+        ("Task: T.", "Normal", False),
+        ("Action: A.", "Normal", False),
+        ("Result: R.", "Normal", False),
+    ]
+    s = wc._parse_stories(paras)[0]
+    assert s["situation"] == "Real situation."
+
+
+def test_parse_stories_handles_multiple_stories():
+    paras = _story_paras([
+        "STORY 1 -- First:",
+        "Employer: ACME | Eng | 2021",
+        "Situation: S1.", "Task: T1.", "Action: A1.", "Result: R1.",
+        "STORY 2 -- Second:",
+        "Employer: Corp | Arch | 2022",
+        "Situation: S2.", "Task: T2.", "Action: A2.", "Result: R2.",
+    ])
+    stories = wc._parse_stories(paras)
+    assert len(stories) == 2
+    assert stories[0]["employer"] == "ACME"
+    assert stories[1]["employer"] == "Corp"
