@@ -212,3 +212,75 @@ def _parse_stories(paragraphs):
     if current:
         stories.append(current)
     return stories
+
+
+# ==============================================
+# GAP PARSER
+# ==============================================
+
+def _parse_gaps(paragraphs):
+    """
+    Parse gap prep paragraphs into a list of gap response dicts.
+    Each dict has: gap_label, severity, honest_answer, bridge, redirect.
+    Skips: italic paragraphs, SHORT TENURE section.
+    Stops at: HARD QUESTIONS section.
+    """
+    GAP_FIELDS = {
+        "Honest answer:": "honest_answer",
+        "Bridge:":        "bridge",
+        "Redirect:":      "redirect",
+    }
+    gaps = []
+    current = None
+    current_field = None
+    in_short_tenure = False
+
+    for text, style, is_italic in paragraphs:
+        if is_italic:
+            continue
+        upper = text.upper()
+        if "SHORT TENURE" in upper:
+            in_short_tenure = True
+            current = None
+            continue
+        if "HARD QUESTIONS" in upper:
+            break
+        if re.match(r'^GAP\s+\d+\s*(?:--|\u2013)', text, re.IGNORECASE):
+            in_short_tenure = False
+            if current:
+                gaps.append(current)
+            severity = "preferred" if "[PREFERRED]" in upper else "required"
+            label_match = re.match(
+                r'^GAP\s+\d+\s*(?:--|\u2013)\s+(.+?)\s*(?:\[(?:REQUIRED|PREFERRED)\])?:?\s*$',
+                text, re.IGNORECASE
+            )
+            gap_label = label_match.group(1).strip() if label_match else text
+            current = {
+                "gap_label": gap_label, "severity": severity,
+                "honest_answer": "", "bridge": "", "redirect": "",
+            }
+            current_field = None
+            continue
+
+        if in_short_tenure or current is None:
+            continue
+        if text.startswith("Gap:"):
+            current_field = None  # Skip the Gap: line itself
+            continue
+
+        matched = False
+        for label, field in GAP_FIELDS.items():
+            if text.startswith(label):
+                current[field] = text[len(label):].strip()
+                current_field = field
+                matched = True
+                break
+        if not matched and current_field:
+            if current[current_field]:
+                current[current_field] += " " + text
+            else:
+                current[current_field] = text
+
+    if current:
+        gaps.append(current)
+    return gaps
