@@ -127,6 +127,9 @@ def _split_sections(paragraphs):
         matched_section = False
         for key, markers in SECTION_MARKERS.items():
             if any(m in upper for m in markers):
+                if key == "other" and len(text.strip()) > 60:
+                    # Only treat as section header if short (real section titles are short)
+                    continue
                 current = None if key == "other" else key
                 matched_section = True
                 break
