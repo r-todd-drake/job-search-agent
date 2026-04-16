@@ -201,3 +201,83 @@ def test_get_stories_stage_param_accepted_without_error(tmp_path, monkeypatch):
 def test_get_stories_returns_empty_when_library_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(ilp, "LIBRARY_PATH", str(tmp_path / "missing.json"))
     assert ilp.get_stories(tags=["mbse"]) == []
+
+
+# ── get_gap_responses ─────────────────────────────────────────────────────────
+
+def test_get_gap_responses_returns_all_when_no_filters(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    assert len(ilp.get_gap_responses()) == 1
+
+
+def test_get_gap_responses_filters_by_gap_label(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_gap_responses(gap_label="IP Networking Expertise")
+    assert len(result) == 1
+    assert result[0]["id"] == "ip-networking-expertise"
+
+
+def test_get_gap_responses_label_match_is_case_insensitive(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_gap_responses(gap_label="ip networking expertise")
+    assert len(result) == 1
+
+
+def test_get_gap_responses_no_match_returns_empty(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    assert ilp.get_gap_responses(gap_label="Nonexistent Gap") == []
+
+
+def test_get_gap_responses_filters_by_tag(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_gap_responses(tags=["domain-gap"])
+    assert len(result) == 1
+
+
+def test_get_gap_responses_filters_by_role(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_gap_responses(role="Viasat_SE_IS")
+    assert len(result) == 1
+
+
+def test_get_gap_responses_returns_empty_when_library_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(ilp, "LIBRARY_PATH", str(tmp_path / "missing.json"))
+    assert ilp.get_gap_responses() == []
+
+
+# ── get_questions ─────────────────────────────────────────────────────────────
+
+def test_get_questions_returns_all_when_no_filters(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    assert len(ilp.get_questions()) == 2
+
+
+def test_get_questions_filters_by_stage(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_questions(stage="hiring_manager")
+    assert len(result) == 1
+    assert result[0]["stage"] == "hiring_manager"
+
+
+def test_get_questions_filters_by_tag(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_questions(tags=["integration"])
+    assert len(result) == 1
+    assert result[0]["id"] == "where-are-integration-problems"
+
+
+def test_get_questions_filters_by_stage_and_tag(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_questions(stage="team_panel", tags=["technical-credibility"])
+    assert len(result) == 1
+
+
+def test_get_questions_stage_and_tag_no_match(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_questions(stage="recruiter", tags=["mbse"])
+    assert result == []
+
+
+def test_get_questions_returns_empty_when_library_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(ilp, "LIBRARY_PATH", str(tmp_path / "missing.json"))
+    assert ilp.get_questions(stage="hiring_manager") == []

@@ -49,3 +49,45 @@ def get_stories(tags=None, role=None, stage=None):
     if role:
         results = [s for s in results if role in s.get("roles_used", [])]
     return results
+
+
+def get_gap_responses(tags=None, role=None, gap_label=None):
+    """Return gap response entries matching all provided filters (AND logic).
+
+    tags:      list of tag strings -- OR match within tags.
+    role:      role slug -- must appear in roles_used.
+    gap_label: case-insensitive exact match on gap_label field.
+
+    Returns empty list on no match or absent library.
+    """
+    library = _load_library()
+    results = library.get("gap_responses", [])
+    if tags:
+        results = [g for g in results if any(t in g.get("tags", []) for t in tags)]
+    if role:
+        results = [g for g in results if role in g.get("roles_used", [])]
+    if gap_label:
+        norm = gap_label.lower().strip()
+        results = [g for g in results
+                   if g.get("gap_label", "").lower().strip() == norm]
+    return results
+
+
+def get_questions(tags=None, role=None, stage=None):
+    """Return question entries matching all provided filters (AND logic).
+
+    tags:  list of tag strings -- OR match within tags.
+    role:  role slug -- must appear in roles_used.
+    stage: exact match on stage field (recruiter / hiring_manager / team_panel).
+
+    Returns empty list on no match or absent library.
+    """
+    library = _load_library()
+    results = library.get("questions", [])
+    if tags:
+        results = [q for q in results if any(t in q.get("tags", []) for t in tags)]
+    if role:
+        results = [q for q in results if role in q.get("roles_used", [])]
+    if stage:
+        results = [q for q in results if q.get("stage") == stage]
+    return results
