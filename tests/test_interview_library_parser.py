@@ -145,3 +145,59 @@ def test_load_tags_returns_list(tmp_path, monkeypatch):
 def test_load_tags_returns_empty_when_absent(tmp_path, monkeypatch):
     monkeypatch.setattr(ilp, "TAGS_PATH", str(tmp_path / "missing.json"))
     assert ilp.load_tags() == []
+
+
+# ── get_stories ───────────────────────────────────────────────────────────────
+
+def test_get_stories_returns_all_when_no_filters(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_stories()
+    assert len(result) == 2
+
+
+def test_get_stories_filters_by_tag(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_stories(tags=["mbse"])
+    assert len(result) == 1
+    assert result[0]["id"] == "g2ops-mbse-bottleneck"
+
+
+def test_get_stories_tag_filter_is_or_within_tags(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    # Both stories match when tags list covers both
+    result = ilp.get_stories(tags=["mbse", "cross-functional"])
+    assert len(result) == 2
+
+
+def test_get_stories_filters_by_role(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    result = ilp.get_stories(role="Leidos_SE")
+    assert len(result) == 1
+    assert result[0]["id"] == "shield-ai-cross-domain"
+
+
+def test_get_stories_filters_by_tag_and_role(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    # shield-ai story has cross-functional tag and Leidos_SE role
+    result = ilp.get_stories(tags=["cross-functional"], role="Leidos_SE")
+    assert len(result) == 1
+    assert result[0]["id"] == "shield-ai-cross-domain"
+
+
+def test_get_stories_tag_and_role_no_match(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    # mbse tag exists, but not for Leidos_SE
+    result = ilp.get_stories(tags=["mbse"], role="Leidos_SE")
+    assert result == []
+
+
+def test_get_stories_stage_param_accepted_without_error(tmp_path, monkeypatch):
+    _write_library(tmp_path, _sample_library(), monkeypatch)
+    # stage is accepted but not applied -- stories have no stage field
+    result = ilp.get_stories(stage="hiring_manager")
+    assert len(result) == 2  # all stories returned; stage filter is no-op
+
+
+def test_get_stories_returns_empty_when_library_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(ilp, "LIBRARY_PATH", str(tmp_path / "missing.json"))
+    assert ilp.get_stories(tags=["mbse"]) == []
