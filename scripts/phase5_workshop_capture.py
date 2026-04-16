@@ -284,3 +284,32 @@ def _parse_gaps(paragraphs):
     if current:
         gaps.append(current)
     return gaps
+
+
+# ==============================================
+# QUESTION PARSER
+# ==============================================
+
+def _parse_questions(paragraphs, stage):
+    """
+    Parse questions section paragraphs into a list of question dicts.
+    Each dict has: stage, text (question only, rationale stripped), category=None.
+    Extracts numbered items (1. ...) only.
+    Strips rationale text after the closing "?".
+    Italic paragraphs are skipped.
+    """
+    questions = []
+    for text, style, is_italic in paragraphs:
+        if is_italic:
+            continue
+        if not re.match(r'^\d+\.', text):
+            continue
+        # Strip number prefix
+        text_no_num = re.sub(r'^\d+\.\s*', '', text).strip()
+        # Take only up to and including the first "?"
+        q_match = re.search(r'^(.*?\?)', text_no_num)
+        if not q_match:
+            continue
+        q_text = q_match.group(1).strip()
+        questions.append({"stage": stage, "text": q_text, "category": None})
+    return questions

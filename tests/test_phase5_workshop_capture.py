@@ -336,3 +336,52 @@ def test_parse_gaps_skips_italic_paragraphs():
     ]
     gaps = wc._parse_gaps(paras)
     assert len(gaps) == 1
+
+
+# ── _parse_questions ──────────────────────────────────────────────────────────
+
+def test_parse_questions_extracts_question_text():
+    paras = [(
+        "1. What does success look like at 6 months? Signals you're thinking about impact.",
+        "Normal", False
+    )]
+    questions = wc._parse_questions(paras, "hiring_manager")
+    assert len(questions) == 1
+    assert questions[0]["text"] == "What does success look like at 6 months?"
+    assert questions[0]["stage"] == "hiring_manager"
+
+
+def test_parse_questions_strips_rationale():
+    paras = [(
+        "2. Where are the hard interface problems right now? This signals peer credibility.",
+        "Normal", False
+    )]
+    q = wc._parse_questions(paras, "team_panel")[0]
+    assert q["text"].endswith("?")
+    assert "credibility" not in q["text"]
+
+
+def test_parse_questions_skips_italic():
+    paras = [
+        ("1. Real question?", "Normal", False),
+        ("Coaching note.", "Normal", True),
+        ("2. Another question?", "Normal", False),
+    ]
+    questions = wc._parse_questions(paras, "recruiter")
+    assert len(questions) == 2
+
+
+def test_parse_questions_returns_empty_when_no_numbered_items():
+    paras = [("Not a numbered item.", "Normal", False)]
+    assert wc._parse_questions(paras, "hiring_manager") == []
+
+
+def test_closing_question_excluded():
+    paras = [
+        ("1. What does success look like at 6 months?", "Normal", False),
+        ("Based on our conversation, is there anything that gives you pause about my fit?",
+         "Normal", False),
+    ]
+    questions = wc._parse_questions(paras, "hiring_manager")
+    assert len(questions) == 1
+    assert not any("Based on our conversation" in q["text"] for q in questions)
