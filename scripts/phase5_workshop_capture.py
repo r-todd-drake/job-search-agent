@@ -110,6 +110,9 @@ def _split_sections(paragraphs):
     Detection uses case-insensitive substring match on paragraph text.
     Paragraphs in other sections (Company Brief, Introduce Yourself, etc.)
     are assigned to no bucket and discarded.
+
+    For "other" markers, only apply when the paragraph has a heading style.
+    Primary bucket markers (story_bank, gap_prep, questions) match any paragraph.
     """
     SECTION_MARKERS = {
         "story_bank":  ["STORY BANK"],
@@ -124,11 +127,12 @@ def _split_sections(paragraphs):
 
     for text, style, is_italic in paragraphs:
         upper = text.upper()
+        is_heading = "heading" in style.lower()
         matched_section = False
         for key, markers in SECTION_MARKERS.items():
             if any(m in upper for m in markers):
-                if key == "other" and len(text.strip()) > 60:
-                    # Only treat as section header if short (real section titles are short)
+                if key == "other" and not is_heading:
+                    # "other" markers only apply to heading-style paragraphs
                     continue
                 current = None if key == "other" else key
                 matched_section = True
