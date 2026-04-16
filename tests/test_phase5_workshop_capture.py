@@ -145,3 +145,15 @@ def test_split_sections_excludes_other_sections():
     ])
     sections = wc._split_sections(paras)
     assert not any("overview" in t for t, _, _ in sections["story_bank"])
+
+
+def test_split_sections_content_with_salary_word_not_false_positive():
+    paras = _paras([
+        "Story Bank",
+        "STORY 1 -- Background:",
+        "Situation: I negotiated salary and benefits package for the team.",
+        "Task: T.", "Action: A.", "Result: R.",
+    ])
+    sections = wc._split_sections(paras)
+    # Content paragraph mentioning "salary" should NOT reset the section
+    assert any("salary" in t.lower() for t, _, _ in sections["story_bank"])
