@@ -204,7 +204,9 @@ def _parse_stories(paragraphs):
             # Continuation line for the current field
             if current[current_field] is None:
                 current[current_field] = text
-            elif current[current_field]:
+            elif current[current_field] == "":
+                current[current_field] = text
+            else:
                 current[current_field] += " " + text
 
     if current:

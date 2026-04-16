@@ -246,3 +246,15 @@ def test_parse_stories_handles_multiple_stories():
     assert len(stories) == 2
     assert stories[0]["employer"] == "ACME"
     assert stories[1]["employer"] == "Corp"
+
+
+def test_parse_stories_continuation_after_empty_label():
+    paras = _story_paras([
+        "STORY 1 -- Requirement:",
+        "Employer: ACME | Engineer | 2022",
+        "Situation: S.", "Task: T.", "Action: A.", "Result: R.",
+        "If probed:",
+        "One more sentence.",
+    ])
+    s = wc._parse_stories(paras)[0]
+    assert s["if_probed"] == "One more sentence."
