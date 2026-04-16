@@ -313,3 +313,324 @@ def _parse_questions(paragraphs, stage):
         q_text = q_match.group(1).strip()
         questions.append({"stage": stage, "text": q_text, "category": None})
     return questions
+
+
+# ==============================================
+# TAG SUGGESTION AND ID GENERATION
+# ==============================================
+
+def _suggest_tags(text):
+    """Return list of tags from controlled vocabulary whose keywords appear in text."""
+    vocabulary = load_tags()
+    text_lower = text.lower()
+    return [
+        tag for tag, keywords in TAG_KEYWORDS.items()
+        if tag in vocabulary and any(kw in text_lower for kw in keywords)
+    ]
+
+
+def _make_story_id(employer, tags):
+    """Generate a unique slug from employer name and primary tag."""
+    emp = re.sub(r'[^a-z0-9]+', '-', employer.lower()).strip('-')
+    tag = tags[0] if tags else "story"
+    return f"{emp}-{tag}"[:60]
+
+
+def _make_gap_id(gap_label):
+    """Generate a unique slug from gap label."""
+    return re.sub(r'[^a-z0-9]+', '-', gap_label.lower()).strip('-')[:60]
+
+
+def _make_question_id(text):
+    """Generate a unique slug from first 60 chars of question text."""
+    return re.sub(r'[^a-z0-9]+', '-', text.lower())[:60].strip('-')
+
+
+# ==============================================
+# DUPLICATE DETECTION
+# ==============================================
+
+def _find_duplicate_story(library, employer, primary_tag):
+    """Return existing story entry matching employer + primary_tag, or None."""
+    for s in library.get("stories", []):
+        if (s.get("employer", "").lower() == employer.lower() and
+                primary_tag in s.get("tags", [])):
+            return s
+    return None
+
+
+def _find_duplicate_gap(library, gap_label):
+    """Return existing gap entry matching gap_label (case-insensitive), or None."""
+    norm = gap_label.lower().strip()
+    for g in library.get("gap_responses", []):
+        if g.get("gap_label", "").lower().strip() == norm:
+            return g
+    return None
+
+
+def _find_duplicate_question(library, text):
+    """Return existing question entry matching first 60 chars of text, or None."""
+    prefix = text[:60].lower()
+    for q in library.get("questions", []):
+        if q.get("text", "")[:60].lower() == prefix:
+            return q
+    return None
+
+
+# ==============================================
+# LIBRARY WRITE HELPERS
+# ==============================================
+
+def _write_library(library):
+    """Write library dict to LIBRARY_PATH."""
+    import scripts.interview_library_parser as ilp
+    with open(ilp.LIBRARY_PATH, "w", encoding="utf-8") as f:
+        json.dump(library, f, indent=2, ensure_ascii=False)
+
+
+def _skip_update_roles(existing_entry, role, library, section_key):
+    """On skip: add role to roles_used if not already present. Mutates library in place."""
+    if role not in existing_entry.get("roles_used", []):
+        existing_entry.setdefault("roles_used", []).append(role)
+    # Ensure the library dict reflects the mutation
+    for i, entry in enumerate(library[section_key]):
+        if entry.get("id") == existing_entry["id"]:
+            library[section_key][i] = existing_entry
+            break
+
+
+def _overwrite_entry(existing_entry, new_entry, library, section_key):
+    """On overwrite: replace entry; merge roles_used from both. Mutates library in place."""
+    merged_roles = list(set(
+        existing_entry.get("roles_used", []) + new_entry.get("roles_used", [])
+    ))
+    new_entry["roles_used"] = merged_roles
+    for i, entry in enumerate(library[section_key]):
+        if entry.get("id") == existing_entry["id"]:
+            library[section_key][i] = new_entry
+            break
+
+
+# ==============================================
+# ENTRY BUILDERS
+# ==============================================
+
+def _build_story_entry(raw, tags, role, today):
+    """Convert a parsed story dict to a library-ready entry."""
+    return {
+        "id":          _make_story_id(raw["employer"], tags),
+        "title":       raw["_header"],
+        "tags":        tags,
+        "employer":    raw["employer"],
+        "title_held":  raw["title_held"],
+        "dates":       raw["dates"],
+        "situation":   raw["situation"],
+        "task":        raw["task"],
+        "action":      raw["action"],
+        "result":      raw["result"],
+        "if_probed":   raw["if_probed"],
+        "notes":       None,
+        "source":      "workshopped",
+        "roles_used":  [role],
+        "last_updated": today,
+    }
+
+
+def _build_gap_entry(raw, tags, role, today):
+    """Convert a parsed gap dict to a library-ready entry."""
+    return {
+        "id":           _make_gap_id(raw["gap_label"]),
+        "gap_label":    raw["gap_label"],
+        "severity":     raw["severity"],
+        "tags":         tags,
+        "honest_answer": raw["honest_answer"],
+        "bridge":       raw["bridge"],
+        "redirect":     raw["redirect"],
+        "notes":        None,
+        "source":       "workshopped",
+        "roles_used":   [role],
+        "last_updated": today,
+    }
+
+
+def _build_question_entry(raw, tags, role, today):
+    """Convert a parsed question dict to a library-ready entry."""
+    category = tags[0] if tags else "general"
+    return {
+        "id":          _make_question_id(raw["text"]),
+        "stage":       raw["stage"],
+        "category":    category,
+        "text":        raw["text"],
+        "tags":        tags,
+        "notes":       None,
+        "source":      "workshopped",
+        "roles_used":  [role],
+        "last_updated": today,
+    }
+
+
+def _confirm_tags(content_text, label):
+    """
+    Suggest tags for an entry; prompt user to accept or override.
+    Returns final confirmed list of tags.
+    Unknown tags produce a warning but are accepted.
+    """
+    vocabulary = load_tags()
+    suggested = _suggest_tags(content_text)
+    if suggested:
+        print(f"  Suggested tags for {label}: {', '.join(suggested)}")
+    else:
+        print(f"  No tags auto-suggested for {label}.")
+    raw = input(
+        "  Press Enter to accept, or type comma-separated tags: "
+    ).strip()
+    if not raw:
+        tags = suggested
+    else:
+        tags = [t.strip() for t in raw.split(",") if t.strip()]
+    unknown = [t for t in tags if t not in vocabulary]
+    for t in unknown:
+        print(f"  WARNING: '{t}' is not in the tag vocabulary -- accepted anyway.")
+    return tags
+
+
+def _handle_duplicate(existing, new_entry, library, section_key, role, label):
+    """
+    Handle a duplicate entry. Prompt: skip / overwrite / rename.
+    Returns True if entry was written (overwrite or rename), False if skipped.
+    """
+    answer = input(
+        f"  Entry '{existing['id']}' already exists. Skip / overwrite / rename? (s/o/r): "
+    ).strip().lower()
+    if answer == "s":
+        _skip_update_roles(existing, role, library, section_key)
+        print(f"  Skipped {label} -- roles_used updated.")
+        return False
+    elif answer == "o":
+        _overwrite_entry(existing, new_entry, library, section_key)
+        print(f"  Overwrote {label}.")
+        return True
+    elif answer == "r":
+        new_id = input("  Enter new ID: ").strip()
+        new_entry["id"] = new_id
+        library[section_key].append(new_entry)
+        print(f"  Added as new entry '{new_id}'.")
+        return True
+    else:
+        print("  Invalid choice -- skipping.")
+        _skip_update_roles(existing, role, library, section_key)
+        return False
+
+
+# ==============================================
+# MAIN
+# ==============================================
+
+def main():
+    args = build_parser().parse_args()
+    role = args.role
+    stage = args.stage
+    today = str(date.today())
+
+    print("=" * 60)
+    print("PHASE 5 \u2013 WORKSHOP CAPTURE")
+    print("=" * 60)
+    print(f"Role:  {role}")
+    print(f"Stage: {stage}")
+
+    docx_path = _locate_docx(role, stage)
+    print(f"\nReading: {docx_path}")
+
+    paragraphs = _extract_docx_paragraphs(docx_path)
+    sections = _split_sections(paragraphs)
+
+    raw_stories   = _parse_stories(sections["story_bank"])
+    raw_gaps      = _parse_gaps(sections["gap_prep"])
+    raw_questions = _parse_questions(sections["questions"], stage)
+
+    print(f"\nFound: {len(raw_stories)} stories, "
+          f"{len(raw_gaps)} gap responses, "
+          f"{len(raw_questions)} questions")
+
+    # ── Tag assignment ──────────────────────────────────────────────────────
+    print("\n-- Tag Assignment --")
+    story_entries = []
+    for i, raw in enumerate(raw_stories):
+        label = f"story {i+1} ({raw['employer']})"
+        content = " ".join([raw["situation"], raw["task"], raw["action"], raw["result"]])
+        tags = _confirm_tags(content, label)
+        story_entries.append(_build_story_entry(raw, tags, role, today))
+
+    gap_entries = []
+    for i, raw in enumerate(raw_gaps):
+        label = f"gap '{raw['gap_label']}'"
+        content = " ".join([raw["honest_answer"], raw["bridge"], raw["redirect"]])
+        tags = _confirm_tags(content, label)
+        gap_entries.append(_build_gap_entry(raw, tags, role, today))
+
+    question_entries = []
+    for i, raw in enumerate(raw_questions):
+        label = f"question {i+1}"
+        tags = _confirm_tags(raw["text"], label)
+        question_entries.append(_build_question_entry(raw, tags, role, today))
+
+    # ── Summary and confirmation ────────────────────────────────────────────
+    total = len(story_entries) + len(gap_entries) + len(question_entries)
+    print(f"\nReady to write {len(story_entries)} stories, "
+          f"{len(gap_entries)} gap responses, "
+          f"{len(question_entries)} questions to interview_library.json.")
+    answer = input(f"Write {total} entries? (y/n): ").strip().lower()
+    if answer != "y":
+        print("Cancelled -- no file written.")
+        sys.exit(0)
+
+    # ── Write with duplicate handling ───────────────────────────────────────
+    init_library()
+    library = _load_library()
+    written = skipped = 0
+
+    for entry in story_entries:
+        dup = _find_duplicate_story(library, entry["employer"], entry["tags"][0] if entry["tags"] else "")
+        if dup:
+            if _handle_duplicate(dup, entry, library, "stories", role, entry["id"]):
+                written += 1
+            else:
+                skipped += 1
+        else:
+            library["stories"].append(entry)
+            written += 1
+
+    for entry in gap_entries:
+        dup = _find_duplicate_gap(library, entry["gap_label"])
+        if dup:
+            if _handle_duplicate(dup, entry, library, "gap_responses", role, entry["id"]):
+                written += 1
+            else:
+                skipped += 1
+        else:
+            library["gap_responses"].append(entry)
+            written += 1
+
+    for entry in question_entries:
+        dup = _find_duplicate_question(library, entry["text"])
+        if dup:
+            if _handle_duplicate(dup, entry, library, "questions", role, entry["id"]):
+                written += 1
+            else:
+                skipped += 1
+        else:
+            library["questions"].append(entry)
+            written += 1
+
+    _write_library(library)
+
+    print(f"\n{'=' * 60}")
+    print(f"Written: {written} entries")
+    if skipped:
+        print(f"Skipped: {skipped} (existing entries; roles_used updated)")
+    print(f"Library: {LIBRARY_PATH}")
+    print(f"{'=' * 60}")
+
+
+if __name__ == "__main__":
+    main()

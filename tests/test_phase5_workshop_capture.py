@@ -385,3 +385,103 @@ def test_closing_question_excluded():
     questions = wc._parse_questions(paras, "hiring_manager")
     assert len(questions) == 1
     assert not any("Based on our conversation" in q["text"] for q in questions)
+
+
+# ── Tag suggestion ────────────────────────────────────────────────────────────
+
+def test_suggest_tags_matches_keywords(tmp_path, monkeypatch):
+    import scripts.interview_library_parser as ilp
+    tags_path = tmp_path / "tags.json"
+    tags_path.write_text(json.dumps({"tags": list(wc.TAG_KEYWORDS.keys())}))
+    monkeypatch.setattr(ilp, "TAGS_PATH", str(tags_path))
+    text = "I led a cross-functional team delivering MBSE toolchain improvements."
+    suggested = wc._suggest_tags(text)
+    assert "leadership" in suggested
+    assert "cross-functional" in suggested
+    assert "mbse" in suggested
+
+
+def test_suggest_tags_unknown_tag_not_in_result():
+    text = "Nothing here matches any tag."
+    suggested = wc._suggest_tags(text)
+    assert suggested == []
+
+
+# ── ID generation ─────────────────────────────────────────────────────────────
+
+def test_make_story_id_slugifies_employer():
+    slug = wc._make_story_id("G2 OPS", ["mbse"])
+    assert slug == "g2-ops-mbse"
+
+
+def test_make_gap_id_slugifies_label():
+    slug = wc._make_gap_id("IP Networking Expertise")
+    assert slug == "ip-networking-expertise"
+
+
+def test_make_question_id_uses_first_60_chars():
+    text = "What does success look like at 6 months?"
+    slug = wc._make_question_id(text)
+    assert len(slug) <= 60
+    assert "success" in slug
+
+
+# ── Duplicate detection ───────────────────────────────────────────────────────
+
+def test_find_duplicate_story_matches_employer_and_tag():
+    library = {
+        "stories": [{"id": "g2-ops-mbse", "employer": "G2 OPS", "tags": ["mbse"],
+                     "roles_used": ["OldRole"]}],
+        "gap_responses": [], "questions": []
+    }
+    result = wc._find_duplicate_story(library, "G2 OPS", "mbse")
+    assert result is not None
+    assert result["id"] == "g2-ops-mbse"
+
+
+def test_find_duplicate_story_no_match():
+    library = {"stories": [], "gap_responses": [], "questions": []}
+    assert wc._find_duplicate_story(library, "ACME", "leadership") is None
+
+
+def test_find_duplicate_gap_case_insensitive():
+    library = {
+        "stories": [], "questions": [],
+        "gap_responses": [{"id": "ip-networking", "gap_label": "IP Networking",
+                           "roles_used": []}]
+    }
+    assert wc._find_duplicate_gap(library, "ip networking") is not None
+
+
+# ── Skip path: roles_used updated ────────────────────────────────────────────
+
+def test_skip_updates_roles_used(tmp_path, monkeypatch):
+    library = {
+        "stories": [{"id": "g2-ops-mbse", "employer": "G2 OPS", "tags": ["mbse"],
+                     "roles_used": ["OldRole"]}],
+        "gap_responses": [], "questions": []
+    }
+    lib_path = _seed_library(tmp_path, library, monkeypatch)
+    wc._skip_update_roles(library["stories"][0], "NewRole", library, "stories")
+    wc._write_library(library)
+    saved = json.loads(lib_path.read_text())
+    assert "NewRole" in saved["stories"][0]["roles_used"]
+    assert "OldRole" in saved["stories"][0]["roles_used"]
+
+
+# ── Overwrite path: entry replaced, roles_used merged ────────────────────────
+
+def test_overwrite_merges_roles_used(tmp_path, monkeypatch):
+    library = {
+        "stories": [{"id": "g2-ops-mbse", "employer": "G2 OPS", "tags": ["mbse"],
+                     "roles_used": ["OldRole"]}],
+        "gap_responses": [], "questions": []
+    }
+    lib_path = _seed_library(tmp_path, library, monkeypatch)
+    new_entry = {"id": "g2-ops-mbse", "employer": "G2 OPS", "tags": ["mbse"],
+                 "roles_used": ["NewRole"]}
+    wc._overwrite_entry(library["stories"][0], new_entry, library, "stories")
+    wc._write_library(library)
+    saved = json.loads(lib_path.read_text())
+    assert "OldRole" in saved["stories"][0]["roles_used"]
+    assert "NewRole" in saved["stories"][0]["roles_used"]
