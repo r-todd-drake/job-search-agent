@@ -21,7 +21,10 @@ def _load_library():
     if not os.path.exists(LIBRARY_PATH):
         return {k: list(v) for k, v in _EMPTY_LIBRARY.items()}
     with open(LIBRARY_PATH, encoding="utf-8") as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Library file at {LIBRARY_PATH} is not valid JSON: {e}") from e
 
 
 def load_tags():
