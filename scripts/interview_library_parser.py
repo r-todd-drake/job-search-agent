@@ -31,3 +31,21 @@ def load_tags():
     with open(TAGS_PATH, encoding="utf-8") as f:
         data = json.load(f)
     return data.get("tags", [])
+
+
+def get_stories(tags=None, role=None, stage=None):
+    """Return story entries matching all provided filters (AND logic).
+
+    tags:  list of tag strings -- story matches if it has ANY listed tag (OR within tags).
+    role:  role slug -- story must include this slug in roles_used.
+    stage: accepted for API compatibility; not applied (stories have no stage field).
+
+    Returns empty list on no match or absent library.
+    """
+    library = _load_library()
+    results = library.get("stories", [])
+    if tags:
+        results = [s for s in results if any(t in s.get("tags", []) for t in tags)]
+    if role:
+        results = [s for s in results if role in s.get("roles_used", [])]
+    return results
