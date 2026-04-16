@@ -258,3 +258,81 @@ def test_parse_stories_continuation_after_empty_label():
     ])
     s = wc._parse_stories(paras)[0]
     assert s["if_probed"] == "One more sentence."
+
+
+# ── _parse_gaps ───────────────────────────────────────────────────────────────
+
+def _gap_paras(lines):
+    return [(line, "Normal", False) for line in lines]
+
+
+def test_parse_gaps_extracts_label_and_severity_required():
+    paras = _gap_paras([
+        "GAP 1 -- IP Networking Expertise [REQUIRED]:",
+        "Gap: I have not worked in IP networking.",
+        "Honest answer: Direct acknowledgment.",
+        "Bridge: Adjacent experience.",
+        "Redirect: Strong redirect.",
+    ])
+    gaps = wc._parse_gaps(paras)
+    assert len(gaps) == 1
+    assert gaps[0]["gap_label"] == "IP Networking Expertise"
+    assert gaps[0]["severity"] == "required"
+
+
+def test_parse_gaps_extracts_severity_preferred():
+    paras = _gap_paras([
+        "GAP 1 -- Cameo TWC Experience [PREFERRED]:",
+        "Gap: gap text.", "Honest answer: A.", "Bridge: B.", "Redirect: R.",
+    ])
+    assert wc._parse_gaps(paras)[0]["severity"] == "preferred"
+
+
+def test_parse_gaps_extracts_triad():
+    paras = _gap_paras([
+        "GAP 1 -- Topic [REQUIRED]:",
+        "Gap: gap text.",
+        "Honest answer: Honest text.",
+        "Bridge: Bridge text.",
+        "Redirect: Redirect text.",
+    ])
+    g = wc._parse_gaps(paras)[0]
+    assert g["honest_answer"] == "Honest text."
+    assert g["bridge"] == "Bridge text."
+    assert g["redirect"] == "Redirect text."
+
+
+def test_parse_gaps_excludes_short_tenure_section():
+    paras = _gap_paras([
+        "SHORT TENURE EXPLANATION:",
+        "I left after 8 months because...",
+        "GAP 1 -- Networking [REQUIRED]:",
+        "Gap: gap text.", "Honest answer: A.", "Bridge: B.", "Redirect: R.",
+    ])
+    gaps = wc._parse_gaps(paras)
+    assert len(gaps) == 1
+    assert gaps[0]["gap_label"] == "Networking"
+
+
+def test_parse_gaps_stops_at_hard_questions():
+    paras = _gap_paras([
+        "GAP 1 -- Topic [REQUIRED]:",
+        "Gap: g.", "Honest answer: A.", "Bridge: B.", "Redirect: R.",
+        "HARD QUESTIONS TO PREPARE FOR:",
+        "1. Tough question?",
+    ])
+    gaps = wc._parse_gaps(paras)
+    assert len(gaps) == 1
+
+
+def test_parse_gaps_skips_italic_paragraphs():
+    paras = [
+        ("GAP 1 -- Topic [REQUIRED]:", "Normal", False),
+        ("Coaching note -- do not use.", "Normal", True),
+        ("Gap: gap text.", "Normal", False),
+        ("Honest answer: A.", "Normal", False),
+        ("Bridge: B.", "Normal", False),
+        ("Redirect: R.", "Normal", False),
+    ]
+    gaps = wc._parse_gaps(paras)
+    assert len(gaps) == 1
