@@ -515,3 +515,63 @@ def test_generate_prep_cold_path_no_library_seeds(monkeypatch):
     section2_kwargs = client.messages.create.call_args_list[2].kwargs
     prompt = section2_kwargs["messages"][0]["content"]
     assert "VETTED LIBRARY STORIES" not in prompt
+
+
+# ---- performance signal injected into story seed ----
+
+def test_performance_signal_injected_into_story_seed_prompt(monkeypatch, tmp_path):
+    import scripts.interview_library_parser as ilp
+    import scripts.phase5_debrief_utils as dbu
+    from scripts.phase5_interview_prep import generate_prep
+
+    sample_story = {
+        "id": "story_001", "employer": "G2 OPS", "title": "Lead SE", "dates": "2022-2024",
+        "situation": "Led MBSE.", "task": "OV-1.", "action": "IPT.", "result": "Baseline.",
+        "tags": ["mbse"], "if_probed": None, "roles_used": []
+    }
+    monkeypatch.setattr(ilp, "load_tags", lambda: ["mbse"])
+    monkeypatch.setattr(ilp, "get_stories", lambda tags=None, **kw: [sample_story] if tags else [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs",
+                        lambda: [{"metadata": {"role": "x", "stage": "hm", "interview_date": "2026-04-01",
+                                               "panel_label": None, "interviewers": []},
+                                  "stories_used": [{"library_id": "story_001", "landed": "yes", "tags": []}],
+                                  "gaps_surfaced": [], "salary_exchange": {},
+                                  "advancement_read": {}, "what_i_said": None, "open_notes": None}])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    generate_prep(client, role_data, "hiring_manager",
+                  str(tmp_path / "p.txt"), str(tmp_path / "p.docx"))
+
+    section2_kwargs = client.messages.create.call_args_list[2].kwargs
+    prompt = section2_kwargs["messages"][0]["content"]
+    assert "Used 1 times" in prompt
+    assert "yes x1" in prompt
+
+
+def test_no_performance_signal_when_no_debrief_history(monkeypatch, tmp_path):
+    import scripts.interview_library_parser as ilp
+    import scripts.phase5_debrief_utils as dbu
+    from scripts.phase5_interview_prep import generate_prep
+
+    sample_story = {
+        "id": "story_999", "employer": "Acme", "title": "SE", "dates": "2020-2022",
+        "situation": "s", "task": "t", "action": "a", "result": "r",
+        "tags": ["mbse"], "if_probed": None, "roles_used": []
+    }
+    monkeypatch.setattr(ilp, "load_tags", lambda: ["mbse"])
+    monkeypatch.setattr(ilp, "get_stories", lambda tags=None, **kw: [sample_story] if tags else [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    generate_prep(client, role_data, "hiring_manager",
+                  str(tmp_path / "p.txt"), str(tmp_path / "p.docx"))
+
+    section2_kwargs = client.messages.create.call_args_list[2].kwargs
+    prompt = section2_kwargs["messages"][0]["content"]
+    assert "Performance:" not in prompt

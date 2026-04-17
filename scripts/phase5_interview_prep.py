@@ -558,6 +558,30 @@ def _extract_jd_tags(jd_text: str) -> list:
     jd_lower = jd_text.lower()
     return [t for t in tags if t.lower() in jd_lower or t.lower().replace("-", " ") in jd_lower]
 
+
+def _load_all_debriefs_safe():
+    try:
+        from scripts.phase5_debrief_utils import load_all_debriefs
+        return load_all_debriefs()
+    except Exception:
+        return []
+
+
+def _get_story_signal_safe(library_id, all_debriefs):
+    try:
+        from scripts.phase5_debrief_utils import get_story_performance_signal
+        return get_story_performance_signal(library_id, all_debriefs)
+    except Exception:
+        return None
+
+
+def _get_gap_signal_safe(gap_label, all_debriefs):
+    try:
+        from scripts.phase5_debrief_utils import get_gap_performance_signal
+        return get_gap_performance_signal(gap_label, all_debriefs)
+    except Exception:
+        return None
+
 # ==============================================
 # LOAD RESUME BULLETS FROM STAGE FILE
 # ==============================================
@@ -899,6 +923,17 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
 
     # Library seed lookup for stories
     story_seeds = _ilp.get_stories(tags=jd_tags) if jd_tags else []
+
+    # Load debrief history once for both story and gap signal injection
+    all_debriefs_for_signal = _load_all_debriefs_safe() if story_seeds else []
+
+    # Inject performance signal into story seeds
+    if story_seeds:
+        for s in story_seeds:
+            signal = _get_story_signal_safe(s.get("id"), all_debriefs_for_signal)
+            if signal:
+                s["_performance_signal"] = signal
+
     story_prompt = _build_section2_prompt(
         jd, story_context, candidate_profile, profile,
         library_seeds=story_seeds or None
@@ -934,6 +969,16 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     else:
         # Library seed lookup for gaps
         gap_seeds = _ilp.get_gap_responses(tags=jd_tags) if jd_tags else []
+
+        # Inject performance signal into gap seeds (reuse already-loaded debrief history)
+        if gap_seeds:
+            if not all_debriefs_for_signal:
+                all_debriefs_for_signal = _load_all_debriefs_safe()
+            for g in gap_seeds:
+                signal = _get_gap_signal_safe(g.get("gap_label"), all_debriefs_for_signal)
+                if signal:
+                    g["_performance_signal"] = signal
+
         gap_prompt = _build_gap_prompt(
             jd, gaps_section, candidate_profile, profile,
             library_seeds=gap_seeds or None
