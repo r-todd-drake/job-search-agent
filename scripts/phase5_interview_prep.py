@@ -1340,6 +1340,30 @@ def main():
     print(f"  5. Select 4-5 questions from Section 4")
     print(f"{'=' * 60}")
 
+    # Post-generation notifications
+    try:
+        from scripts.phase5_debrief_utils import (
+            load_debriefs, find_unmatched_debrief_content, has_debrief_for_stage
+        )
+        _notify_debriefs = load_debriefs(role)
+        unmatched_stories, unmatched_gaps = find_unmatched_debrief_content(_notify_debriefs)
+        if unmatched_stories or unmatched_gaps:
+            print("\nDebrief content found that is not in your interview library.")
+            print(f"Run: python scripts/phase5_workshop_capture.py --role {role} --stage {interview_stage}")
+            print("to review and add workshopped content to the library.")
+
+        if has_debrief_for_stage(_notify_debriefs, interview_stage):
+            print("\nDebrief found for this stage. Generate thank you letters:")
+            thankyou_cmd = f"python scripts/phase5_thankyou.py --role {role} --stage {interview_stage}"
+            for d in _notify_debriefs:
+                meta = d.get("metadata", {}) or {}
+                if meta.get("stage") == interview_stage and meta.get("panel_label"):
+                    thankyou_cmd += f" --panel_label {meta['panel_label']}"
+                    break
+            print(f"Run: {thankyou_cmd}")
+    except Exception:
+        pass  # notifications are best-effort; never block on failure
+
 
 if __name__ == "__main__":
     main()
