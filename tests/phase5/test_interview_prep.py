@@ -631,3 +631,87 @@ def test_no_performance_signal_when_no_debrief_history(monkeypatch, tmp_path):
     section2_kwargs = client.messages.create.call_args_list[2].kwargs
     prompt = section2_kwargs["messages"][0]["content"]
     assert "Performance:" not in prompt
+
+
+# ---- continuity section in output ----
+
+def test_continuity_section_appears_in_txt_when_debriefs_exist(monkeypatch, tmp_path):
+    import scripts.phase5_debrief_utils as dbu
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    prior_debrief = {
+        "metadata": {"role": "acme_sse", "stage": "recruiter", "interview_date": "2026-04-01",
+                     "panel_label": None,
+                     "interviewers": [{"name": "HR Alice", "title": "Recruiter", "notes": ""}]},
+        "advancement_read": {"assessment": "maybe", "notes": ""},
+        "stories_used": [], "gaps_surfaced": [], "salary_exchange": {},
+        "what_i_said": "Said I want hybrid work.",
+        "open_notes": None,
+    }
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [prior_debrief])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    txt_path = tmp_path / "p.txt"
+    generate_prep(client, role_data, "hiring_manager",
+                  str(txt_path), str(tmp_path / "p.docx"))
+    content = txt_path.read_text(encoding="utf-8")
+    assert "CONTINUITY SUMMARY" in content
+    assert "Said I want hybrid work." in content
+    assert "HR Alice" in content
+
+
+def test_no_continuity_section_when_no_debriefs(monkeypatch, tmp_path):
+    import scripts.phase5_debrief_utils as dbu
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    txt_path = tmp_path / "p.txt"
+    generate_prep(client, role_data, "hiring_manager",
+                  str(txt_path), str(tmp_path / "p.docx"))
+    content = txt_path.read_text(encoding="utf-8")
+    assert "CONTINUITY SUMMARY" not in content
+
+
+def test_continuity_section_in_docx(monkeypatch, tmp_path):
+    import scripts.phase5_debrief_utils as dbu
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    prior_debrief = {
+        "metadata": {"role": "acme_sse", "stage": "recruiter", "interview_date": "2026-04-01",
+                     "panel_label": None,
+                     "interviewers": [{"name": "HR Alice", "title": "Recruiter", "notes": ""}]},
+        "advancement_read": {}, "stories_used": [], "gaps_surfaced": [], "salary_exchange": {},
+        "what_i_said": "Said I prefer remote.", "open_notes": None,
+    }
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [prior_debrief])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    docx_path = tmp_path / "p.docx"
+    generate_prep(client, role_data, "hiring_manager",
+                  str(tmp_path / "p.txt"), str(docx_path))
+    doc = Document(str(docx_path))
+    all_text = "\n".join(p.text for p in doc.paragraphs)
+    assert "Continuity Summary" in all_text or "CONTINUITY" in all_text

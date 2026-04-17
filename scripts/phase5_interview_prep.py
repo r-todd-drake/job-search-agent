@@ -618,6 +618,14 @@ def _load_salary_actuals_safe(debriefs):
     except Exception:
         return None
 
+
+def _build_continuity_safe(debriefs):
+    try:
+        from scripts.phase5_debrief_utils import build_continuity_section
+        return build_continuity_section(debriefs)
+    except Exception:
+        return ""
+
 # ==============================================
 # LOAD RESUME BULLETS FROM STAGE FILE
 # ==============================================
@@ -745,7 +753,7 @@ def build_story_context(library, resume_data, jd_lower):
 
 def generate_prep_docx(output_path, role, resume_source, stage_profile,
                         section1, section_intro, section2, section3, section4,
-                        salary_data):
+                        salary_data, continuity_section=""):
     """
     Generate a clean formatted .docx interview prep document.
     Uses simple heading/normal/bullet styles -- no resume color scheme.
@@ -845,6 +853,12 @@ def generate_prep_docx(output_path, role, resume_source, stage_profile,
     # Section 4
     add_heading("Questions to Ask", level=1)
     parse_and_add_section(section4)
+
+    # Continuity section
+    if continuity_section:
+        add_heading("Continuity Summary", level=1)
+        add_normal("(Reference record from prior interviews -- not prep guidance)")
+        parse_and_add_section(continuity_section)
 
     # Salary guidance
     if salary_data['found']:
@@ -1064,6 +1078,9 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     )
     section4 = response4.content[0].text
 
+    # Build continuity section from role debriefs
+    continuity_text = _build_continuity_safe(role_debriefs)
+
     # --------------------------------------------------
     # COMPILE AND SAVE OUTPUT
     # --------------------------------------------------
@@ -1116,6 +1133,10 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     output_lines.append(section4)
     output_lines.append("")
 
+    if continuity_text:
+        output_lines.append(continuity_text)
+        output_lines.append("")
+
     output_lines.append("=" * 60)
     output_lines.append("END OF INTERVIEW PREP PACKAGE")
     output_lines.append(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}")
@@ -1132,7 +1153,7 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
         generate_prep_docx(
             output_docx_path, role_name, resume_source, profile,
             section1, section_intro, section2, section3, section4,
-            salary_data
+            salary_data, continuity_section=continuity_text
         )
         print(f"  Interview prep .docx written to {output_docx_path}")
     except Exception as e:
