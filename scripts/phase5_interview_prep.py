@@ -49,6 +49,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 # Add project root to path for utils import
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
+import scripts.interview_library_parser as _ilp
 
 load_dotenv()
 
@@ -319,7 +320,7 @@ def _build_intro_prompt(intro_monologue, profile):
         f"- Do not add headers or labels -- return only the introduction text itself"
     )
 
-def _build_section2_prompt(jd, story_context, candidate_profile, profile):
+def _build_section2_prompt(jd, story_context, candidate_profile, profile, library_seeds=None):
     """Build the Section 2 story bank prompt, parameterized by stage profile."""
     _depth_instructions = {
         "headline": (
@@ -361,6 +362,32 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile):
         else "3-4 honest sentences -- genuine strengths and real gaps."
     )
 
+    seed_block = ""
+    if library_seeds:
+        seed_lines = [
+            "\nVETTED LIBRARY STORIES -- tailor each to this role and stage (do NOT reproduce verbatim):\n"
+        ]
+        for i, s in enumerate(library_seeds, 1):
+            tags_str = ", ".join(s.get("tags", []))
+            perf = s.get("_performance_signal", "")
+            seed_lines.append(f"LIBRARY STORY {i} [{tags_str}]:")
+            if perf:
+                seed_lines.append(f"Performance: {perf}")
+            seed_lines.append(f"Employer: {s.get('employer', '')} | {s.get('title', '')} | {s.get('dates', '')}")
+            seed_lines.append(f"Situation: {s.get('situation', '')}")
+            seed_lines.append(f"Task: {s.get('task', '')}")
+            seed_lines.append(f"Action: {s.get('action', '')}")
+            seed_lines.append(f"Result: {s.get('result', '')}")
+            if s.get("if_probed"):
+                seed_lines.append(f"If probed: {s.get('if_probed')}")
+            seed_lines.append("")
+        seed_lines.append(
+            "For each seeded story: tailor to this role/stage. "
+            "After 'STORY N --' heading, append '(library-seeded)'. "
+            "If a Performance line is shown above, reproduce it verbatim on the next line.\n"
+        )
+        seed_block = "\n".join(seed_lines)
+
     return (
         f"Generate employer-attributed interview stories for a {profile['label']}.\n\n"
         f"CANDIDATE PROFILE (PII removed):\n{candidate_profile[:2500]}\n\n"
@@ -373,6 +400,7 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile):
         f"- Do NOT invent metrics or outcomes\n\n"
         f"{_depth_instructions[profile['story_depth']]}\n\n"
         f"{_gap_instructions[profile['gap_behavior']]}\n\n"
+        f"{seed_block}"
         f"Generate {profile['story_count']} stories. Use this format:\n\n"
         f"ROLE FIT ASSESSMENT:\n[{role_fit_instruction}]\n\n"
         f"KEY THEMES TO LEAD WITH:\n"
@@ -391,7 +419,7 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile):
         f"[5-8 questions likely to be asked, with one-line approach each]"
     )
 
-def _build_gap_prompt(jd, gaps_section, candidate_profile, profile):
+def _build_gap_prompt(jd, gaps_section, candidate_profile, profile, library_seeds=None):
     """Build the Section 3 gap prep prompt, parameterized by stage profile."""
     peer_frame_block = ""
     if profile["gap_behavior"] == "full_peer":
@@ -403,6 +431,28 @@ def _build_gap_prompt(jd, gaps_section, candidate_profile, profile):
             "\nFor hiring manager stage: for each gap, include a brief note on how "
             "the gap might surface in a program context and how to address it proactively."
         )
+
+    gap_seed_block = ""
+    if library_seeds:
+        seed_lines = [
+            "\nVETTED GAP RESPONSES FROM LIBRARY -- tailor each to this role:\n"
+        ]
+        for s in library_seeds:
+            tags_str = ", ".join(s.get("tags", []))
+            perf = s.get("_performance_signal", "")
+            seed_lines.append(f"GAP: {s.get('gap_label', '')} [{tags_str}]:")
+            if perf:
+                seed_lines.append(f"Performance: {perf}")
+            seed_lines.append(f"Honest answer: {s.get('honest_answer', '')}")
+            seed_lines.append(f"Bridge: {s.get('bridge', '')}")
+            seed_lines.append(f"Redirect: {s.get('redirect', '')}")
+            seed_lines.append("")
+        seed_lines.append(
+            "For each seeded gap: tailor to this role/stage. "
+            "After 'GAP N --' heading, append '(library-seeded)'. "
+            "If a Performance line is shown, reproduce it verbatim on the next line.\n"
+        )
+        gap_seed_block = "\n".join(seed_lines)
 
     return (
         f"You are doing a two-step gap analysis grounded strictly in the JD text and "
@@ -423,6 +473,7 @@ def _build_gap_prompt(jd, gaps_section, candidate_profile, profile):
         f"CANDIDATE CONFIRMED GAPS:\n{gaps_section[:1500]}\n\n"
         f"CANDIDATE FULL PROFILE:\n{candidate_profile[:2000]}\n"
         f"{gap_depth_note}\n\n"
+        f"{gap_seed_block}"
         f"For each gap provide a direct, confident talking point -- not apologetic.\n\n"
         f"Format exactly as:\n\n"
         f"GAP 1 -- [Topic] [REQUIRED or PREFERRED]:\n"
@@ -497,6 +548,15 @@ def extract_salary(jd_text):
             f"  Floor: Do not accept below ${floor:,.0f} for this role level."
         )
     }
+
+# ==============================================
+# JD TAG EXTRACTION
+# ==============================================
+
+def _extract_jd_tags(jd_text: str) -> list:
+    tags = _ilp.load_tags()
+    jd_lower = jd_text.lower()
+    return [t for t in tags if t.lower() in jd_lower or t.lower().replace("-", " ") in jd_lower]
 
 # ==============================================
 # LOAD RESUME BULLETS FROM STAGE FILE
@@ -771,6 +831,9 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     safe_stage = strip_pii(raw_stage)
     jd_lower = jd.lower()
 
+    # Extract JD tags for library filtering
+    jd_tags = _extract_jd_tags(jd)
+
     # Build resume data from stage text (parse inline)
     resume_data = _parse_stage_text(safe_stage, source_label="stage_text")
     resume_source = resume_data.get('source') if resume_data else None
@@ -834,7 +897,12 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("Section 2: Story Bank (grounded in resume and library)...")
 
-    story_prompt = _build_section2_prompt(jd, story_context, candidate_profile, profile)
+    # Library seed lookup for stories
+    story_seeds = _ilp.get_stories(tags=jd_tags) if jd_tags else []
+    story_prompt = _build_section2_prompt(
+        jd, story_context, candidate_profile, profile,
+        library_seeds=story_seeds or None
+    )
 
     response2 = client.messages.create(
         model=MODEL,
@@ -864,7 +932,12 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
             + "Gap prep omitted -- do not volunteer gaps in a recruiter screen."
         )
     else:
-        gap_prompt = _build_gap_prompt(jd, gaps_section, candidate_profile, profile)
+        # Library seed lookup for gaps
+        gap_seeds = _ilp.get_gap_responses(tags=jd_tags) if jd_tags else []
+        gap_prompt = _build_gap_prompt(
+            jd, gaps_section, candidate_profile, profile,
+            library_seeds=gap_seeds or None
+        )
         response3 = client.messages.create(
             model=MODEL,
             max_tokens=1200,
@@ -878,9 +951,22 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("Section 4: Questions to Ask...")
 
+    # Library seed lookup for questions
+    question_seeds = _ilp.get_questions(tags=jd_tags, stage=interview_stage) if jd_tags else []
+    question_seed_block = ""
+    if question_seeds:
+        qlines = ["\nVETTED QUESTIONS FROM LIBRARY -- include or adapt these as appropriate:\n"]
+        for q in question_seeds:
+            qlines.append(f"- {q.get('text', '')}")
+        qlines.append(
+            "\nFor each included library question, append '(library-seeded)' after the question text.\n"
+        )
+        question_seed_block = "\n".join(qlines)
+
     context_block = (
         f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
         f"CANDIDATE BACKGROUND (PII removed):\n{strip_pii(candidate_profile[:800])}\n\n"
+        f"{question_seed_block}"
     )
     questions_prompt = context_block + profile["questions_prompt"]
 

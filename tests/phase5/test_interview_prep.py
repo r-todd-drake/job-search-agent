@@ -4,7 +4,7 @@ import json
 import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from docx import Document
 
 FIXTURE_JD = Path(__file__).parent.parent / "fixtures" / "stage_files" / "sample_jd.txt"
@@ -394,3 +394,124 @@ def test_team_panel_peer_frame_bold_in_docx():
     ]
     assert peer_frame_paragraphs, "No 'Peer Frame:' paragraph found in docx"
     assert peer_frame_paragraphs[0].runs[0].bold, "Peer Frame: label run should be bold"
+
+
+# ---- _extract_jd_tags tests ----
+
+def test_extract_jd_tags_returns_matching_tags():
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import _extract_jd_tags
+    with patch.object(ilp, "load_tags", return_value=["mbse", "systems-engineering", "leadership"]):
+        result = _extract_jd_tags("This role requires MBSE experience and Systems Engineering skills.")
+    assert "mbse" in result
+    assert "systems-engineering" in result
+    assert "leadership" not in result
+
+
+def test_extract_jd_tags_returns_empty_when_no_match():
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import _extract_jd_tags
+    with patch.object(ilp, "load_tags", return_value=["mbse", "clearance"]):
+        result = _extract_jd_tags("General software engineering role.")
+    assert result == []
+
+
+def test_extract_jd_tags_case_insensitive():
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import _extract_jd_tags
+    with patch.object(ilp, "load_tags", return_value=["mbse"]):
+        result = _extract_jd_tags("Experience with MBSE frameworks required.")
+    assert "mbse" in result
+
+
+# ---- library seeding in _build_section2_prompt ----
+
+def test_build_section2_prompt_injects_seed_block():
+    from scripts.phase5_interview_prep import _build_section2_prompt, STAGE_PROFILES
+    seeds = [{
+        "id": "story_001", "employer": "G2 OPS", "title": "Lead SE", "dates": "2022-2024",
+        "situation": "Led MBSE.", "task": "Build OV-1.", "action": "Facilitated IPT.",
+        "result": "Delivered baseline.", "tags": ["mbse"], "if_probed": None
+    }]
+    prompt = _build_section2_prompt("JD text", "story context", "profile",
+                                    STAGE_PROFILES["hiring_manager"], library_seeds=seeds)
+    assert "VETTED LIBRARY STORIES" in prompt
+    assert "G2 OPS" in prompt
+    assert "library-seeded" in prompt
+
+
+def test_build_section2_prompt_no_seed_block_when_none():
+    from scripts.phase5_interview_prep import _build_section2_prompt, STAGE_PROFILES
+    prompt = _build_section2_prompt("JD text", "story context", "profile",
+                                    STAGE_PROFILES["hiring_manager"], library_seeds=None)
+    assert "VETTED LIBRARY STORIES" not in prompt
+
+
+# ---- library seeding in _build_gap_prompt ----
+
+def test_build_gap_prompt_injects_seed_block():
+    from scripts.phase5_interview_prep import _build_gap_prompt, STAGE_PROFILES
+    seeds = [{
+        "id": "gap_001", "gap_label": "no SCIF experience", "severity": "REQUIRED",
+        "honest_answer": "I have not worked in SCIF.", "bridge": "Worked TS cleared.",
+        "redirect": "Adapt quickly.", "tags": ["clearance"]
+    }]
+    prompt = _build_gap_prompt("JD text", "gaps text", "profile",
+                               STAGE_PROFILES["hiring_manager"], library_seeds=seeds)
+    assert "VETTED GAP RESPONSES" in prompt
+    assert "no SCIF experience" in prompt
+    assert "library-seeded" in prompt
+
+
+def test_build_gap_prompt_no_seed_block_when_none():
+    from scripts.phase5_interview_prep import _build_gap_prompt, STAGE_PROFILES
+    prompt = _build_gap_prompt("JD text", "gaps text", "profile",
+                               STAGE_PROFILES["hiring_manager"], library_seeds=None)
+    assert "VETTED GAP RESPONSES" not in prompt
+
+
+# ---- generate_prep calls get_stories with jd tags ----
+
+def test_generate_prep_calls_library_with_jd_tags(monkeypatch):
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    captured_tags = {}
+    def fake_get_stories(tags=None, **kw):
+        captured_tags["tags"] = tags
+        return []
+    monkeypatch.setattr(ilp, "load_tags", lambda: ["mbse", "systems-engineering"])
+    monkeypatch.setattr(ilp, "get_stories", fake_get_stories)
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        generate_prep(client, role_data, "hiring_manager",
+                      str(Path(tmpdir) / "p.txt"), str(Path(tmpdir) / "p.docx"))
+
+    assert captured_tags.get("tags") is not None
+
+
+# ---- cold path: no seeds, prompt unchanged behaviour ----
+
+def test_generate_prep_cold_path_no_library_seeds(monkeypatch):
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt = Path(tmpdir) / "p.txt"
+        generate_prep(client, role_data, "hiring_manager",
+                      str(txt), str(Path(tmpdir) / "p.docx"))
+    # No library seeds -- section 2 call should NOT include VETTED LIBRARY STORIES
+    section2_kwargs = client.messages.create.call_args_list[2].kwargs
+    prompt = section2_kwargs["messages"][0]["content"]
+    assert "VETTED LIBRARY STORIES" not in prompt
