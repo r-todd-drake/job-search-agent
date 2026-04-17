@@ -424,6 +424,15 @@ def test_extract_jd_tags_case_insensitive():
     assert "mbse" in result
 
 
+def test_extract_jd_tags_hyphen_matches_space_in_jd():
+    # "systems-engineering" tag should match JD text "Systems Engineering" (space, not hyphen)
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import _extract_jd_tags
+    with patch.object(ilp, "load_tags", return_value=["systems-engineering"]):
+        result = _extract_jd_tags("This role requires Systems Engineering experience.")
+    assert "systems-engineering" in result
+
+
 # ---- library seeding in _build_section2_prompt ----
 
 def test_build_section2_prompt_injects_seed_block():
