@@ -551,6 +551,62 @@ def test_performance_signal_injected_into_story_seed_prompt(monkeypatch, tmp_pat
     assert "yes x1" in prompt
 
 
+# ---- salary actuals override ----
+
+def test_salary_actuals_override_injects_actuals_into_section1_prompt(monkeypatch, tmp_path):
+    import scripts.phase5_debrief_utils as dbu
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    actuals_debrief = {
+        "metadata": {"role": "acme_sse", "stage": "recruiter", "interview_date": "2026-04-10",
+                     "panel_label": None, "interviewers": []},
+        "advancement_read": {}, "stories_used": [], "gaps_surfaced": [],
+        "salary_exchange": {"range_given_min": 145000, "range_given_max": 175000,
+                            "candidate_anchor": 168000, "candidate_floor": 152000},
+        "what_i_said": None, "open_notes": None,
+    }
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [actuals_debrief])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    generate_prep(client, role_data, "hiring_manager",
+                  str(tmp_path / "p.txt"), str(tmp_path / "p.docx"))
+
+    section1_kwargs = client.messages.create.call_args_list[0].kwargs
+    prompt = section1_kwargs["messages"][0]["content"]
+    assert "SALARY ACTUALS" in prompt
+    assert "145,000" in prompt
+    assert "175,000" in prompt
+
+
+def test_no_salary_override_when_no_debrief(monkeypatch, tmp_path):
+    import scripts.phase5_debrief_utils as dbu
+    import scripts.interview_library_parser as ilp
+    from scripts.phase5_interview_prep import generate_prep
+
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    generate_prep(client, role_data, "hiring_manager",
+                  str(tmp_path / "p.txt"), str(tmp_path / "p.docx"))
+
+    section1_kwargs = client.messages.create.call_args_list[0].kwargs
+    prompt = section1_kwargs["messages"][0]["content"]
+    assert "SALARY ACTUALS" not in prompt
+
+
 def test_no_performance_signal_when_no_debrief_history(monkeypatch, tmp_path):
     import scripts.interview_library_parser as ilp
     import scripts.phase5_debrief_utils as dbu

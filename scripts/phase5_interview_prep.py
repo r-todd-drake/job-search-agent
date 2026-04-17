@@ -238,7 +238,7 @@ def extract_profile_section(profile_text, header):
     return profile_text[start:end].strip()
 
 
-def _build_section1_prompt(jd, salary_data, profile):
+def _build_section1_prompt(jd, salary_data, profile, salary_actuals=None):
     """Build the Section 1 company brief prompt, parameterized by stage profile."""
     _stage_instructions = {
         "recruiter": (
@@ -268,13 +268,33 @@ def _build_section1_prompt(jd, salary_data, profile):
 
     salary_block = ""
     if profile["salary_in_section1"]:
-        salary_block = (
-            f"\nSALARY & LEVEL CONTEXT:\n"
-            f"JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}\n"
-            f"[1-2 sentences on what level this represents and where initial offers land.]\n\n"
-            f"SALARY EXPECTATIONS GUIDANCE:\n"
-            f"{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}\n"
-        )
+        if salary_actuals:
+            min_val = salary_actuals.get("range_given_min")
+            max_val = salary_actuals.get("range_given_max")
+            anchor = salary_actuals.get("candidate_anchor")
+            floor_ = salary_actuals.get("candidate_floor")
+            act_stage = salary_actuals.get("stage", "prior stage")
+            act_date = salary_actuals.get("interview_date", "prior interview")
+            min_str = f"${min_val:,.0f}" if min_val else "not recorded"
+            max_str = f"${max_val:,.0f}" if max_val else "not recorded"
+            anchor_str = f"${anchor:,.0f}" if anchor else "not recorded"
+            floor_str = f"${floor_:,.0f}" if floor_ else "not recorded"
+            salary_block = (
+                f"\nSALARY ACTUALS (reported from {act_stage} on {act_date} -- use these, not estimates):\n"
+                f"Range given by interviewer: {min_str} -- {max_str}\n"
+                f"Candidate anchor stated: {anchor_str}\n"
+                f"Candidate floor: {floor_str}\n"
+                f"Note: these are reported actuals from a prior interview for this role. "
+                f"Present them as confirmed data, not as analysis.\n"
+            )
+        else:
+            salary_block = (
+                f"\nSALARY & LEVEL CONTEXT:\n"
+                f"JD posted range: {salary_data['text'] if salary_data['found'] else 'Not found in JD'}\n"
+                f"[1-2 sentences on what level this represents and where initial offers land.]\n\n"
+                f"SALARY EXPECTATIONS GUIDANCE:\n"
+                f"{salary_data['guidance'] if salary_data['found'] else 'Research market rate before interview.'}\n"
+            )
 
     return (
         f"Research this company and role, then generate an interview prep brief "
@@ -582,6 +602,22 @@ def _get_gap_signal_safe(gap_label, all_debriefs):
     except Exception:
         return None
 
+
+def _load_role_debriefs_safe(role):
+    try:
+        from scripts.phase5_debrief_utils import load_debriefs
+        return load_debriefs(role)
+    except Exception:
+        return []
+
+
+def _load_salary_actuals_safe(debriefs):
+    try:
+        from scripts.phase5_debrief_utils import load_salary_actuals
+        return load_salary_actuals(debriefs)
+    except Exception:
+        return None
+
 # ==============================================
 # LOAD RESUME BULLETS FROM STAGE FILE
 # ==============================================
@@ -858,6 +894,10 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # Extract JD tags for library filtering
     jd_tags = _extract_jd_tags(jd)
 
+    # Load role debriefs for salary actuals and continuity (reused in Tasks 4 and 5)
+    role_debriefs = _load_role_debriefs_safe(role_name)
+    salary_actuals = _load_salary_actuals_safe(role_debriefs)
+
     # Build resume data from stage text (parse inline)
     resume_data = _parse_stage_text(safe_stage, source_label="stage_text")
     resume_source = resume_data.get('source') if resume_data else None
@@ -877,7 +917,8 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     # --------------------------------------------------
     print("\nSection 1: Company & Role Brief (searching web)...")
 
-    company_prompt = _build_section1_prompt(jd, salary_data, profile)
+    company_prompt = _build_section1_prompt(jd, salary_data, profile,
+                                             salary_actuals=salary_actuals)
 
     response1 = client.messages.create(
         model=MODEL,
