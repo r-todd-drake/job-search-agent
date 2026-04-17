@@ -715,3 +715,75 @@ def test_continuity_section_in_docx(monkeypatch, tmp_path):
     doc = Document(str(docx_path))
     all_text = "\n".join(p.text for p in doc.paragraphs)
     assert "Continuity Summary" in all_text or "CONTINUITY" in all_text
+
+
+# ---- terminal notifications (debrief_utils logic validation) ----
+
+def test_find_unmatched_returns_ghost_story_id():
+    import scripts.phase5_debrief_utils as dbu
+    unmatched_debrief = {
+        "metadata": {"role": "r", "stage": "hiring_manager", "interview_date": "2026-04-10",
+                     "panel_label": None, "interviewers": []},
+        "stories_used": [{"library_id": "ghost_id", "tags": ["mbse"], "landed": "yes"}],
+        "gaps_surfaced": [], "salary_exchange": {}, "advancement_read": {},
+        "what_i_said": None, "open_notes": None,
+    }
+    with patch("scripts.interview_library_parser._load_library",
+               return_value={"stories": [], "gap_responses": [], "questions": []}):
+        stories, gaps = dbu.find_unmatched_debrief_content([unmatched_debrief])
+    assert len(stories) == 1
+    assert stories[0]["library_id"] == "ghost_id"
+
+
+def test_thankyou_notification_check():
+    import scripts.phase5_debrief_utils as dbu
+    d = {
+        "metadata": {"stage": "hiring_manager", "panel_label": None, "interview_date": "2026-04-10",
+                     "interviewers": [], "role": "r"},
+        "stories_used": [], "gaps_surfaced": [], "salary_exchange": {}, "advancement_read": {},
+        "what_i_said": None, "open_notes": None,
+    }
+    assert dbu.has_debrief_for_stage([d], "hiring_manager") is True
+    assert dbu.has_debrief_for_stage([d], "team_panel") is False
+
+
+# ---- no-regression: absent library, absent debriefs ----
+
+def test_no_regression_absent_library_file(monkeypatch, tmp_path):
+    import scripts.interview_library_parser as ilp
+    import scripts.phase5_debrief_utils as dbu
+    from scripts.phase5_interview_prep import generate_prep
+
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    txt = tmp_path / "p.txt"
+    docx = tmp_path / "p.docx"
+    generate_prep(client, role_data, "hiring_manager", str(txt), str(docx))
+    assert txt.exists()
+    assert docx.exists()
+
+
+def test_no_regression_absent_debriefs_dir(monkeypatch, tmp_path):
+    import scripts.interview_library_parser as ilp
+    import scripts.phase5_debrief_utils as dbu
+    from scripts.phase5_interview_prep import generate_prep
+
+    monkeypatch.setattr(ilp, "load_tags", lambda: [])
+    monkeypatch.setattr(ilp, "get_stories", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_gap_responses", lambda **kw: [])
+    monkeypatch.setattr(ilp, "get_questions", lambda **kw: [])
+    monkeypatch.setattr(dbu, "load_all_debriefs", lambda: [])
+    monkeypatch.setattr(dbu, "load_debriefs", lambda role: [])
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+    txt = tmp_path / "p.txt"
+    generate_prep(client, role_data, "recruiter", str(txt), str(tmp_path / "p.docx"))
+    assert txt.exists()
