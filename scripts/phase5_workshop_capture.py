@@ -351,10 +351,12 @@ def _make_question_id(text):
 # ==============================================
 
 def _find_duplicate_story(library, employer, primary_tag):
-    """Return existing story entry matching employer + primary_tag, or None."""
+    """Return existing story entry matching employer + primary_tag, or None.
+    When primary_tag is empty, matches on employer alone."""
     for s in library.get("stories", []):
-        if (s.get("employer", "").lower() == employer.lower() and
-                primary_tag in s.get("tags", [])):
+        if s.get("employer", "").lower() != employer.lower():
+            continue
+        if not primary_tag or primary_tag in s.get("tags", []):
             return s
     return None
 

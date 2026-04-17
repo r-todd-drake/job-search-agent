@@ -444,6 +444,18 @@ def test_find_duplicate_story_no_match():
     assert wc._find_duplicate_story(library, "ACME", "leadership") is None
 
 
+def test_find_duplicate_story_employer_only_when_no_tags():
+    library = {
+        "stories": [{"id": "g2-ops-mbse", "employer": "G2 OPS", "tags": ["mbse"],
+                     "roles_used": ["OldRole"]}],
+        "gap_responses": [], "questions": []
+    }
+    # Empty primary_tag should still find the story by employer
+    result = wc._find_duplicate_story(library, "G2 OPS", "")
+    assert result is not None
+    assert result["id"] == "g2-ops-mbse"
+
+
 def test_find_duplicate_gap_case_insensitive():
     library = {
         "stories": [], "questions": [],
