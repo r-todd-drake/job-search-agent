@@ -27,12 +27,9 @@ def test_parse_library_employer_has_required_fields():
 
 def test_parse_library_bullet_count_matches_source():
     employers, _ = parse_library(str(FIXTURE_MD))
-    # Fixture has 3 bullet lines, but the parser drops the last pending bullet
-    # when it encounters ## PROFESSIONAL SUMMARIES (sets current_employer = None
-    # before the end-of-loop flush). Actual parsed count is 2.
     acme = employers.get("Acme Defense Systems")
     assert acme is not None
-    assert len(acme["bullets"]) == 2
+    assert len(acme["bullets"]) == 3
 
 
 def test_parse_library_priority_bullet_flagged():
