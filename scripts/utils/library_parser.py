@@ -92,6 +92,8 @@ def parse_library(filepath):
 
         # Detect summaries section
         if stripped.startswith('## PROFESSIONAL SUMMARIES'):
+            if current_bullet and current_employer:
+                employers[current_employer]['bullets'].append(current_bullet)
             in_summaries = True
             current_employer = None
             current_theme = None
