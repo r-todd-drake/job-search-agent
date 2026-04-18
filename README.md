@@ -71,11 +71,15 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
    → Specify --interview_stage (recruiter, hiring_manager, team_panel)
    → Generates stage-specific .txt and .docx prep package
    → Workshop stories in Claude web chat before interview
+   → Run phase5_workshop_capture.py after workshopping to persist stories to interview_library.json
 7. Run phase5_debrief.py after each interview
    → --interactive for guided capture with optional AI follow-up questions
    → --init / --convert for YAML-based offline workflow
    → Saves structured JSON to data/debriefs/[role]/
-8. Submit, update status to APPLIED, move to tracker
+8. Run phase5_thankyou.py to generate thank-you letters
+   → One .txt and .docx per interviewer, drawn from the filed debrief
+   → Use --panel_label for panel interviews with multiple interviewers
+9. Submit, update status to APPLIED, move to tracker
 ```
 
 ---
@@ -207,6 +211,45 @@ per section. All responses are PII-stripped before the API call.
 
 ---
 
+## Post-Interview Thank-You Letters
+
+Generates a personalized thank-you letter for each interviewer from a filed debrief JSON.
+
+```bash
+# Standard (single interviewer or named panel label)
+python scripts/phase5_thankyou.py --role [role] --stage [stage]
+
+# Panel with a specific label
+python scripts/phase5_thankyou.py --role [role] --stage panel --panel_label [label]
+```
+
+Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
+
+Outputs to `data/job_packages/[role]/`:
+- `thankyou_[stage]_[interviewer].txt`
+- `thankyou_[stage]_[interviewer].docx`
+
+One API call per letter. Reads interviewer name and exchange details from the debrief JSON.
+
+---
+
+## Interview Workshop Capture
+
+Parses a workshopped interview prep `.docx` and writes durable story, gap, and question
+content into a persistent interview library for reuse across roles.
+
+```bash
+python scripts/phase5_workshop_capture.py --role [role] --stage [stage]
+```
+
+Reads: `data/job_packages/[role]/interview_prep_[stage].docx`
+Writes: `data/interview_library.json` (appends or updates existing entries)
+
+Run this after story workshopping in Claude web chat to capture refined content before
+it is lost.
+
+---
+
 ## Tech Stack
 
 - **Python 3.x** — core scripting and automation
@@ -317,6 +360,8 @@ python scripts/phase5_interview_prep.py --role [role] --interview_stage [recruit
 python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
 python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
 python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
+python scripts/phase5_workshop_capture.py --role [role] --stage [recruiter|hiring_manager|team_panel]
+python scripts/phase5_thankyou.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final]
 ```
 
 ---
@@ -337,6 +382,7 @@ Job_search_agent/
 │   ├── job_packages/[role]/              # JD, stage files, interview prep (active)
 │   │   └── inactive/[role]/              # Rejected / ghosted / withdrawn roles
 │   ├── debriefs/[role]/                  # Post-interview debrief JSON (local only)
+│   ├── interview_library.json           # Persistent story/gap/question library (local only)
 │   └── experience_library/              # Library source, JSON, candidate profile
 ├── docs/
 │   ├── features/                         # Requirements artifacts per capability
@@ -364,10 +410,15 @@ Job_search_agent/
 │   ├── phase4_cover_letter.py            # Staged cover letter generator
 │   ├── phase5_interview_prep.py          # Stage-aware interview prep (recruiter/HM/team panel)
 │   ├── phase5_debrief.py                  # Post-interview debrief capture (--init/--convert/--interactive)
+│   ├── phase5_thankyou.py                # Post-interview thank-you letter generation (one per interviewer)
+│   ├── phase5_workshop_capture.py        # Parses workshopped prep .docx into interview_library.json
+│   ├── phase5_debrief_utils.py           # Shared utility — load filed debrief JSON
+│   ├── interview_library_parser.py       # Shared module — read/write interview_library.json
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
+│       ├── normalize_library.py          # One-time cleanup — merge tranche-suffixed employer sections
 │       └── pii_filter.py                 # PII stripping — safe for GitHub
 ├── tests/                                # Two-tier pytest suite (mock + live)
 │   ├── conftest.py                       # Shared fixtures and fictional test identity
