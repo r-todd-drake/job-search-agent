@@ -393,6 +393,13 @@ Job_search_agent/
 │   │   ├── specs/                        # Design specs (how to build it)
 │   │   └── plans/                        # Implementation plans (how to execute)
 │   └── capabilities.md                   # Script-to-phase traceability (in progress)
+├── example_data/
+|   ├── job_packages/[role]/              # Example JD, stage files
+|   ├── outputs/                          # Example generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
+|   ├── tracker/job_pipeline_example.xlsx # Example job pipeline tracker
+|   │    └── README.txt                   # Tracker workbook README
+|   └── jobs.csv                          # Example Pipeline - status + req number tracking
+├── outputs                               # Generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 ├── resumes/tailored/                     # Generated resumes (local only)
 ├── templates/                            # Script input templates (tracked — YAML, plain-text)
 │   └── interview_debrief_template.yaml   # Debrief YAML template for --init mode

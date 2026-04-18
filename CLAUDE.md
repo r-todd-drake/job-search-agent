@@ -21,13 +21,13 @@ Never use Glob, Read, or any tool to browse or read files in the above directori
 - README.md
 - requirements.txt
 - CLAUDE.md
-- PROJECT_CONTEXT.md
 
 ### Git safety:
-- Never run git add . — always stage specific files
-- Never commit .env or data/ or resumes/
-- Always run git status before committing
-- Verify .gitignore has dot prefix before any git operations
+- If the user asks how to push changes to GitHub or asks for git commands, do NOT suggest `git add .` — always tell them to stage specific files by name.
+- Claude Code may use `git add .` internally, but only after running `git status` and verifying that no forbidden files (`.env`, `data/`, `resumes/`, `outputs/`) are staged, and that `.gitignore` is correctly named with a dot prefix. Background: a prior incident where `.gitignore` was misnamed caused personal data and API keys to be pushed to GitHub via `git add . && git commit && git push`.
+- Never commit `.env`, `data/`, `resumes/`, or `outputs/`
+- Always run `git status` before committing
+- Verify `.gitignore` has the dot prefix before any git operations
 
 ## Code Style
 - Python scripts — en dashes in strings, not em dashes
@@ -37,15 +37,21 @@ Never use Glob, Read, or any tool to browse or read files in the above directori
 
 ## Project Structure
 See README.md for full structure.
+See context/SCRIPT_INDEX.md for a quick-reference table of every script — purpose, key flags, and shared module relationships. Read this before navigating multi-script tasks.
+See context/SCHEMA_REFERENCE.md for the JSON schemas of the three key data files: debrief JSON, interview_library.json, and experience_library.json. Read this before modifying any Phase 4 or Phase 5 script that reads or writes these files.
 ### Key scripts:
+- scripts/pipeline_report.py
 - scripts/phase2_job_ranking.py
 - scripts/phase2_semantic_analyzer.py
 - scripts/phase3_*.py
 - scripts/phase4_resume_generator.py
 - scripts/phase4_cover_letter.py
-- scripts/phase5_interview_prep.py
-- scripts/pipeline_report.py
 - scripts/check_resume.py
+- scripts/check_cover_letter.py
+- scripts/phase5_interview_prep.py
+- scripts/phase5_debrief.py
+- scripts/phase5_thankyou.py
+- scripts/phase5_workshop_capture.py
 
 ## When asked to modify scripts:
 1. Read the existing script first
