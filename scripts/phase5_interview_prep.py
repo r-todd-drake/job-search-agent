@@ -753,7 +753,7 @@ def build_story_context(library, resume_data, jd_lower):
 
 def generate_prep_docx(output_path, role, resume_source, stage_profile,
                         section1, section_intro, section2, section3, section4,
-                        salary_data, continuity_section=""):
+                        continuity_section=""):
     """
     Generate a clean formatted .docx interview prep document.
     Uses simple heading/normal/bullet styles -- no resume color scheme.
@@ -859,11 +859,6 @@ def generate_prep_docx(output_path, role, resume_source, stage_profile,
         add_heading("Continuity Summary", level=1)
         add_normal("(Reference record from prior interviews -- not prep guidance)")
         parse_and_add_section(continuity_section)
-
-    # Salary guidance
-    if salary_data['found']:
-        add_heading("Salary Guidance", level=1)
-        add_normal(salary_data['guidance'])
 
     doc.save(output_path)
 
@@ -1153,7 +1148,7 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
         generate_prep_docx(
             output_docx_path, role_name, resume_source, profile,
             section1, section_intro, section2, section3, section4,
-            salary_data, continuity_section=continuity_text
+            continuity_section=continuity_text
         )
         print(f"  Interview prep .docx written to {output_docx_path}")
     except Exception as e:
