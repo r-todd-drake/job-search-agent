@@ -1,5 +1,103 @@
 {
-  "stories": [],
+  "stories": [
+    {
+      "id": "-program-delivery",
+      "title": "Story 1 – V&V Framework Under OTA Contract Pressure   Saronic Technologies  |  May – Oct 2025",
+      "tags": [
+        "program-delivery",
+        "systems-engineering",
+        "v-and-v"
+      ],
+      "employer": "",
+      "title_held": "",
+      "dates": "",
+      "situation": "",
+      "task": "",
+      "action": "",
+      "result": "",
+      "if_probed": null,
+      "notes": null,
+      "source": "workshopped",
+      "roles_used": [
+        "Anduril_Veh_Sys_Lead"
+      ],
+      "last_updated": "2026-04-17"
+    },
+    {
+      "id": "-cross-functional",
+      "title": "Story 2 – Requirements Harmonization Across 35 Capability Threads   KForce supporting Leidos / NIWC PAC  |  Aug 2024 – Mar 2025",
+      "tags": [
+        "cross-functional",
+        "systems-engineering",
+        "requirements-analysis",
+        "communication"
+      ],
+      "employer": "",
+      "title_held": "",
+      "dates": "",
+      "situation": "",
+      "task": "",
+      "action": "",
+      "result": "",
+      "if_probed": null,
+      "notes": null,
+      "source": "workshopped",
+      "roles_used": [
+        "Anduril_Veh_Sys_Lead"
+      ],
+      "last_updated": "2026-04-17"
+    },
+    {
+      "id": "-domain-gap",
+      "title": "Story 3 – Dual PDR on Two Autonomous UAS Programs Simultaneously   Shield AI  |  Nov 2022 – Apr 2024",
+      "tags": [
+        "domain-gap",
+        "systems-engineering",
+        "program-delivery",
+        "cross-functional",
+        "leadership"
+      ],
+      "employer": "",
+      "title_held": "",
+      "dates": "",
+      "situation": "",
+      "task": "",
+      "action": "",
+      "result": "",
+      "if_probed": null,
+      "notes": null,
+      "source": "workshopped",
+      "roles_used": [
+        "Anduril_Veh_Sys_Lead"
+      ],
+      "last_updated": "2026-04-17"
+    },
+    {
+      "id": "-mbse",
+      "title": "Story 4 – Critical Path Bottleneck Elimination via MBSE Automation   G2 OPS / Project Overmatch  |  Mar 2016 – Nov 2022  –  Hold for deep probe",
+      "tags": [
+        "mbse",
+        "leadership",
+        "technical-credibility",
+        "program-delivery",
+        "culture-fit"
+      ],
+      "employer": "",
+      "title_held": "",
+      "dates": "",
+      "situation": "",
+      "task": "",
+      "action": "",
+      "result": "",
+      "if_probed": null,
+      "notes": null,
+      "source": "workshopped",
+      "roles_used": [
+        "Anduril_Veh_Sys_Lead"
+      ],
+      "last_updated": "2026-04-17"
+    }
+  ],
   "gap_responses": [],
   "questions": []
 }
