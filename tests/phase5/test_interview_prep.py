@@ -799,17 +799,12 @@ def test_no_regression_absent_debriefs_dir(monkeypatch, tmp_path):
 
 
 def test_generate_prep_docx_does_not_inject_salary_guidance():
-    """Docx must render only section text — no content from salary_data injected."""
+    """Docx must render only section text — no standalone Salary Guidance section injected."""
     import tempfile
     from pathlib import Path
     from docx import Document
     from scripts.phase5_interview_prep import generate_prep_docx, STAGE_PROFILES
 
-    salary_data = {
-        'found': True,
-        'text': '$150,000 - $180,000',
-        'guidance': 'SENTINEL_SALARY_INJECTION_TEXT'
-    }
     profile = STAGE_PROFILES['hiring_manager']
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -824,14 +819,10 @@ def test_generate_prep_docx_does_not_inject_salary_guidance():
             section2="Story bank content.",
             section3="Gap prep content.",
             section4="Questions content.",
-            salary_data=salary_data,
         )
         doc = Document(str(docx_path))
         all_text = "\n".join(p.text for p in doc.paragraphs)
 
-    assert "SENTINEL_SALARY_INJECTION_TEXT" not in all_text, (
-        "generate_prep_docx must not inject salary_data['guidance'] — .txt is source of truth"
-    )
     assert "Salary Guidance" not in all_text, (
-        "generate_prep_docx must not add a 'Salary Guidance' heading — it is not present in the .txt"
+        "generate_prep_docx must not add a standalone 'Salary Guidance' heading"
     )
