@@ -104,3 +104,100 @@ def test_extract_library_bullets_sources_survive_note_lines():
         assert "Acme_Resume" in bullets[0]["sources"]
     finally:
         os.unlink(tmp)
+
+
+LIBRARY_BULLETS_SAMPLE = [
+    {
+        "text": "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.",
+        "theme": "Systems Architecture",
+        "employer": "Acme Defense Systems",
+        "line_number": 13,
+        "sources": ["acme_sse"],
+    },
+    {
+        "text": "Developed system-of-systems architecture models supporting multi-domain C2 integration.",
+        "theme": "Systems Architecture",
+        "employer": "Acme Defense Systems",
+        "line_number": 17,
+        "sources": ["acme_sse"],
+    },
+]
+
+
+def test_classify_bullet_present():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.",
+        LIBRARY_BULLETS_SAMPLE,
+    )
+    assert result["classification"] == "present"
+    assert result["score"] >= 85
+
+
+def test_classify_bullet_net_new():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Architected system interface definitions for all GNC subsystems across the autonomous vehicle program.",
+        LIBRARY_BULLETS_SAMPLE,
+    )
+    assert result["classification"] == "net_new"
+    assert result["match"] is None
+
+
+def test_classify_bullet_variant():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Developed system-of-sys architecture models for multi-domain C2 integration with minor rewording.",
+        LIBRARY_BULLETS_SAMPLE,
+    )
+    assert result["classification"] == "variant"
+    assert result["score"] >= 60
+    assert result["score"] < 85
+
+
+def test_classify_bullet_custom_thresholds():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Developed system-of-sys architecture models for multi-domain C2 integration with minor rewording.",
+        LIBRARY_BULLETS_SAMPLE,
+        net_new_threshold=70,
+        variant_floor=50,
+    )
+    assert result["classification"] == "present"
+
+
+def test_match_employer_found():
+    from scripts.phase4_backport import match_employer
+    result = match_employer("Acme Defense Systems", LIBRARY_BULLETS_SAMPLE)
+    assert result == "Acme Defense Systems"
+
+
+def test_match_employer_not_found():
+    from scripts.phase4_backport import match_employer
+    result = match_employer("Unknown Corp", LIBRARY_BULLETS_SAMPLE)
+    assert result is None
+
+
+def test_classify_bullet_cross_employer_isolation():
+    """A bullet from Employer A must not be suppressed by a high-scoring match from Employer B.
+
+    main() filters library_bullets to the matched employer before calling classify_bullet.
+    This test verifies that employer-filtered classify_bullet correctly returns net_new
+    even when the same bullet text would score >=85 against a different employer's bullets.
+    """
+    from scripts.phase4_backport import classify_bullet
+    # Same bullet text as in LIBRARY_BULLETS_SAMPLE (Acme Defense Systems)
+    bullet_text = "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views."
+    # But we only pass Saronic bullets -- the Acme match is excluded by employer filtering
+    saronic_bullets = [
+        {
+            "text": "Developed software-defined radio integration architecture for multi-domain mesh networks.",
+            "theme": "Communications",
+            "employer": "Saronic Technologies",
+            "line_number": 55,
+            "sources": ["saronic_se"],
+        }
+    ]
+    result = classify_bullet(bullet_text, saronic_bullets)
+    # Should be net_new against Saronic's library -- the Acme match is not present
+    assert result["classification"] == "net_new"

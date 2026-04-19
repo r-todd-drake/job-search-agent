@@ -14,6 +14,7 @@ import re
 import json
 import argparse
 from datetime import date
+from rapidfuzz import fuzz as _fuzz
 
 JOBS_PACKAGES_DIR = "data/job_packages"
 LIBRARY_MD_PATH = "data/experience_library/experience_library.md"
@@ -168,3 +169,48 @@ def extract_library_bullets(library_md_path: str) -> list:
         bullets.append(current_bullet)
 
     return bullets
+
+
+def classify_bullet(
+    bullet_text: str,
+    library_bullets: list,
+    net_new_threshold: float = 85.0,
+    variant_floor: float = 60.0,
+) -> dict:
+    """Classify a stage file bullet against library bullets.
+
+    Returns {classification: 'net_new'|'variant'|'present', match: dict|None, score: float}.
+    """
+    best_score = 0.0
+    best_match = None
+
+    for lib_bullet in library_bullets:
+        score = _fuzz.token_sort_ratio(bullet_text, lib_bullet["text"])
+        if score > best_score:
+            best_score = score
+            best_match = lib_bullet
+
+    if best_score >= net_new_threshold:
+        return {"classification": "present", "match": best_match, "score": best_score}
+    elif best_score >= variant_floor:
+        return {"classification": "variant", "match": best_match, "score": best_score}
+    else:
+        return {"classification": "net_new", "match": None, "score": best_score}
+
+
+def match_employer(stage_employer: str, library_bullets: list, threshold: float = 80.0):
+    """Find the best-matching employer name in library_bullets for a stage file employer.
+
+    Returns employer name string or None if no match at or above threshold.
+    """
+    employer_names = list({b["employer"] for b in library_bullets})
+    best_score = 0.0
+    best_name = None
+
+    for name in employer_names:
+        score = _fuzz.token_sort_ratio(stage_employer, name)
+        if score > best_score:
+            best_score = score
+            best_name = name
+
+    return best_name if best_score >= threshold else None
