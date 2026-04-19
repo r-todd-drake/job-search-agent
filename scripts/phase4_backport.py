@@ -214,3 +214,84 @@ def match_employer(stage_employer: str, library_bullets: list, threshold: float 
             best_name = name
 
     return best_name if best_score >= threshold else None
+
+
+def check_source_attribution(library_bullet: dict, role_source_name: str) -> bool:
+    """Return True if role_source_name appears in library_bullet sources (case-insensitive)."""
+    role_lower = role_source_name.lower()
+    return any(role_lower == s.lower() for s in library_bullet.get("sources", []))
+
+
+def generate_staged_output(
+    net_new_entries: list,
+    variant_entries: list,
+    source_gap_entries: list,
+    role_source_name: str,
+) -> str:
+    today = date.today().isoformat()
+    lines = [
+        f"# Backport Staged \u2013 {role_source_name}",
+        f"Generated: {today}",
+        "",
+        "---",
+        "",
+        "## Net-New Bullets",
+        "",
+    ]
+
+    if not net_new_entries:
+        lines.append("No net-new bullets found.")
+    else:
+        for entry in net_new_entries:
+            lines += [
+                f"### {entry['employer']}",
+                "",
+                f"**Theme:** {entry['theme']}",
+                f"- {entry['text']}",
+                f"*Used in: {role_source_name}*",
+                "*NOTE: [BACKPORT -- review before reuse. Outcome: recruiter callback | HM interview | panel | offer | no outcome]*",
+                "",
+                "---",
+                "",
+            ]
+
+    lines += [
+        "## Variant Bullets (Review Required)",
+        "",
+    ]
+
+    if not variant_entries:
+        lines.append("No variant bullets found.")
+    else:
+        for entry in variant_entries:
+            lines += [
+                f"### {entry['employer']}",
+                "",
+                f"**Theme:** {entry['theme']}",
+                f"- {entry['text']}",
+                f"*Fuzzy match score: {entry['score']:.0f}% \u2013 matched: \"{entry['matched_text']}\"*",
+                "",
+                "---",
+                "",
+            ]
+
+    lines += [
+        "## Source Gaps",
+        "",
+    ]
+
+    if not source_gap_entries:
+        lines.append("No source gaps found.")
+    else:
+        for entry in source_gap_entries:
+            lines += [
+                f"### {entry['employer']} (line {entry['line_number']})",
+                "",
+                f"- {entry['text']}",
+                f"*Missing source:* `{role_source_name}` \u2013 add to `*Used in:*` at line {entry['line_number']}",
+                "",
+                "---",
+                "",
+            ]
+
+    return "\n".join(lines)

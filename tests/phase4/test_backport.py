@@ -201,3 +201,56 @@ def test_classify_bullet_cross_employer_isolation():
     result = classify_bullet(bullet_text, saronic_bullets)
     # Should be net_new against Saronic's library -- the Acme match is not present
     assert result["classification"] == "net_new"
+
+
+def test_check_source_attribution_present():
+    from scripts.phase4_backport import check_source_attribution
+    lib_bullet = {"sources": ["acme_sse", "Viasat_SE_IS_Resume"]}
+    assert check_source_attribution(lib_bullet, "Viasat_SE_IS_Resume") is True
+
+
+def test_check_source_attribution_absent():
+    from scripts.phase4_backport import check_source_attribution
+    lib_bullet = {"sources": ["acme_sse"]}
+    assert check_source_attribution(lib_bullet, "Viasat_SE_IS_Resume") is False
+
+
+def test_check_source_attribution_case_insensitive():
+    from scripts.phase4_backport import check_source_attribution
+    lib_bullet = {"sources": ["viasat_se_is_resume"]}
+    assert check_source_attribution(lib_bullet, "Viasat_SE_IS_Resume") is True
+
+
+def test_generate_staged_output_contains_net_new():
+    from scripts.phase4_backport import generate_staged_output
+    net_new = [{"employer": "Acme Defense Systems", "text": "Brand new bullet.", "theme": "Leadership"}]
+    output = generate_staged_output(net_new, [], [], "TestRole_Resume")
+    assert "Brand new bullet." in output
+    assert "*Used in: TestRole_Resume*" in output
+    assert "BACKPORT -- review before reuse" in output
+    assert "## Net-New Bullets" in output
+
+
+def test_generate_staged_output_contains_variant():
+    from scripts.phase4_backport import generate_staged_output
+    variants = [{"employer": "Acme", "text": "Variant text.", "theme": "Engineering", "matched_text": "Original text.", "score": 72.0}]
+    output = generate_staged_output([], variants, [], "TestRole_Resume")
+    assert "## Variant Bullets" in output
+    assert "Variant text." in output
+    assert "72%" in output
+
+
+def test_generate_staged_output_contains_source_gap():
+    from scripts.phase4_backport import generate_staged_output
+    gaps = [{"text": "Some bullet.", "employer": "Acme", "theme": "Systems", "line_number": 42, "matched_sources": ["other_resume"]}]
+    output = generate_staged_output([], [], gaps, "TestRole_Resume")
+    assert "## Source Gaps" in output
+    assert "line 42" in output
+    assert "TestRole_Resume" in output
+
+
+def test_generate_staged_output_empty():
+    from scripts.phase4_backport import generate_staged_output
+    output = generate_staged_output([], [], [], "TestRole_Resume")
+    assert "Net-New Bullets" in output
+    assert "No net-new bullets found" in output
