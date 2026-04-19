@@ -27,6 +27,7 @@ For full structure see README.md.
 | Script | Purpose | Key flags |
 |---|---|---|
 | `phase4_resume_generator.py` | Staged resume tailoring (Stages 1, 3, 4) | `--stage` `--role` |
+| `phase4_backport.py` | Identify net-new/variant bullets from stage files; stage for library backport | `--role` `--dry-run` `--net-new-threshold` `--variant-floor` |
 | `check_resume.py` | Two-layer quality check on stage2_approved.txt | `--role` |
 | `phase4_cover_letter.py` | Staged cover letter generation (Stages 1, 4) | `--stage` `--role` |
 | `check_cover_letter.py` | Two-layer quality check on cl_stage2_approved.txt | `--role` |
