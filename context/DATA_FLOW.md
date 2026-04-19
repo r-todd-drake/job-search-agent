@@ -19,7 +19,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 
 | Script | Reads | Writes |
 |--------|-------|--------|
-| `phase3_parse_library.py` | `data/experience_library/experience_library.md` | `data/experience_library/employers/[name].json`, `data/experience_library/summaries.json` |
+| `phase3_parse_library.py` | `data/experience_library/experience_library.md` | `data/experience_library/employers/[employer_slug].json`, `data/experience_library/summaries.json` |
 | `phase3_parse_employer.py` | `data/experience_library/experience_library.md` | `data/experience_library/employers/[employer_slug].json` |
 | `phase3_compile_library.py` | `data/experience_library/employers/*.json`, `data/experience_library/summaries.json` | `data/experience_library/experience_library.json` |
 | `phase3_build_candidate_profile.py` | `data/experience_library/experience_library.json`, `data/experience_library/employers/*.json`, `data/experience_library/summaries.json` | `data/experience_library/candidate_profile.md` |
@@ -41,7 +41,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 | Script | Reads | Writes |
 |--------|-------|--------|
 | `phase5_interview_prep.py` | `data/job_packages/[role]/job_description.txt`, `data/interview_library.json`, `data/experience_library/candidate_profile.md` | `data/job_packages/[role]/interview_prep_[stage].txt`, `data/job_packages/[role]/interview_prep_[stage].docx` |
-| `phase5_workshop_capture.py` | `data/job_packages/[role]/interview_prep_[stage].docx`, `data/interview_library_tags.json` | `data/interview_library.json` (appends/updates) |
+| `phase5_workshop_capture.py` | `data/job_packages/[role]/interview_prep_[stage].docx` | `data/interview_library.json` (appends/updates) |
 | `phase5_debrief.py --init` | `templates/interview_debrief_template.yaml` | `data/debriefs/[role]/debrief_[stage]_draft.yaml` |
 | `phase5_debrief.py --convert` | `data/debriefs/[role]/debrief_[stage]_draft.yaml` | `data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json` |
 | `phase5_debrief.py --interactive` | (none) | `data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json` |
