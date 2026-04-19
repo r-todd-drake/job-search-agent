@@ -94,3 +94,77 @@ def parse_stage_file(content: str) -> list:
         sections.append({"employer": current_employer, "bullets": current_bullets})
 
     return sections
+
+
+def extract_library_bullets(library_md_path: str) -> list:
+    """Read experience_library.md and return all employer bullets with metadata.
+
+    Returns list of {text, theme, employer, line_number, sources}.
+    Stops at PROFESSIONAL SUMMARIES section.
+    """
+    bullets = []
+    current_employer = None
+    current_theme = None
+    current_bullet = None
+
+    with open(library_md_path, encoding="utf-8") as f:
+        lines = f.readlines()
+
+    for i, raw_line in enumerate(lines, start=1):
+        line = raw_line.rstrip("\n")
+        stripped = line.strip()
+
+        if stripped.startswith("## PROFESSIONAL SUMMARIES"):
+            if current_bullet:
+                bullets.append(current_bullet)
+                current_bullet = None
+            break
+
+        if stripped.startswith("## ") and not stripped.startswith("## PROFESSIONAL"):
+            if current_bullet:
+                bullets.append(current_bullet)
+                current_bullet = None
+            current_employer = stripped[3:].strip()
+            current_theme = None
+            continue
+
+        if stripped.startswith("### "):
+            if current_bullet:
+                bullets.append(current_bullet)
+                current_bullet = None
+            raw_theme = stripped[4:].strip()
+            if raw_theme.startswith("Theme:"):
+                raw_theme = raw_theme[6:].strip()
+            current_theme = raw_theme
+            continue
+
+        if stripped.startswith("- ") and not stripped.startswith("- [") and current_employer and current_theme:
+            if current_bullet:
+                bullets.append(current_bullet)
+            bullet_text = stripped[2:].strip()
+            bullet_text = bullet_text.replace("[FLAGGED]", "").replace("[VERIFY]", "").strip()
+            current_bullet = {
+                "text": bullet_text,
+                "theme": current_theme,
+                "employer": current_employer,
+                "line_number": i,
+                "sources": [],
+            }
+            continue
+
+        if stripped.startswith("*Used in:") and current_bullet:
+            src_text = stripped.replace("*Used in:", "").replace("*", "").strip()
+            current_bullet["sources"] = [s.strip() for s in src_text.split(",")]
+            continue
+
+        # Annotation lines — skip explicitly; never flush current_bullet.
+        # Handles: *NOTE:*, *PRIORITY:*, [CANONICAL...], [VERIFY...], [FLAGGED...]
+        # These may appear between a bullet line and its *Used in:* tag.
+        ANNOTATION_PREFIXES = ("*NOTE:", "*PRIORITY:", "*VERIFY:", "[CANONICAL", "[VERIFY", "[FLAGGED")
+        if any(stripped.startswith(p) for p in ANNOTATION_PREFIXES):
+            continue
+
+    if current_bullet:
+        bullets.append(current_bullet)
+
+    return bullets

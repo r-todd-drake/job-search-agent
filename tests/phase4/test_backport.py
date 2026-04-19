@@ -49,3 +49,58 @@ def test_parse_stage_file_skips_summary_and_competencies():
     sections = parse_stage_file(content)
     assert len(sections) == 1
     assert sections[0]["employer"] == "Real Employer"
+
+
+def test_extract_library_bullets_count():
+    from scripts.phase4_backport import extract_library_bullets
+    bullets = extract_library_bullets(str(FIXTURE_LIBRARY_MD))
+    # Generated fixture has 3 employers x up to 3 bullets each — assert at least 3
+    assert len(bullets) >= 3
+
+
+def test_extract_library_bullets_fields():
+    from scripts.phase4_backport import extract_library_bullets
+    bullets = extract_library_bullets(str(FIXTURE_LIBRARY_MD))
+    b = bullets[0]
+    assert isinstance(b["employer"], str) and b["employer"]
+    assert isinstance(b["theme"], str) and b["theme"]
+    assert isinstance(b["text"], str) and b["text"]
+    assert isinstance(b["line_number"], int) and b["line_number"] > 0
+    assert isinstance(b["sources"], list)
+    # Generated fixture has real *Used in: tags — at least one bullet has sources
+    assert any(bullet["sources"] for bullet in bullets)
+
+
+def test_extract_library_bullets_excludes_summaries():
+    from scripts.phase4_backport import extract_library_bullets
+    bullets = extract_library_bullets(str(FIXTURE_LIBRARY_MD))
+    # Summaries section should not produce bullet entries
+    texts = [b["text"] for b in bullets]
+    assert not any(t.startswith('"') for t in texts)  # summary text is quoted
+
+
+def test_extract_library_bullets_sources_survive_note_lines():
+    """*Used in:* must attach even when *NOTE:* or [CANONICAL] lines intervene."""
+    import tempfile, os
+    from scripts.phase4_backport import extract_library_bullets
+    content = (
+        "# Experience Library\n\n"
+        "## Acme Corp\n\n"
+        "**Title:** Engineer\n"
+        "**Dates:** 2020-2025\n"
+        "**Domain:** Defense\n\n"
+        "### Theme: Leadership\n\n"
+        "- Led a team of engineers to deliver key milestones.\n"
+        "*NOTE: [CANONICAL -- use this version]*\n"
+        "*PRIORITY: true*\n"
+        "*Used in: Acme_Resume*\n"
+    )
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write(content)
+        tmp = f.name
+    try:
+        bullets = extract_library_bullets(tmp)
+        assert len(bullets) == 1
+        assert "Acme_Resume" in bullets[0]["sources"]
+    finally:
+        os.unlink(tmp)
