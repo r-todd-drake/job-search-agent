@@ -20,6 +20,7 @@ LIBRARY_MD_PATH = "data/experience_library/experience_library.md"
 REGISTRY_PATH = "data/backport_registry.json"
 
 SKIP_SECTION_HEADERS = {"## PROFESSIONAL SUMMARY", "## CORE COMPETENCIES"}
+UNKNOWN_THEME = "UNKNOWN -- assign before committing"
 
 
 def parse_stage_file(content: str) -> list:
@@ -32,8 +33,6 @@ def parse_stage_file(content: str) -> list:
     current_bullets = []
     current_bullet_text = None
     in_skip_section = False
-
-    UNKNOWN_THEME = "UNKNOWN -- assign before committing"
 
     for line in content.splitlines():
         stripped = line.strip()
