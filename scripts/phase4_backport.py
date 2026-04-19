@@ -110,6 +110,7 @@ def extract_library_bullets(library_md_path: str) -> list:
     with open(library_md_path, encoding="utf-8") as f:
         lines = f.readlines()
 
+    ANNOTATION_PREFIXES = ("*NOTE:", "*PRIORITY:", "*VERIFY:", "[CANONICAL", "[VERIFY", "[FLAGGED")
     for i, raw_line in enumerate(lines, start=1):
         line = raw_line.rstrip("\n")
         stripped = line.strip()
@@ -157,10 +158,9 @@ def extract_library_bullets(library_md_path: str) -> list:
             current_bullet["sources"] = [s.strip() for s in src_text.split(",")]
             continue
 
-        # Annotation lines — skip explicitly; never flush current_bullet.
+        # Annotation lines – skip explicitly; never flush current_bullet.
         # Handles: *NOTE:*, *PRIORITY:*, [CANONICAL...], [VERIFY...], [FLAGGED...]
         # These may appear between a bullet line and its *Used in:* tag.
-        ANNOTATION_PREFIXES = ("*NOTE:", "*PRIORITY:", "*VERIFY:", "[CANONICAL", "[VERIFY", "[FLAGGED")
         if any(stripped.startswith(p) for p in ANNOTATION_PREFIXES):
             continue
 
