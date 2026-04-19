@@ -298,3 +298,147 @@ def test_update_registry_appends():
     assert entry["net_new_count"] == 4
     assert entry["source_gap_count"] == 2
     assert entry["outcome"] == "pending"
+
+
+# Mini library for integration tests — uses "Acme Defense Systems" to match the
+# stage file fixture employer. Does NOT use FIXTURE_LIBRARY_MD because the generated
+# fixture has real employers (Saronic etc.) that don't match the stage fixture.
+MINI_LIBRARY = """\
+# Experience Library
+
+## Acme Defense Systems
+**Title:** Senior Systems Engineer
+**Dates:** 2020 - Present
+**Domain:** Defense
+
+### Theme: Systems Architecture
+
+- Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.
+*Used in: acme_sse*
+
+- Developed system-of-systems architecture models supporting multi-domain C2 integration.
+*Used in: acme_sse*
+
+### Theme: Stakeholder Engagement
+
+- Facilitated IPT working groups with government stakeholders to define operational requirements and ConOps.
+*Used in: acme_sse*
+
+## PROFESSIONAL SUMMARIES
+
+"""
+
+
+def _write_mini_library(tmp_path):
+    lib = tmp_path / "mini_library.md"
+    lib.write_text(MINI_LIBRARY, encoding="utf-8")
+    return str(lib)
+
+
+def test_normalize_role_source_name_adds_suffix():
+    from scripts.phase4_backport import normalize_role_source_name
+    assert normalize_role_source_name("Viasat_SE_IS") == "Viasat_SE_IS_Resume"
+
+
+def test_normalize_role_source_name_no_double_suffix():
+    from scripts.phase4_backport import normalize_role_source_name
+    assert normalize_role_source_name("Viasat_SE_IS_Resume") == "Viasat_SE_IS_Resume"
+
+
+def test_resolve_input_file_prefers_stage4(tmp_path):
+    from scripts.phase4_backport import resolve_input_file
+    (tmp_path / "stage4_final.txt").write_text("content", encoding="utf-8")
+    (tmp_path / "stage2_approved.txt").write_text("content", encoding="utf-8")
+    path, name = resolve_input_file(str(tmp_path))
+    assert name == "stage4_final.txt"
+
+
+def test_resolve_input_file_falls_back_to_stage2(tmp_path):
+    from scripts.phase4_backport import resolve_input_file
+    (tmp_path / "stage2_approved.txt").write_text("content", encoding="utf-8")
+    path, name = resolve_input_file(str(tmp_path))
+    assert name == "stage2_approved.txt"
+
+
+def test_resolve_input_file_raises_if_neither(tmp_path):
+    from scripts.phase4_backport import resolve_input_file
+    with pytest.raises(FileNotFoundError, match="stage4_final.txt"):
+        resolve_input_file(str(tmp_path))
+
+
+def test_main_dry_run(tmp_path, capsys):
+    from scripts.phase4_backport import main
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    main(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=str(tmp_path / "registry.json"),
+        dry_run=True,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    captured = capsys.readouterr()
+    assert "net-new" in captured.out.lower()
+    assert not (tmp_path / "backport_staged.md").exists()
+
+
+def test_main_writes_staged_file(tmp_path):
+    from scripts.phase4_backport import main
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    main(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=str(tmp_path / "registry.json"),
+        dry_run=False,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    assert (tmp_path / "backport_staged.md").exists()
+    content = (tmp_path / "backport_staged.md").read_text(encoding="utf-8")
+    assert "Architected system interface definitions" in content
+
+
+def test_main_writes_registry(tmp_path):
+    from scripts.phase4_backport import main, load_registry
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    registry_path = str(tmp_path / "registry.json")
+    main(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=registry_path,
+        dry_run=False,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    registry = load_registry(registry_path)
+    assert any(e["role"] == "TestRole" for e in registry["processed"])
+
+
+def test_main_warns_on_duplicate_role(tmp_path, capsys):
+    from scripts.phase4_backport import main
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    registry_path = str(tmp_path / "registry.json")
+    kwargs = dict(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=registry_path,
+        dry_run=False,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    main(**kwargs)
+    main(**kwargs)
+    captured = capsys.readouterr()
+    assert "already been processed" in captured.out.lower() or "WARNING" in captured.out

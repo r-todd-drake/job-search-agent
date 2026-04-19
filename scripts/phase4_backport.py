@@ -330,3 +330,168 @@ def update_registry(registry: dict, role: str, net_new_count: int, source_gap_co
         "outcome": "pending",
     })
     return registry
+
+
+def normalize_role_source_name(role: str) -> str:
+    """Append _Resume suffix to role if not already present."""
+    if role.endswith("_Resume"):
+        return role
+    return f"{role}_Resume"
+
+
+def resolve_input_file(package_dir: str) -> tuple:
+    """Return (absolute_path, filename) for the best available stage input file.
+
+    Prefers stage4_final.txt; falls back to stage2_approved.txt.
+    Raises FileNotFoundError with a clear message if neither exists.
+    """
+    stage4 = os.path.join(package_dir, "stage4_final.txt")
+    stage2 = os.path.join(package_dir, "stage2_approved.txt")
+    if os.path.exists(stage4):
+        return stage4, "stage4_final.txt"
+    if os.path.exists(stage2):
+        return stage2, "stage2_approved.txt"
+    raise FileNotFoundError(
+        f"Neither stage4_final.txt nor stage2_approved.txt found in {package_dir}.\n"
+        "Complete Stage 2 or Stage 4 before running backport."
+    )
+
+
+def main(
+    role: str,
+    package_dir: str,
+    library_md_path: str,
+    registry_path: str,
+    dry_run: bool = False,
+    net_new_threshold: float = 85.0,
+    variant_floor: float = 60.0,
+) -> None:
+    print("=" * 60)
+    print("PHASE 4 \u2013 EXPERIENCE LIBRARY BACKPORT")
+    print("=" * 60)
+
+    # Registry duplicate check
+    registry = load_registry(registry_path)
+    existing = check_registry(registry, role)
+    if existing:
+        print(f"WARNING: {role} has already been processed on {existing['date_processed']}.")
+        print("  Re-running will append a duplicate registry entry.")
+        print("  Proceeding anyway \u2013 review backport_staged.md before committing.\n")
+
+    # Resolve input file
+    input_path, input_filename = resolve_input_file(package_dir)
+    print(f"  Input file: {input_filename}")
+
+    # Parse stage file
+    content = open(input_path, encoding="utf-8").read()
+    stage_sections = parse_stage_file(content)
+    total_stage_bullets = sum(len(s["bullets"]) for s in stage_sections)
+    print(f"  Stage bullets parsed: {total_stage_bullets}")
+
+    # Extract library bullets
+    library_bullets = extract_library_bullets(library_md_path)
+    print(f"  Library bullets loaded: {len(library_bullets)}")
+
+    role_source_name = normalize_role_source_name(role)
+
+    net_new_entries = []
+    variant_entries = []
+    source_gap_entries = []
+    present_count = 0
+
+    for section in stage_sections:
+        stage_employer = section["employer"]
+        matched_employer = match_employer(stage_employer, library_bullets)
+
+        if matched_employer is None:
+            print(f"  WARNING: Employer '{stage_employer}' not found in library \u2013 skipping section.")
+            continue
+
+        employer_lib_bullets = [b for b in library_bullets if b["employer"] == matched_employer]
+
+        for bullet in section["bullets"]:
+            result = classify_bullet(
+                bullet["text"],
+                employer_lib_bullets,
+                net_new_threshold=net_new_threshold,
+                variant_floor=variant_floor,
+            )
+
+            if result["classification"] == "net_new":
+                net_new_entries.append({
+                    "employer": stage_employer,
+                    "text": bullet["text"],
+                    "theme": bullet["theme"],
+                })
+            elif result["classification"] == "variant":
+                variant_entries.append({
+                    "employer": stage_employer,
+                    "text": bullet["text"],
+                    "theme": bullet["theme"],
+                    "matched_text": result["match"]["text"],
+                    "score": result["score"],
+                })
+            else:  # present
+                present_count += 1
+                lib_bullet = result["match"]
+                if not check_source_attribution(lib_bullet, role_source_name):
+                    source_gap_entries.append({
+                        "text": lib_bullet["text"],
+                        "employer": matched_employer,
+                        "theme": lib_bullet["theme"],
+                        "line_number": lib_bullet["line_number"],
+                        "matched_sources": lib_bullet["sources"],
+                    })
+
+    # Summary
+    print(f"\n  Results:")
+    print(f"    Net-new bullets:  {len(net_new_entries)}")
+    print(f"    Variant bullets:  {len(variant_entries)}")
+    print(f"    Present bullets:  {present_count}")
+    print(f"    Source gaps:      {len(source_gap_entries)}")
+
+    if dry_run:
+        print("\n  Dry run \u2013 no files written.")
+        return
+
+    # Write backport_staged.md
+    output_path = os.path.join(package_dir, "backport_staged.md")
+    staged_content = generate_staged_output(
+        net_new_entries, variant_entries, source_gap_entries, role_source_name
+    )
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(staged_content)
+    print(f"\n  Written: {output_path}")
+
+    # Update registry
+    registry = update_registry(registry, role, len(net_new_entries), len(source_gap_entries))
+    save_registry(registry_path, registry)
+    print(f"  Registry updated: {registry_path}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Stage net-new resume bullets for backport into experience_library.md"
+    )
+    parser.add_argument("--role", required=True, help="Role slug (e.g. Viasat_SE_IS)")
+    parser.add_argument("--dry-run", action="store_true", help="Print findings without writing files")
+    parser.add_argument("--net-new-threshold", type=float, default=85.0,
+                        help="Fuzzy match threshold for 'present' classification (default: 85)")
+    parser.add_argument("--variant-floor", type=float, default=60.0,
+                        help="Fuzzy match floor for 'variant' classification (default: 60)")
+    args = parser.parse_args()
+
+    package_dir = os.path.join(JOBS_PACKAGES_DIR, args.role)
+    if not os.path.isdir(package_dir):
+        print(f"ERROR: Job package directory not found: {package_dir}")
+        raise SystemExit(1)
+
+    main(
+        role=args.role,
+        package_dir=package_dir,
+        library_md_path=LIBRARY_MD_PATH,
+        registry_path=REGISTRY_PATH,
+        dry_run=args.dry_run,
+        net_new_threshold=args.net_new_threshold,
+        variant_floor=args.variant_floor,
+    )
