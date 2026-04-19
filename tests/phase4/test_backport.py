@@ -1,10 +1,12 @@
 # tests/phase4/test_backport.py
 
+import json
 import pytest
-from pathlib import Path
+import tempfile
+from pathlib import Path as _Path
 
-FIXTURE_STAGE4 = Path(__file__).parent.parent / "fixtures" / "stage_files" / "stage4_final_backport.txt"
-FIXTURE_LIBRARY_MD = Path(__file__).parent.parent / "fixtures" / "library" / "experience_library.md"
+FIXTURE_STAGE4 = _Path(__file__).parent.parent / "fixtures" / "stage_files" / "stage4_final_backport.txt"
+FIXTURE_LIBRARY_MD = _Path(__file__).parent.parent / "fixtures" / "library" / "experience_library.md"
 
 
 def test_parse_stage_file_employer_count():
@@ -254,3 +256,45 @@ def test_generate_staged_output_empty():
     output = generate_staged_output([], [], [], "TestRole_Resume")
     assert "Net-New Bullets" in output
     assert "No net-new bullets found" in output
+
+
+def test_load_registry_missing_file():
+    from scripts.phase4_backport import load_registry
+    registry = load_registry("/nonexistent/path/registry.json")
+    assert registry == {"processed": []}
+
+
+def test_save_and_load_registry():
+    from scripts.phase4_backport import load_registry, save_registry
+    data = {"processed": [{"role": "TestRole", "date_processed": "2026-01-01", "net_new_count": 3, "source_gap_count": 1, "outcome": "pending"}]}
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
+        tmp_path = f.name
+    save_registry(tmp_path, data)
+    loaded = load_registry(tmp_path)
+    assert loaded["processed"][0]["role"] == "TestRole"
+
+
+def test_check_registry_found():
+    from scripts.phase4_backport import check_registry
+    registry = {"processed": [{"role": "Viasat_SE_IS", "date_processed": "2026-04-01", "net_new_count": 2, "source_gap_count": 0, "outcome": "pending"}]}
+    entry = check_registry(registry, "Viasat_SE_IS")
+    assert entry is not None
+    assert entry["role"] == "Viasat_SE_IS"
+
+
+def test_check_registry_not_found():
+    from scripts.phase4_backport import check_registry
+    registry = {"processed": []}
+    assert check_registry(registry, "NewRole") is None
+
+
+def test_update_registry_appends():
+    from scripts.phase4_backport import update_registry
+    registry = {"processed": []}
+    updated = update_registry(registry, "NewRole", net_new_count=4, source_gap_count=2)
+    assert len(updated["processed"]) == 1
+    entry = updated["processed"][0]
+    assert entry["role"] == "NewRole"
+    assert entry["net_new_count"] == 4
+    assert entry["source_gap_count"] == 2
+    assert entry["outcome"] == "pending"

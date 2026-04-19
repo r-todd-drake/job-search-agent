@@ -228,6 +228,7 @@ def generate_staged_output(
     source_gap_entries: list,
     role_source_name: str,
 ) -> str:
+    """Generate formatted backport staged output with net-new, variant, and source gap sections."""
     today = date.today().isoformat()
     lines = [
         f"# Backport Staged \u2013 {role_source_name}",
@@ -295,3 +296,37 @@ def generate_staged_output(
             ]
 
     return "\n".join(lines)
+
+
+def load_registry(path: str) -> dict:
+    """Load backport_registry.json; return empty registry if file does not exist."""
+    if not os.path.exists(path):
+        return {"processed": []}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_registry(path: str, data: dict) -> None:
+    """Save registry dict to JSON file."""
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def check_registry(registry: dict, role: str):
+    """Return existing registry entry for role, or None if not found."""
+    for entry in registry.get("processed", []):
+        if entry.get("role") == role:
+            return entry
+    return None
+
+
+def update_registry(registry: dict, role: str, net_new_count: int, source_gap_count: int) -> dict:
+    """Append a new entry for role to registry and return the updated registry."""
+    registry["processed"].append({
+        "role": role,
+        "date_processed": date.today().isoformat(),
+        "net_new_count": net_new_count,
+        "source_gap_count": source_gap_count,
+        "outcome": "pending",
+    })
+    return registry
