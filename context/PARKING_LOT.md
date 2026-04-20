@@ -1,16 +1,14 @@
 # Parking Lot
 # Load for: planning next development session, prioritizing work items
-Last updated: 11 Apr 2026
+Last updated: 18 Apr 2026
 
 ## Active Items
 
 ### Development
 
-1. **Phase 5 updates** *(urgent — affects active interview prep)*
+1. **Phase 5 updates** *(urgent — affects active interview prep)* (docs\superpowers\plans\2026-04-19-phase5-prompt-fixes.md)
    - Duplicate salary guidance in the prep package — reconcile to a single anchor and remove the duplicate section
    - Gap 1 redirect fabricates an MBSE gap that doesn't exist — rewrite around the real Shield AI story (domain gap, not MBSE gap)
-   - Add UCSD Systems Engineering certificate program to CANDIDATE_BACKGROUND and experience library education section
-   - Remove Security+ language entirely — lapsed, not flagged
 
 2. **candidate_profile.md rebuild**
    - CompTIA Security+ lapsed — must be flagged not omitted
@@ -36,24 +34,24 @@ Last updated: 11 Apr 2026
 5. **Phase 4 Stage 4 — Add Phase 6 prompt to next steps**
    - Deferred until Phase 6 is stable
 
-6. **Experience library update workflow**
-   - Process to add new bullets written during resume tailoring back into library
-   - NG SE Man2 book club bullet, compensation bullets, Army expansion not yet in library
-   - Need structured intake process: draft bullet to verify to library entry
-
-7. **Phase 5 Stage 2 — revision stage** *(proper pipeline extension)*
+6. **Phase 5 Stage 2 — revision stage** *(proper pipeline extension)*
    - Add a Stage 2 to phase5_interview_prep.py — similar to how Phase 4 has multiple stages
    - Stage 1 generates the initial prep package
    - Stage 2 accepts workshop notes or a corrected prep file and produces a clean revised version
    - Could also flag experience library updates automatically
 
-8. **library_parser.py — last-bullet drop bug**
-   - Parser silently drops the last bullet in an employer section when immediately followed by `## PROFESSIONAL SUMMARIES`
-   - Documented in `test_parse_library_bullet_count_matches_source` (currently a known failing test)
-   - Fix: flush the pending bullet before resetting `current_employer`
-   - Data integrity risk for any library rebuild — fix before next library update
+7. **Script usage instructions — update to `python -m` invocation**
+   - All scripts use `from scripts.utils...` imports; running as `python scripts/X.py`
+     adds the script dir to sys.path and breaks resolution — `python -m scripts.X` is correct
+   - Scope: header comment usage blocks in all scripts + runtime `print` next-step prompts
+     that tell the user what command to run next
+   - Files: phase3_parse_library.py, phase3_parse_employer.py, phase3_build_candidate_profile.py,
+     phase4_resume_generator.py, phase4_cover_letter.py, phase5_interview_prep.py,
+     phase5_debrief.py, phase5_thankyou.py, phase5_workshop_capture.py,
+     check_resume.py, check_cover_letter.py, utils/pii_filter.py
+   - Also update README.md Quick Reference commands section
 
-9. **Script identifier audit — GitHub exposure risk**
+8. **Script identifier audit — GitHub exposure risk**
    - Concern: hardcoded strings in scripts or comments that combine identifiers
      (company name + req number, role title, folder path, salary) could narrow
      attribution even if no direct PII is present
@@ -68,20 +66,26 @@ Last updated: 11 Apr 2026
      restrictions already cover the high-risk surface; this audit targets
      residual risk in script code and comments
 
-10. **check_utils.py shared module — deferred**
+9. **check_utils.py shared module — deferred**
     - Concept: extract shared logic (gap term extraction, Layer 1 rules, output formatting)
       from check_resume.py and check_cover_letter.py into scripts/utils/check_utils.py
     - Reevaluate if a third checking module is added — two checkers don't justify the abstraction
 
-11. **Phase 7 — Search agent**
+10. **Phase 7 — Search agent**
     - Automated role discovery: Google, USAJobs, ClearanceJobs
     - NOT LinkedIn (blocks automation)
     - Deferred — lower priority than Phase 6
 
-12. **capabilities.md — traceability document**
-    - Maps script capabilities to project phases
-    - Deferred until Phase 5 fully stable
+11. **Phase 0 — Candidate Onboarding Process documentation**
+    - Document the structured prompts and instructions to capture existing experinect in the form of resumes into the working experience library.
 
+12. **Folder naming QC -- underscores throughout
+    - Normalize all folder names to underscores to match file naming convention. Find-and-replace folder path strings in scripts, then rename actual directories. docs/ and context/ are low-effort (documentation only). data/job_packages/ and any role folder references in scripts are the higher-effort surface. Defer until a natural touch-point -- do not sprint this standalone.
+
+13. **Single source of infrmation for documents with duplicative sections
+    - Several project documents (README, PROJECT_CONTEXT, and others identified during the build audit) contain overlapping sections -- current phase status, project structure, script inventory, employer list, and similar reference content. When one document is updated, the others fall out of sync. There is currently no mechanism to detect or correct this drift. This feature establishes a fragment-based single-source-of-truth pattern: canonical content lives in one file, documents are assembled from fragments plus document-specific content via a build script.
+    - `docs\features\single_source_documents_proposal\single_source_docs_proposal.md`
+    
 ## Standing / Evergreen Tasks
 - **Experience library tool equivalence review**
   - After any tool clarification or correction (e.g., Cameo = MagicDraw), verify
@@ -91,16 +95,6 @@ Last updated: 11 Apr 2026
 
 ## Future / Speculative Ideas
 *(Not ready to scope or build — needs further refinement before moving to Active)*
-
-- **Interview follow-up capture and library**
-  - Concept A: structured debrief workflow — interview the candidate post-interview
-    via formatted questionnaire to capture key takeaways; normalize and structure
-    output for use in follow-on prep (same role and future roles)
-  - Concept B: extraction library — pull workshopped STAR stories and Gap responses
-    (Gap, Honest answer, Redirect) into reusable libraries, similar to phase3_parse_library.py
-  - These may be one feature or two — needs design spike to define flow, artifacts,
-    and primary user before scoping
-  - Design spike recommended via Claude web chat before bringing back here to build
 
 - **Qualitative fit assessment — design spike**
   - Concept: develop a candidate profile document that describes the candidate
@@ -118,6 +112,15 @@ Last updated: 11 Apr 2026
   - Do not begin development until design spike is complete
 
 ## Completed (recent)
+- Experience library update workflow (a script that identifies net-new and variant resume bullets from stage files, stages them for human review) (19 Apr 2026)
+  `phase4_backport.py` (full backport script (no API calls, rapidfuzz fuzzy matching))
+  `generate_test_fixture.py` (one time fixture generator)
+- Updated Security+ status to (lapsed), was already removed from resume generator (19 Apr 2026)
+- Added UCSD Systems Engineering certificate program to CANDIDATE_BACKGROUND, phase3_build_candidate_profile.py and experience library education section (19 Apr 2026)
+- Interview follow-up capture and library -- COMPLETE (Apr 2026)
+  `phase5_debrief.py` (--init/--convert/--interactive), `phase5_workshop_capture.py`, `phase5_thankyou.py`, library integration in `phase5_interview_prep.py`. Full workflow in `docs/phase5_workflow_orchestration_amended.md`.
+- library_parser.py last-bullet drop bug — COMPLETE (18 Apr 2026)
+  Flush guard added before `## PROFESSIONAL SUMMARIES` transition; test assertion corrected 2→3; 7/7 parser tests pass
 - pytest baseline setup — COMPLETE (07 Apr 2026)
   73 mock tests across utils, phases 1–5; CI via GitHub Actions; all passing on master
 - Phase 4 cover letter generator — COMPLETE (07 Apr 2026)

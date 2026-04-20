@@ -9,11 +9,11 @@ docs/features/
 ├── README.md                     — this file
 ├── user_story_template.md        — template for new proposals
 ├── prompt_handoff_template.md    — template for Claude Code (CC) session starters
-├── [feature-name]/               — one folder per active or in-progress feature
+├── [feature_name]/               — one folder per active or in-progress feature
 │   ├── proposal.md               — user story, acceptance criteria, out of scope
 │   └── prompt_handoff.md         — CC session starter (written after spec review is complete)
 └── completed/
-    └── [feature-name]/           — moved here once built and tests passing
+    └── [feature_name]/           — moved here once built and tests passing
 
  CC = Claude Code - agentic development environment used for build sessions.
 ```
