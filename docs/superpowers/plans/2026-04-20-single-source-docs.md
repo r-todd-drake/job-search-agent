@@ -23,8 +23,8 @@
 | Create | `docs/templates/PROJECT_CONTEXT.md` | PROJECT_CONTEXT template with 4 include markers |
 | Create | `scripts/utils/build_docs.py` | Assembler script |
 | Create | `tests/utils/test_build_docs.py` | Unit tests for build_docs core functions |
-| Modify | `context/SCRIPT_INDEX.md` | Add build_docs.py entry |
 | Create | `.git/hooks/pre-commit` | Reminder hook (not tracked by git) |
+| Modify | `context/SCRIPT_INDEX.md` | Add build_docs.py entry |
 | Modify | `README.md` | Assembled output (overwritten by build script) |
 | Modify | `context/PROJECT_CONTEXT.md` | Assembled output (overwritten by build script) |
 
@@ -208,7 +208,11 @@ git commit -m "docs: add canonical fragment files (AC-2)"
 
 - [ ] **Step 1: Create `docs/templates/README.md`**
 
-Copy the current `README.md` to `docs/templates/README.md`, then make three replacements:
+Copy the current `README.md` to `docs/templates/README.md`. If `README.md` already begins with
+`<!-- assembled by build_docs.py` (i.e., the build script has already been run), strip that
+first line before saving — the assembled header must not appear in templates, only in outputs.
+
+Then make three replacements:
 
 **Replacement 1** — under `## Project Phases`, replace the entire table body with the marker:
 
@@ -447,15 +451,33 @@ class TestAssembleDocument:
 
         assert "{{include: inner}}" in result
 
-    def test_assembled_header_not_duplicated_on_repeated_call(self, tmp_path):
+    def test_header_prepended_once(self, tmp_path):
         frags = tmp_path / "fragments"
         frags.mkdir()
         (frags / "frag.md").write_text("content")
 
-        template = "{{include: frag}}"
-        result = assemble_document(template, frags)
+        result = assemble_document("{{include: frag}}", frags)
 
         assert result.count(ASSEMBLED_HEADER) == 1
+
+    def test_idempotent_run_produces_identical_file(self, tmp_path):
+        frags = tmp_path / "fragments"
+        frags.mkdir()
+        (frags / "frag.md").write_text("Fragment body")
+
+        template_path = tmp_path / "template.md"
+        target_path = tmp_path / "output.md"
+        template_path.write_text("## Section\n\n{{include: frag}}\n")
+
+        # Simulate _run: assemble and write twice
+        for _ in range(2):
+            content = template_path.read_text(encoding="utf-8")
+            output = assemble_document(content, frags, "template.md")
+            target_path.write_text(output, encoding="utf-8")
+
+        final = target_path.read_text(encoding="utf-8")
+        assert final.count(ASSEMBLED_HEADER) == 1
+        assert "Fragment body" in final
 
     def test_no_markers_content_preserved(self, tmp_path):
         frags = tmp_path / "fragments"
@@ -465,6 +487,18 @@ class TestAssembleDocument:
         result = assemble_document(body, frags)
 
         assert body in result
+
+
+class TestCLI:
+    def test_unknown_doc_flag_exits_nonzero(self):
+        import subprocess
+        result = subprocess.run(
+            ["python", "scripts/utils/build_docs.py", "--doc", "NONEXISTENT.md"],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1
+        assert "Unknown document" in result.stdout or "Unknown document" in result.stderr
 ```
 
 - [ ] **Step 2: Run tests — confirm they fail with ImportError (module not yet written)**
@@ -633,8 +667,10 @@ tests/utils/test_build_docs.py::TestAssembleDocument::test_prepends_assembled_he
 tests/utils/test_build_docs.py::TestAssembleDocument::test_raises_on_missing_fragment PASSED
 tests/utils/test_build_docs.py::TestAssembleDocument::test_error_message_includes_template_name PASSED
 tests/utils/test_build_docs.py::TestAssembleDocument::test_fragments_not_recursively_processed PASSED
-tests/utils/test_build_docs.py::TestAssembleDocument::test_assembled_header_not_duplicated_on_repeated_call PASSED
+tests/utils/test_build_docs.py::TestAssembleDocument::test_header_prepended_once PASSED
+tests/utils/test_build_docs.py::TestAssembleDocument::test_idempotent_run_produces_identical_file PASSED
 tests/utils/test_build_docs.py::TestAssembleDocument::test_no_markers_content_preserved PASSED
+tests/utils/test_build_docs.py::TestCLI::test_unknown_doc_flag_exits_nonzero PASSED
 ```
 
 - [ ] **Step 3: Run the full mock suite — all existing tests must still pass**
