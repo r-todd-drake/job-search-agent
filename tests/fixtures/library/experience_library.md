@@ -34,8 +34,8 @@
 
 ---
 
-## PROFESSIONAL SUMMARIES (Archived by Role Target)
+## PROFESSIONAL SUMMARIES
 
-### Senior Systems Engineer (BAE – Lead SA MBSE)
-- Senior systems engineer with 20+ years of experience in defense MBSE, autonomous systems, and multi-domain C2 integration. TS/SCI cleared.
+### Senior Systems Engineer
+"Senior systems engineer with 20+ years of experience in defense MBSE, autonomous systems, and multi-domain C2 integration. TS/SCI cleared."
 [Theme: Defense Systems Engineering]
