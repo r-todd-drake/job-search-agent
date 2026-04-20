@@ -108,9 +108,18 @@ Job_search_agent/
 │   │   ├── README.md                     # Feature folder process and conventions
 │   │   ├── user_story_template.md        # Template for new proposals
 │   │   └── completed/                    # Built and tested features
+│   ├── fragments/                        # Canonical shared content — edit these, not assembled docs
+│   │   ├── audit_report.md               # Document audit findings (AC-1)
+│   │   ├── current_phase_status.md       # Canonical phase table
+│   │   ├── key_commands.md               # Canonical quick reference commands
+│   │   ├── project_split.md              # Canonical dev vs implementation description
+│   │   └── project_structure.md          # Canonical directory tree (this file)
 │   ├── superpowers/
 │   │   ├── specs/                        # Design specs (how to build it)
 │   │   └── plans/                        # Implementation plans (how to execute)
+│   ├── templates/                        # Document assembly templates ({{include:}} markers)
+│   │   ├── README.md                     # Template for README.md
+│   │   └── PROJECT_CONTEXT.md            # Template for context/PROJECT_CONTEXT.md
 │   └── capabilities.md                   # Script-to-phase traceability (in progress)
 ├── example_data/
 |   ├── job_packages/[role]/              # Example JD, stage files
@@ -143,13 +152,14 @@ Job_search_agent/
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
+│       ├── build_docs.py                 # Assemble README + PROJECT_CONTEXT from fragments
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       ├── normalize_library.py          # One-time cleanup — merge tranche-suffixed employer sections
 │       └── pii_filter.py                 # PII stripping — safe for GitHub
 ├── tests/                                # Two-tier pytest suite (mock + live)
 │   ├── conftest.py                       # Shared fixtures and fictional test identity
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
-│   ├── utils/                            # pii_filter, library_parser tests
+│   ├── utils/                            # pii_filter, library_parser, build_docs tests
 │   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
@@ -166,7 +176,7 @@ Job_search_agent/
 <!-- fragment: key_commands -->
 ```
 # Tests (run after any script change)
-pytest tests/ -m "not live" -v          # Tier 1 mock suite — all 73 must pass
+pytest tests/ -m "not live" -v          # Tier 1 mock suite — all must pass
 pytest -m live -v                        # Tier 2 live API (before promoting a phase)
 
 # Pipeline
@@ -192,5 +202,9 @@ python scripts/phase3_parse_library.py
 python scripts/phase3_parse_employer.py "[employer name]"
 python scripts/phase3_build_candidate_profile.py
 python scripts/phase3_compile_library.py
+
+# Document assembly (run after editing any fragment or template)
+python scripts/utils/build_docs.py                   # rebuild all
+python scripts/utils/build_docs.py --doc README.md   # rebuild one
 ```
 
