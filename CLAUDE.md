@@ -7,12 +7,13 @@ AI-powered job search automation system. Python scripts for job ranking, resume 
 
 ### Never read, access, or touch these files/folders:
 - .env — contains API keys and PII
+
+### Read-only (understand structure, never modify):
 - data/ — contains personal career data, resumes, job packages
 - resumes/ — contains tailored resume documents
 - outputs/ — contains generated reports
 
-**Important:** .gitignore does NOT prevent Claude's tools (Glob, Read) from accessing these paths.
-Never use Glob, Read, or any tool to browse or read files in the above directories, even if asked to explore the project structure.
+**Important:** .gitignore does NOT prevent Claude's tools (Glob, Read) from accessing these paths. Do not browse these directories unprompted or include them in exploratory searches.
 
 ### Safe to read and edit:
 - scripts/*.py — all Python automation scripts
@@ -28,6 +29,10 @@ Never use Glob, Read, or any tool to browse or read files in the above directori
 - Never commit `.env`, `data/`, `resumes/`, or `outputs/`
 - Always run `git status` before committing
 - Verify `.gitignore` has the dot prefix before any git operations
+
+## Codeburn Optimizations
+- Before editing any file, read it first. Before modifying a function, grep for all callers. Research before you edit.
+- Before touching a Phase 4/5 script, read the relevant schema and data flow docs
 
 ## Code Style
 - Python scripts — en dashes in strings, not em dashes
