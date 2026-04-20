@@ -1,7 +1,7 @@
 <!-- fragment: key_commands -->
 ```
 # Tests (run after any script change)
-pytest tests/ -m "not live" -v          # Tier 1 mock suite — all 73 must pass
+pytest tests/ -m "not live" -v          # Tier 1 mock suite — all must pass
 pytest -m live -v                        # Tier 2 live API (before promoting a phase)
 
 # Pipeline
@@ -27,4 +27,8 @@ python scripts/phase3_parse_library.py
 python scripts/phase3_parse_employer.py "[employer name]"
 python scripts/phase3_build_candidate_profile.py
 python scripts/phase3_compile_library.py
+
+# Document assembly (run after editing any fragment or template)
+python scripts/utils/build_docs.py                   # rebuild all
+python scripts/utils/build_docs.py --doc README.md   # rebuild one
 ```
