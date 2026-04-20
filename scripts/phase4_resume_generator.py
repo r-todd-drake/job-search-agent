@@ -53,7 +53,7 @@ load_dotenv()
 JOBS_PACKAGES_DIR = "data/job_packages"
 EXPERIENCE_LIBRARY = "data/experience_library/experience_library.json"
 CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
-RESUME_TEMPLATE = "templates/resume_template.docx"
+RESUME_TEMPLATE = "templates_local/resume_template.docx"
 RESUMES_TAILORED_DIR = "resumes/tailored"
 CHECK_RESUME_SCRIPT = "scripts/check_resume.py"
 
@@ -86,10 +86,10 @@ def load_candidate_profile():
         print("  Using fallback minimal profile.")
         return """
 CANDIDATE: [CANDIDATE]
-CLEARANCE: Current TS/SCI
+CLEARANCE: Current TS/SCI (granted 2022)
 LOCATION: San Diego, CA
 EXPERIENCE: 20+ years defense systems engineering
-EDUCATION: B.A. Geography, GIS & Remote Sensing (NOT Systems Engineering)
+EDUCATION: B.A. Geography, GIS & Remote Sensing (NOT Systems Engineering), Army ROTC, Enrolled in UCSC Extended Studies Systems Engineering Certificate Program
 GAPS: No GitLab, no Terraform, no INCOSE, no FAA/DO-178, no FEA/CFD
 RULES: En dashes only, no unverifiable metrics, Saronic = maritime only
 """

@@ -48,13 +48,14 @@ CONFIRMED FACTS (supplement library data):
 EDUCATION (confirmed):
 - San Diego State University
 - Degree: B.A. Geography, GIS & Remote Sensing
-- Army ROTC – commission pathway to Infantry Officer
+- Army ROTC - commission pathway to Infantry Officer
+- University of San Diego - Extended Studies, Systems Engineering Professional Certificate Program (enrolled)
 - NOT a Systems Engineering degree
 - NOT a Computer Science degree
 - NOT a STEM degree in the traditional sense
 
 CERTIFICATIONS (confirmed):
-- CompTIA Security+ (held, verify current status)
+- CompTIA Security+ (lapsed)
 - ICAgile Certified Professional
 - NOT INCOSE certified
 - NOT PMP certified
@@ -70,10 +71,10 @@ MILITARY SERVICE (confirmed):
 - Infantry Officer (11A) 1997-2001
 - Military Intelligence Officer (35A) 2001-2004
 - Medically discharged as Captain (O-3)
-- D-TOC OIC at Fort Huachuca – FBCB2, MCS, AFATDS, ASAS
+- D-TOC OIC at Fort Huachuca - FBCB2, MCS, AFATDS, ASAS
 
 CONFIRMED SKILLS - PROGRAMMING:
-- Python: self-taught, beginner to intermediate – built multi-phase AI job
+- Python: self-taught, beginner to intermediate - built multi-phase AI job
   search automation system using Anthropic API, openpyxl, python-docx,
   python-dotenv. Not a software developer but demonstrates applied capability.
 - Git/GitHub: version control for personal projects
@@ -89,9 +90,9 @@ CONFIRMED GAPS (never include on resume):
 - No hands-on RF/communications engineering
 - No laser/space payload experience
 - No automotive/semiconductor experience
-- No cloud administration (awareness only – Kubernetes, AWS concepts)
-- Shield AI hazard analysis was SUPPORTING role only – never led FHA/SSA/PSSA
-- Saronic = autonomous MARITIME vessels only – NO aircraft, NO airworthiness
+- No cloud administration (awareness only - Kubernetes, AWS concepts)
+- Shield AI hazard analysis was SUPPORTING role only - never led FHA/SSA/PSSA
+- Saronic = autonomous MARITIME vessels only - NO aircraft, NO airworthiness
 
 STYLE RULES:
 - En dashes only, never em dashes
@@ -101,7 +102,7 @@ STYLE RULES:
 """
 
 SYSTEM_PROMPT = """You are building a canonical candidate profile from resume experience data.
-Your job is to extract ONLY confirmed facts – skills, tools, roles, and scope that are
+Your job is to extract ONLY confirmed facts - skills, tools, roles, and scope that are
 explicitly demonstrated in the provided bullets.
 
 You NEVER invent, infer, or embellish. If a skill is not explicitly demonstrated in the
@@ -175,10 +176,10 @@ TITLE: {title}
 DATES: {dates}
 
 CONFIRMED TOOLS AND TECHNOLOGIES:
-[List only tools explicitly named in the bullets – one per line with brief evidence]
+[List only tools explicitly named in the bullets - one per line with brief evidence]
 
 CONFIRMED TECHNICAL SKILLS:
-[List only skills explicitly demonstrated – one per line]
+[List only skills explicitly demonstrated - one per line]
 
 CONFIRMED LEADERSHIP AND SCOPE:
 [Team sizes, program scope, stakeholder levels explicitly mentioned]
@@ -281,15 +282,15 @@ CONFIRMED SUPPLEMENTAL FACTS:
 Compile a comprehensive master profile in this format:
 
 # CANONICAL CANDIDATE PROFILE
-# [CANDIDATE] – Compiled from Experience Library
+# [CANDIDATE] - Compiled from Experience Library
 # Generated: {datetime.now().strftime('%d %b %Y')}
-# PURPOSE: Use this file to ground all resume generation – prevents hallucinations
+# PURPOSE: Use this file to ground all resume generation - prevents hallucinations
 
 ## IDENTITY & CONTACT
 [name, location, contact, clearance]
 
 ## EDUCATION & CERTIFICATIONS
-[confirmed education and certs – include explicit statement of what is NOT held]
+[confirmed education and certs - include explicit statement of what is NOT held]
 
 ## MILITARY SERVICE
 [confirmed service history]
@@ -298,12 +299,12 @@ Compile a comprehensive master profile in this format:
 [2-3 sentence overview grounded in confirmed experience]
 
 ## SIGNATURE CREDENTIAL
-[Project Overmatch – confirmed details only]
+[Project Overmatch - confirmed details only]
 
 ## CONFIRMED SKILLS BY CATEGORY
 
 ### MBSE & Architecture Tools
-[tools confirmed in library – note proficiency level where distinguishable]
+[tools confirmed in library - note proficiency level where distinguishable]
 
 ### Systems Engineering Skills
 [confirmed SE capabilities]
@@ -318,19 +319,19 @@ Compile a comprehensive master profile in this format:
 [confirmed documentation capabilities]
 
 ## EMPLOYER HISTORY
-[each employer with confirmed title, dates, key capabilities – 3-4 bullets each]
+[each employer with confirmed title, dates, key capabilities - 3-4 bullets each]
 
-## CONFIRMED GAPS – NEVER INCLUDE ON RESUME
+## CONFIRMED GAPS - NEVER INCLUDE ON RESUME
 [explicit list of skills, tools, certifications the candidate does NOT have]
 [This section is critical for preventing hallucinations]
 
 ## STYLE RULES
 [formatting and content rules for all resume output]
 
-## CANONICAL BULLETS – HIGHEST IMPACT
+## CANONICAL BULLETS - HIGHEST IMPACT
 [Top 5-7 bullets across all employers that should be prioritized]
 
-Be thorough on the CONFIRMED GAPS section – it is the most important part of this document."""
+Be thorough on the CONFIRMED GAPS section - it is the most important part of this document."""
 
     safe_compile_prompt = strip_pii(compile_prompt)
 
@@ -363,7 +364,7 @@ Be thorough on the CONFIRMED GAPS section – it is the most important part of t
 # Source: experience_library.json ({total_bullets} bullets,
 #         {total_employers} employers)
 #
-# PURPOSE: Ground all Phase 4 resume generation – prevents hallucinations
+# PURPOSE: Ground all Phase 4 resume generation - prevents hallucinations
 # USAGE: Load this file into CANDIDATE_PROFILE in phase4_resume_generator.py
 #        Replace the hardcoded CANDIDATE_PROFILE constant with the contents of this file
 #

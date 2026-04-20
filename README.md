@@ -2,9 +2,7 @@
 
 ![Tests](https://github.com/r-todd-drake/job-search-agent/actions/workflows/test.yml/badge.svg)
 
-A multi-phase AI-powered job search automation system built as both a
-practical tool for managing an active job search and a portfolio project
-demonstrating real-world Python development, API integration, and AI agent design.
+A multi-phase AI-powered job search automation system built as both a practical tool for managing an active job search and a portfolio project demonstrating real-world Python development, API integration, and AI agent design.
 
 ---
 
@@ -13,10 +11,7 @@ demonstrating real-world Python development, API integration, and AI agent desig
 Most job seekers optimize their resume wording.
 This system optimizes the entire process.
 
-Instead of manually searching, scoring, and tailoring applications one at a time,
-this agent pipeline handles discovery, ranking, resume generation, and interview
-preparation — producing tailored application packages and interview prep materials
-for every role in the pipeline.
+Instead of manually searching, scoring, and tailoring applications one at a time, this agent pipeline handles discovery, ranking, resume generation, and interview preparation — producing tailored application packages and interview prep materials for every role in the pipeline.
 
 ---
 
@@ -28,7 +23,7 @@ for every role in the pipeline.
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
-| 5 | Interview preparation — stage-aware prep packages (recruiter / hiring manager / team panel) | 🔧 Prototype |
+| 5 | Interview preparation — stage-aware prep packages (recruiter / hiring manager / team panel) | ✅ Complete |
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
@@ -52,34 +47,37 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 ## Daily Workflow
 
 ```
-1. Add new roles to jobs.csv (blank status, req number if available)
-2. Run phase2_job_ranking.py
+01. Add new roles to jobs.csv (blank status, req number if available)
+02. Run phase2_job_ranking.py
    → Scores all roles, reports only NEW/PURSUE/CONSIDER
    → Flags duplicate requisition numbers
    → Assign PURSUE / CONSIDER / SKIP to each new role
-3. Run phase2_semantic_analyzer.py
+03. Run phase2_semantic_analyzer.py
    → Claude API analysis on PURSUE and CONSIDER roles only
-4. Run phase4_resume_generator.py for top PURSUE roles
+04. Run phase4_resume_generator.py for top PURSUE roles
    → Four-stage async workflow with human review at each stage
    → Stage files are source of truth — never edit .docx directly
    → Run check_resume.py --role [role] after Stage 2 to catch violations
-5. Run phase4_cover_letter.py --stage 1 --role [role]
+05. Run phase4_cover_letter.py --stage 1 --role [role]
    → Generates cover letter draft aligned with resume content
    → Run check_cover_letter.py --role [role] after editing Stage 2
    → Stage through to docx via --stage 4
-6. Run phase5_interview_prep.py when interview is scheduled
+06. Submit, update status to APPLIED, move to job_pipeline.xlsx
+07. Run phase5_interview_prep.py when interview is scheduled
    → Specify --interview_stage (recruiter, hiring_manager, team_panel)
    → Generates stage-specific .txt and .docx prep package
    → Workshop stories in Claude web chat before interview
    → Run phase5_workshop_capture.py after workshopping to persist stories to interview_library.json
-7. Run phase5_debrief.py after each interview
+08. Run phase5_debrief.py after each interview
    → --interactive for guided capture with optional AI follow-up questions
    → --init / --convert for YAML-based offline workflow
    → Saves structured JSON to data/debriefs/[role]/
-8. Run phase5_thankyou.py to generate thank-you letters
+09. Run phase4_backport.py to improve experience library
+   → Identifies net-new and variant resume bullets from submitted resumes to update the experience library
+10. Run phase5_thankyou.py to generate thank-you letters
    → One .txt and .docx per interviewer, drawn from the filed debrief
    → Use --panel_label for panel interviews with multiple interviewers
-9. Submit, update status to APPLIED, move to tracker
+
 ```
 
 ---
@@ -450,14 +448,11 @@ Job_search_agent/
 | Item | Description |
 |------|-------------|
 | Phase 5 updates | Reconcile duplicate salary guidance, fix fabricated MBSE gap redirect, remove lapsed Security+ language |
-| Phase 5 validation | Confirm stage-aware output quality against a live interview prep run |
-| candidate_profile.md rebuild | Rebuild from current library — flag lapsed certifications, add confirmed HAIPE experience |
-| Phase 5 Stage 2 | Revision stage — accepts workshop notes and produces a clean updated prep package |
-| library_parser.py bug | Last bullet in employer section silently dropped before PROFESSIONAL SUMMARIES — data integrity fix |
+| candidate_profile.md rebuild | Rebuild from current library — flag lapsed certifications, add confirmed [CANDIDATE] experience |
 | Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
 | Pipeline report | Pull interview stage from job_pipeline.xlsx into pipeline_report.py output |
-| Experience library workflow | Structured process for adding resume-tailoring bullets back into the library |
+
 
 ---
 
@@ -484,9 +479,8 @@ Job_search_agent/
 
 ## Author
 
-R. Todd Drake — Portfolio project, actively developed.
-Built from scratch as a real-world introduction to Python, API development,
-and AI agent design — applied directly to an active senior defense SE job search.
+R. Todd Drake — Senior Systems Engineer, San Diego CA.
+This project started as a structured problem: active defense SE job search, high application volume, and a need for tailored materials at scale without sacrificing quality or accuracy. I applied the same systems engineering discipline I use professionally — phased development, requirements traceability, V&V framework, human-in-the-loop workflow design — and used Claude Code and the Anthropic API to implement it. The result is a working pipeline that has measurably improved decision quality, resume tailoring, and interview preparation outcomes across an active job search.
 
 ---
 
