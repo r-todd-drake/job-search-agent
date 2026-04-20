@@ -58,5 +58,6 @@ For full structure see README.md.
 
 | Script | Purpose |
 |---|---|
+| `utils/build_docs.py` | Assemble README.md and PROJECT_CONTEXT.md from templates + fragments. Run after editing any fragment or template. `python scripts/utils/build_docs.py` or `--doc [filename]` |
 | `utils/normalize_library.py` | Merge tranche-suffixed employer sections in experience_library.md |
 | `utils/diagnose_*.py` | Development diagnostics — not part of the production workflow |
