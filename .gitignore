@@ -50,7 +50,7 @@ Thumbs.db
 
 # Archived files
 .archive/
-docs\features\retired
+docs/features/retired
 
 # mempalace files
 entities.json
