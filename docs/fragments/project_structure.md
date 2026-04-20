@@ -63,7 +63,6 @@ Job_search_agent/
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
 │   ├── utils/                            # pii_filter, library_parser tests
 │   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
-├── example_data/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
 ├── requirements.txt                      # Runtime dependencies
