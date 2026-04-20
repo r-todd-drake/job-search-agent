@@ -1,3 +1,4 @@
+<!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
 # AI Job Search Agent
 
 ![Tests](https://github.com/r-todd-drake/job-search-agent/actions/workflows/test.yml/badge.svg)
@@ -17,6 +18,7 @@ Instead of manually searching, scoring, and tailoring applications one at a time
 
 ## Project Phases
 
+<!-- fragment: current_phase_status -->
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Pipeline report script and tracker schema | ✅ Complete |
@@ -27,10 +29,12 @@ Instead of manually searching, scoring, and tailoring applications one at a time
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
+
 ---
 
 ## Development vs Implementation
 
+<!-- fragment: project_split -->
 This project is split into two distinct workflows:
 
 **Development** — building and improving the pipeline tools.
@@ -41,6 +45,7 @@ Reference: `context/DECISIONS_LOG.md` for coding conventions and architecture.
 Performed using Claude web chat for resume tailoring, interview prep,
 story workshopping, and pipeline management.
 Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
+
 
 ---
 
@@ -366,6 +371,7 @@ python scripts/phase5_thankyou.py --role [role] --stage [recruiter_screen|hiring
 
 ## Project Structure
 
+<!-- fragment: project_structure -->
 ```
 Job_search_agent/
 ├── .github/workflows/test.yml            # GitHub Actions CI — mock suite on every push
@@ -430,7 +436,6 @@ Job_search_agent/
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
 │   ├── utils/                            # pii_filter, library_parser tests
 │   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
-├── example_data/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
 ├── requirements.txt                      # Runtime dependencies
@@ -440,6 +445,7 @@ Job_search_agent/
 ├── .gitignore
 └── README.md
 ```
+
 
 ---
 
