@@ -22,6 +22,7 @@
 
 ### Theme: Systems Architecture
 - Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.
+  *PRIORITY: true*
   *Used in: BAE_SR_PR_MBSE, [CANDIDATE]Systems_Engineer_Resume, SRC_SE_IV*
 
 - Developed system-of-sys architecture models for multi-domain C2 integration with minor rewording.
