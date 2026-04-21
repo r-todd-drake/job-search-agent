@@ -81,6 +81,7 @@ Load these as needed for the session type:
 | context/PIPELINE_STATUS.md | Pipeline management, application decisions, recruiter comms |
 | context/DECISIONS_LOG.md | Script development, architecture decisions, coding conventions |
 | context/PARKING_LOT.md | Planning next development session, prioritizing work items |
+| context/PARKING_LOT_DONE.md | Completed item history — load when reviewing what has been built |
 
 ## Project Structure (top level)
 <!-- fragment: project_structure -->
