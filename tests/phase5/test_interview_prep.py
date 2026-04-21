@@ -849,3 +849,42 @@ def test_salary_actuals_prompt_contains_exclusivity_guardrail():
         "Actuals guardrail must tell Claude not to re-derive salary from JD"
     )
     assert "SALARY ACTUALS" in prompt
+
+
+def test_gap_prompt_contains_confirmed_skills_guardrail():
+    """Gap prompt must instruct Claude not to flag skills listed in Confirmed Tools/Skills
+    as gaps — even if the candidate's depth in that area is limited."""
+    from scripts.phase5_interview_prep import _build_gap_prompt, STAGE_PROFILES
+
+    profile_with_mbse = (
+        "## Confirmed Tools\nCameo Systems Modeler, DoDAF, MBSE\n\n"
+        "## Confirmed Skills\nSystems architecture\n"
+    )
+    prompt = _build_gap_prompt(
+        "JD requires MBSE experience",
+        "gaps section",
+        profile_with_mbse,
+        STAGE_PROFILES["hiring_manager"],
+        library_seeds=None,
+    )
+    assert "Confirmed Tools" in prompt, (
+        "Prompt must reference Confirmed Tools in the guardrail"
+    )
+    assert "do not flag" in prompt.lower(), (
+        "Prompt must explicitly instruct Claude not to flag confirmed skills as gaps"
+    )
+
+
+def test_gap_prompt_contains_redirect_honesty_rule():
+    """Redirect field must be constrained to verified experience — no fabrication."""
+    from scripts.phase5_interview_prep import _build_gap_prompt, STAGE_PROFILES
+
+    prompt = _build_gap_prompt(
+        "JD text", "gaps section", "candidate profile",
+        STAGE_PROFILES["team_panel"],
+        library_seeds=None,
+    )
+    assert "Redirect" in prompt
+    assert "Never suggest the candidate claim experience they do not hold" in prompt, (
+        "Redirect rule must prevent fabricating experience not in the candidate profile"
+    )
