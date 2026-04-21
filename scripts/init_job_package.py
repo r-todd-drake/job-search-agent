@@ -32,5 +32,22 @@ def validate_req(req: str) -> None:
         raise ValueError("--req cannot be empty")
 
 
+def load_csv_rows(csv_path: str) -> list:
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
+
+
+def check_conflicts(rows: list, role: str, req: str) -> str | None:
+    for row in rows:
+        if row.get("req_number", "").strip() == req.strip():
+            status = row.get("status", "").strip().upper()
+            if status not in ACTIVE_STATUSES:
+                return "inactive_reactivation"
+            if row.get("package_folder", "").strip() == role.strip():
+                return "true_duplicate"
+            # same req#, different package_folder = different employer, no conflict
+    return None
+
+
 if __name__ == "__main__":
     pass
