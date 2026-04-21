@@ -357,8 +357,6 @@ python -m scripts.phase5_thankyou --role [role] --stage [recruiter_screen|hiring
 
 | Item | Description |
 |------|-------------|
-| Phase 5 updates | Reconcile duplicate salary guidance, fix fabricated MBSE gap redirect, remove lapsed Security+ language |
-| candidate_profile.md rebuild | Rebuild from current library — flag lapsed certifications, add confirmed [CANDIDATE] experience |
 | Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
 | Pipeline report | Pull interview stage from job_pipeline.xlsx into pipeline_report.py output |
