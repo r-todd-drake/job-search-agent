@@ -1,6 +1,6 @@
 <!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
 # AI Job Search Agent — Project Context
-Last updated: 19 Apr 2026
+Last updated: 21 Apr 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -46,7 +46,7 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
 - **Tier 2 (live):** `pytest -m live -v` — run before promoting a phase or after API changes
 - **CI:** GitHub Actions at `.github/workflows/test.yml` — green badge on README
-- **73 mock tests** across utils, phases 1–5. All passing on master as of 07 Apr 2026.
+- **359 mock tests** across utils, phases 1–5. All passing on master as of 21 Apr 2026.
 - **Test dependencies:** `requirements-dev.txt` (pytest, pytest-mock)
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 
@@ -63,16 +63,13 @@ All 8 scripts below had module-level execution removed so they can be imported b
 
 Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `phase3_parse_library.py`, `phase3_parse_employer.py`, `check_resume.py`.
 
-### Known issue (documented, not yet fixed)
-`library_parser.py` silently drops the last bullet in an employer section when immediately followed by `## PROFESSIONAL SUMMARIES`. Documented in `test_parse_library_bullet_count_matches_source`. Fix: flush the pending bullet before resetting `current_employer`.
-
 ## Non-Negotiable Rules (always in scope)
 - En dashes only — never em dashes (em dashes signal AI-generated content)
 - Stage files are source of truth — never edit .docx directly
 - Never git add . — always stage files explicitly
 - Never fabricate or infer experience — ask if unclear
 - PII stripped from all API calls via pii_filter.py
-- Run `pytest tests/ -m "not live"` after any script change — all 73 must pass before committing
+- Run `pytest tests/ -m "not live"` after any script change — all must pass before committing
 - Python 3.11 compat required: no backslash escapes inside f-string `{}` expressions
 
 ## Supporting Context Files
