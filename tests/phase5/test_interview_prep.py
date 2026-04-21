@@ -826,3 +826,26 @@ def test_generate_prep_docx_does_not_inject_salary_guidance():
     assert "Salary Guidance" not in all_text, (
         "generate_prep_docx must not add a standalone 'Salary Guidance' heading"
     )
+
+
+def test_salary_actuals_prompt_contains_exclusivity_guardrail():
+    """When salary_actuals are present, the Section 1 prompt must instruct Claude
+    not to re-derive salary from the JD — preventing duplicate salary guidance."""
+    from scripts.phase5_interview_prep import _build_section1_prompt, STAGE_PROFILES
+
+    salary_data = {"found": True, "text": "$150,000 – $175,000", "guidance": "anchor at $168k"}
+    actuals = {
+        "range_given_min": 145000,
+        "range_given_max": 175000,
+        "candidate_anchor": 168000,
+        "candidate_floor": 152000,
+        "stage": "recruiter",
+        "interview_date": "2026-04-10",
+    }
+    profile = STAGE_PROFILES["hiring_manager"]
+    prompt = _build_section1_prompt("JD text with $150k-$175k range", salary_data, profile,
+                                    salary_actuals=actuals)
+    assert "Do not re-derive" in prompt, (
+        "Actuals guardrail must tell Claude not to re-derive salary from JD"
+    )
+    assert "SALARY ACTUALS" in prompt

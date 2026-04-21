@@ -286,6 +286,8 @@ def _build_section1_prompt(jd, salary_data, profile, salary_actuals=None):
                 f"Candidate floor: {floor_str}\n"
                 f"Note: these are reported actuals from a prior interview for this role. "
                 f"Present them as confirmed data, not as analysis.\n"
+                f"IMPORTANT: Do not re-derive or add salary guidance from the job description. "
+                f"Use ONLY the salary actuals block above as written.\n"
             )
         else:
             salary_block = (
