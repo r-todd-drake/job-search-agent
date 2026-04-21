@@ -11,7 +11,7 @@
 # Output: data/experience_library/candidate_profile.md
 #
 # Usage:
-#   python scripts/phase3_build_candidate_profile.py
+#   python -m scripts.phase3_build_candidate_profile
 # ==============================================
 
 import os

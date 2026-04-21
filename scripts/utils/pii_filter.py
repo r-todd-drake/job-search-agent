@@ -133,7 +133,7 @@ def verify_strip(text):
 
 # ==============================================
 # STANDALONE TEST
-# Run: python scripts/utils/pii_filter.py
+# Run: python -m scripts.utils.pii_filter
 # ==============================================
 
 if __name__ == '__main__':

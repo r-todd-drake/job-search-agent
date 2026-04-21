@@ -20,9 +20,9 @@
 #          generates .docx + runs check_resume.py
 #
 # Usage:
-#   python scripts/phase4_resume_generator.py --stage 1 --role BAH_LCI_MBSE
-#   python scripts/phase4_resume_generator.py --stage 3 --role BAH_LCI_MBSE
-#   python scripts/phase4_resume_generator.py --stage 4 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_resume_generator --stage 1 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_resume_generator --stage 3 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_resume_generator --stage 4 --role BAH_LCI_MBSE
 # ==============================================
 
 import os
@@ -914,7 +914,7 @@ def main():
         print(f"  2. Review selected bullets and summary")
         print(f"  3. Make any edits")
         print(f"  4. Save as {stage2_path}")
-        print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 3 --role {role}")
+        print(f"  5. Run: python -m scripts.phase4_resume_generator --stage 3 --role {role}")
 
     # -- STAGE 3 --
     elif stage == 3:
@@ -933,7 +933,7 @@ def main():
         print(f"  2. Review suggestions - accept or reject each one")
         print(f"  3. Apply accepted changes to {stage2_path}")
         print(f"  4. Save final version as {stage4_path}")
-        print(f"  5. Run: python scripts/phase4_resume_generator.py --stage 4 --role {role}")
+        print(f"  5. Run: python -m scripts.phase4_resume_generator --stage 4 --role {role}")
 
     # -- STAGE 4 --
     elif stage == 4:
@@ -966,10 +966,10 @@ def main():
                 print("  Quality check passed.")
         except FileNotFoundError:
             print(f"  WARNING: check_resume.py not found at {CHECK_RESUME_SCRIPT}")
-            print("  Run manually: python scripts/check_resume.py " + output_path)
+            print("  Run manually: python -m scripts.check_resume " + output_path)
         except Exception as e:
             print(f"  WARNING: Quality check failed to run: {str(e)}")
-            print("  Run manually: python scripts/check_resume.py " + output_path)
+            print("  Run manually: python -m scripts.check_resume " + output_path)
 
         print(f"\nStage 4 complete.")
         print(f"  Resume: {output_path}")

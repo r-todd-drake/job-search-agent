@@ -7,7 +7,7 @@
 # Writes: data/interview_library.json (appends / updates)
 #
 # Usage:
-#   python scripts/phase5_workshop_capture.py \
+#   python -m scripts.phase5_workshop_capture \
 #     --role Viasat_SE_IS --stage hiring_manager
 # ==============================================
 

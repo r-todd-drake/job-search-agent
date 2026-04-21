@@ -8,9 +8,9 @@
 # No subagents. No multi-turn.
 #
 # Usage:
-#   python scripts/phase5_thankyou.py \
+#   python -m scripts.phase5_thankyou \
 #     --role Viasat_SE_IS --stage hiring_manager
-#   python scripts/phase5_thankyou.py \
+#   python -m scripts.phase5_thankyou \
 #     --role Viasat_SE_IS --stage panel --panel_label se_team
 # ==============================================
 

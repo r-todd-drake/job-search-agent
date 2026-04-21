@@ -15,8 +15,8 @@
 # Docx output: resumes/tailored/[role]/[role]_CoverLetter.docx
 #
 # Usage:
-#   python scripts/phase4_cover_letter.py --stage 1 --role BAH_LCI_MBSE
-#   python scripts/phase4_cover_letter.py --stage 4 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_cover_letter --stage 1 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_cover_letter --stage 4 --role BAH_LCI_MBSE
 # ==============================================
 
 import os
@@ -303,9 +303,9 @@ def build_stage1_txt(role, section1, section2, resume_source):
         "INSTRUCTIONS:",
         f"  1. Review both sections \u2013 verify all claims against your experience",
         f"  2. Make edits and save as cl_stage2_approved.txt",
-        f"  3. Run: python scripts/check_cover_letter.py --role {role}",
+        f"  3. Run: python -m scripts.check_cover_letter --role {role}",
         f"  4. Review cl_stage3_review.txt, make final edits, save as cl_stage4_final.txt",
-        f"  5. Run: python scripts/phase4_cover_letter.py --stage 4 --role {role}",
+        f"  5. Run: python -m scripts.phase4_cover_letter --stage 4 --role {role}",
         "=" * 60,
         "",
         "## COVER LETTER",
@@ -592,9 +592,9 @@ def main():
         print(f"\nNext steps:")
         print(f"  1. Open {CL_STAGE1} \u2013 verify all claims are grounded")
         print(f"  2. Make edits and save as cl_stage2_approved.txt")
-        print(f"  3. Run: python scripts/check_cover_letter.py --role {ROLE}")
+        print(f"  3. Run: python -m scripts.check_cover_letter --role {ROLE}")
         print(f"  4. Review cl_stage3_review.txt, save final as cl_stage4_final.txt")
-        print(f"  5. Run: python scripts/phase4_cover_letter.py --stage 4 --role {ROLE}")
+        print(f"  5. Run: python -m scripts.phase4_cover_letter --stage 4 --role {ROLE}")
         print(f"{'=' * 60}")
 
     elif STAGE == 4:

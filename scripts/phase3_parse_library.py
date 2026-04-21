@@ -11,7 +11,7 @@
 # Then run phase3_compile_library.py to merge.
 #
 # To re-parse a single employer without a full run:
-#   python scripts/phase3_parse_employer.py "employer name"
+#   python -m scripts.phase3_parse_employer "employer name"
 # ==============================================
 
 import os

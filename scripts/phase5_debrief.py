@@ -10,9 +10,9 @@
 # Output: data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json
 #
 # Usage:
-#   python scripts/phase5_debrief.py --role Viasat_SE_IS --stage hiring_manager --init
-#   python scripts/phase5_debrief.py --role Viasat_SE_IS --stage hiring_manager --convert
-#   python scripts/phase5_debrief.py --role Viasat_SE_IS --stage hiring_manager --interactive
+#   python -m scripts.phase5_debrief --role Viasat_SE_IS --stage hiring_manager --init
+#   python -m scripts.phase5_debrief --role Viasat_SE_IS --stage hiring_manager --convert
+#   python -m scripts.phase5_debrief --role Viasat_SE_IS --stage hiring_manager --interactive
 # ==============================================
 
 import os
