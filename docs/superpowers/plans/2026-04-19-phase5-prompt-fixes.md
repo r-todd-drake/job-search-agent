@@ -166,7 +166,7 @@ def test_gap_prompt_contains_confirmed_skills_guardrail():
         STAGE_PROFILES["hiring_manager"],
         library_seeds=None,
     )
-    assert "Confirmed Tools" in prompt or "confirmed tools" in prompt.lower(), (
+    assert "Confirmed Tools" in prompt, (
         "Prompt must reference Confirmed Tools in the guardrail"
     )
     assert "do not flag" in prompt.lower(), (
@@ -184,8 +184,8 @@ def test_gap_prompt_contains_redirect_honesty_rule():
         library_seeds=None,
     )
     assert "Redirect" in prompt
-    assert "explicitly stated" in prompt or "explicitly present" in prompt, (
-        "Redirect rule must require experience to be explicitly stated in the profile"
+    assert "Never suggest the candidate claim experience they do not hold" in prompt, (
+        "Redirect rule must prevent fabricating experience not in the candidate profile"
     )
 ```
 
@@ -198,6 +198,8 @@ python -m pytest tests/phase5/test_interview_prep.py::test_gap_prompt_contains_c
 Expected: both `FAILED`
 
 - [ ] **Step 3: Implement the fix**
+
+> **Project style note:** Per CLAUDE.md, prompt strings must use en dashes (–), not em dashes (—) or double hyphens (--). The GUARDRAIL lines below use en dashes. Verify the pasted text preserves them before committing.
 
 In `scripts/phase5_interview_prep.py`, locate `_build_gap_prompt`. Find this block (around line 488):
 
@@ -222,15 +224,15 @@ Replace that entire block with:
         f"Compare your extracted lists against the candidate profile below. A gap is valid if:\n"
         f"  - HARD GAP: JD lists it as REQUIRED and it is absent from the candidate's experience\n"
         f"  - PREFERRED GAP: JD lists it as PREFERRED and absent -- flag as lower severity\n\n"
-        f"GUARDRAIL -- Confirmed Tools and Skills are NOT gaps:\n"
+        f"GUARDRAIL – Confirmed Tools and Skills are NOT gaps:\n"
         f"Do not flag as a gap any skill, tool, or methodology that appears in the candidate's "
-        f"Confirmed Tools or Confirmed Skills sections -- even if the candidate's depth is limited. "
+        f"Confirmed Tools or Confirmed Skills sections – even if the candidate's depth is limited. "
         f"Presence in Confirmed Tools or Skills means that gap does not exist.\n\n"
-        f"GUARDRAIL -- Redirect honesty:\n"
+        f"GUARDRAIL – Redirect honesty:\n"
         f"In the Redirect field: pivot ONLY to experience explicitly stated in the candidate profile. "
         f"Never suggest the candidate claim experience they do not hold. "
         f"If the candidate has adjacent domain exposure (e.g., a short-term engagement in a related domain), "
-        f"frame the redirect around that specific domain context -- not around methodology depth they may not have.\n\n"
+        f"frame the redirect around that specific domain context – not around methodology depth they may not have.\n\n"
         f"Expect to find 3-5 gaps. If you find zero, re-examine preferred qualifications.\n\n"
 ```
 
