@@ -4,9 +4,9 @@
 # and overwrite only that employer's JSON file.
 #
 # Usage:
-#   python scripts/phase3_parse_employer.py "Employer Name"
-#   python scripts/phase3_parse_employer.py "Employer Name" --keywords
-#   python scripts/phase3_parse_employer.py "Employer Name" --keywords
+#   python -m scripts.phase3_parse_employer "Employer Name"
+#   python -m scripts.phase3_parse_employer "Employer Name" --keywords
+#   python -m scripts.phase3_parse_employer "Employer Name" --keywords
 #
 # Matching: case-insensitive substring – "employer name" matches "Employer Name Inc."
 # Keywords are skipped by default. Add --keywords to generate them.

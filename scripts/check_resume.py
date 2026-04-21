@@ -9,9 +9,9 @@
 # Constraints loaded dynamically from CANDIDATE_BACKGROUND.md.
 #
 # Usage:
-#   python scripts/check_resume.py --role [role]
+#   python -m scripts.check_resume --role [role]
 # Example:
-#   python scripts/check_resume.py --role BAH_LCI_MBSE
+#   python -m scripts.check_resume --role BAH_LCI_MBSE
 # ==============================================
 
 import io

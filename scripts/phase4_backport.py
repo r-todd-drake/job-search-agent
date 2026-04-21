@@ -5,8 +5,8 @@
 # experience_library.md.
 #
 # Usage:
-#   python scripts/phase4_backport.py --role Viasat_SE_IS
-#   python scripts/phase4_backport.py --role Viasat_SE_IS --dry-run
+#   python -m scripts.phase4_backport --role Viasat_SE_IS
+#   python -m scripts.phase4_backport --role Viasat_SE_IS --dry-run
 # ==============================================
 
 import os

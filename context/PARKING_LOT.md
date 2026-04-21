@@ -1,24 +1,10 @@
 # Parking Lot
 # Load for: planning next development session, prioritizing work items
-Last updated: 18 Apr 2026
+Last updated: 21 Apr 2026
 
 ## Active Items
 
 ### Development
-
-1. **Phase 5 updates** *(urgent — affects active interview prep)* (docs\superpowers\plans\2026-04-19-phase5-prompt-fixes.md)
-   - Duplicate salary guidance in the prep package — reconcile to a single anchor and remove the duplicate section
-   - Gap 1 redirect fabricates an MBSE gap that doesn't exist — rewrite around the real Shield AI story (domain gap, not MBSE gap)
-
-2. **candidate_profile.md rebuild**
-   - CompTIA Security+ lapsed — must be flagged not omitted
-   - HAIPE experience needs adding (confirmed from KForce/NGLD-M)
-   - Rebuild from current experience_library.json via phase3_build_candidate_profile.py
-
-3. **Phase 5 — HAIPE gap false positive** *(blocked by item 2)*
-   - Phase 5 gap analysis sometimes flags HAIPE as a gap
-   - KForce/NGLD-M has confirmed HAIPE-enabled architecture experience
-   - Fix: update candidate_profile.md (item 2 above) — should resolve automatically
 
 4. **Phase 6 — Networking support**
    - Scoped and ready to build
@@ -33,23 +19,6 @@ Last updated: 18 Apr 2026
 
 5. **Phase 4 Stage 4 — Add Phase 6 prompt to next steps**
    - Deferred until Phase 6 is stable
-
-6. **Phase 5 Stage 2 — revision stage** *(proper pipeline extension)*
-   - Add a Stage 2 to phase5_interview_prep.py — similar to how Phase 4 has multiple stages
-   - Stage 1 generates the initial prep package
-   - Stage 2 accepts workshop notes or a corrected prep file and produces a clean revised version
-   - Could also flag experience library updates automatically
-
-7. **Script usage instructions — update to `python -m` invocation**
-   - All scripts use `from scripts.utils...` imports; running as `python scripts/X.py`
-     adds the script dir to sys.path and breaks resolution — `python -m scripts.X` is correct
-   - Scope: header comment usage blocks in all scripts + runtime `print` next-step prompts
-     that tell the user what command to run next
-   - Files: phase3_parse_library.py, phase3_parse_employer.py, phase3_build_candidate_profile.py,
-     phase4_resume_generator.py, phase4_cover_letter.py, phase5_interview_prep.py,
-     phase5_debrief.py, phase5_thankyou.py, phase5_workshop_capture.py,
-     check_resume.py, check_cover_letter.py, utils/pii_filter.py
-   - Also update README.md Quick Reference commands section
 
 8. **Script identifier audit — GitHub exposure risk**
    - Concern: hardcoded strings in scripts or comments that combine identifiers
@@ -112,6 +81,14 @@ Last updated: 18 Apr 2026
   - Do not begin development until design spike is complete
 
 ## Completed (recent)
+- candidate_profile.md rebuild — COMPLETE (21 Apr 2026)
+  Security+ flagged as (lapsed); HAIPE-enabled architectures added to KForce employer bullet and confirmed in Domain Knowledge. Profile regenerated 19 Apr 2026.
+- Phase 5 HAIPE gap false positive — COMPLETE (21 Apr 2026)
+  Resolved by candidate_profile.md rebuild above; HAIPE now confirmed in employer history and Domain Knowledge, preventing Phase 5 from flagging it as a gap.
+- Script usage instructions updated to python -m invocation — COMPLETE (21 Apr 2026)
+  Header comments and runtime print statements updated across 12 scripts + README.md. Note: build_docs.py and generate_test_fixture.py were out of scope and retain old style.
+- Phase 5 prompt fixes — salary duplicate and gap fabrication guardrails — COMPLETE (21 Apr 2026)
+  Salary actuals exclusivity guardrail in `_build_section1_prompt`; confirmed-skills guardrail + redirect honesty rule in `_build_gap_prompt`. Commits: 1a2c073, aa46c76. 45 tests pass.
 - Experience library update workflow (a script that identifies net-new and variant resume bullets from stage files, stages them for human review) (19 Apr 2026)
   `phase4_backport.py` (full backport script (no API calls, rapidfuzz fuzzy matching))
   `generate_test_fixture.py` (one time fixture generator)

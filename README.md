@@ -150,7 +150,7 @@ Stage 4 (automated)  →  [Role]_CoverLetter.docx
 Single command generates a stage-appropriate prep package:
 
 ```bash
-python scripts/phase5_interview_prep.py --role [role_folder] --interview_stage [recruiter|hiring_manager|team_panel]
+python -m scripts.phase5_interview_prep --role [role_folder] --interview_stage [recruiter|hiring_manager|team_panel]
 ```
 
 Valid stages: `recruiter`, `hiring_manager`, `team_panel`
@@ -186,11 +186,11 @@ stories used, gaps surfaced, salary exchange, and continuity notes.
 
 ```bash
 # Guided questionnaire (recommended — AI follow-up questions per section)
-python scripts/phase5_debrief.py --role [role] --stage [stage] --interactive
+python -m scripts.phase5_debrief --role [role] --stage [stage] --interactive
 
 # YAML-based workflow (fill the draft, then convert)
-python scripts/phase5_debrief.py --role [role] --stage [stage] --init
-python scripts/phase5_debrief.py --role [role] --stage [stage] --convert
+python -m scripts.phase5_debrief --role [role] --stage [stage] --init
+python -m scripts.phase5_debrief --role [role] --stage [stage] --convert
 ```
 
 Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
@@ -220,10 +220,10 @@ Generates a personalized thank-you letter for each interviewer from a filed debr
 
 ```bash
 # Standard (single interviewer or named panel label)
-python scripts/phase5_thankyou.py --role [role] --stage [stage]
+python -m scripts.phase5_thankyou --role [role] --stage [stage]
 
 # Panel with a specific label
-python scripts/phase5_thankyou.py --role [role] --stage panel --panel_label [label]
+python -m scripts.phase5_thankyou --role [role] --stage panel --panel_label [label]
 ```
 
 Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
@@ -242,7 +242,7 @@ Parses a workshopped interview prep `.docx` and writes durable story, gap, and q
 content into a persistent interview library for reuse across roles.
 
 ```bash
-python scripts/phase5_workshop_capture.py --role [role] --stage [stage]
+python -m scripts.phase5_workshop_capture --role [role] --stage [stage]
 ```
 
 Reads: `data/job_packages/[role]/interview_prep_[stage].docx`
@@ -329,13 +329,13 @@ CANDIDATE_LOCATION=City, ST
 ### 5. Build the experience library
 ```bash
 # Full parse — all employers:
-python scripts/phase3_parse_library.py
+python -m scripts.phase3_parse_library
 
 # Re-parse a single employer (faster for targeted edits):
-python scripts/phase3_parse_employer.py "employer name"
+python -m scripts.phase3_parse_employer "employer name"
 
-python scripts/phase3_build_candidate_profile.py
-python scripts/phase3_compile_library.py
+python -m scripts.phase3_build_candidate_profile
+python -m scripts.phase3_compile_library
 ```
 
 ### 6. Run tests
@@ -349,22 +349,22 @@ pytest -m live -v
 
 ### 7. Run scripts
 ```bash
-python scripts/pipeline_report.py
-python scripts/phase2_job_ranking.py
-python scripts/phase2_semantic_analyzer.py
-python scripts/phase4_resume_generator.py --stage 1 --role [role]
-python scripts/phase4_resume_generator.py --stage 3 --role [role]
-python scripts/phase4_resume_generator.py --stage 4 --role [role]
-python scripts/check_resume.py --role [role]
-python scripts/phase4_cover_letter.py --stage 1 --role [role]
+python -m scripts.pipeline_report
+python -m scripts.phase2_job_ranking
+python -m scripts.phase2_semantic_analyzer
+python -m scripts.phase4_resume_generator --stage 1 --role [role]
+python -m scripts.phase4_resume_generator --stage 3 --role [role]
+python -m scripts.phase4_resume_generator --stage 4 --role [role]
+python -m scripts.check_resume --role [role]
+python -m scripts.phase4_cover_letter --stage 1 --role [role]
 python -m scripts.check_cover_letter --role [role]
-python scripts/phase4_cover_letter.py --stage 4 --role [role]
-python scripts/phase5_interview_prep.py --role [role] --interview_stage [recruiter|hiring_manager|team_panel]
-python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
-python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
-python scripts/phase5_debrief.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
-python scripts/phase5_workshop_capture.py --role [role] --stage [recruiter|hiring_manager|team_panel]
-python scripts/phase5_thankyou.py --role [role] --stage [recruiter_screen|hiring_manager|panel|final]
+python -m scripts.phase4_cover_letter --stage 4 --role [role]
+python -m scripts.phase5_interview_prep --role [role] --interview_stage [recruiter|hiring_manager|team_panel]
+python -m scripts.phase5_debrief --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
+python -m scripts.phase5_debrief --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
+python -m scripts.phase5_debrief --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
+python -m scripts.phase5_workshop_capture --role [role] --stage [recruiter|hiring_manager|team_panel]
+python -m scripts.phase5_thankyou --role [role] --stage [recruiter_screen|hiring_manager|panel|final]
 ```
 
 ---
