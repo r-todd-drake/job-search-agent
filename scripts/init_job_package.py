@@ -49,5 +49,49 @@ def check_conflicts(rows: list, role: str, req: str) -> str | None:
     return None
 
 
+def create_job_folder(packages_dir: str, role: str) -> str:
+    folder_path = os.path.join(packages_dir, role)
+    os.makedirs(folder_path, exist_ok=False)
+    return folder_path
+
+
+def create_job_description(folder_path: str) -> str:
+    jd_path = os.path.join(folder_path, "job_description.txt")
+    open(jd_path, "w").close()
+    return jd_path
+
+
+def append_csv_row(csv_path: str, role: str, req: str) -> None:
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        fieldnames = csv.DictReader(f).fieldnames or []
+    row = {field: "" for field in fieldnames}
+    row["package_folder"] = role
+    row["req_number"] = req
+    row["date_found"] = str(date.today())
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writerow(row)
+
+
+def open_file_in_editor(file_path: str) -> None:
+    try:
+        result = subprocess.run(["code", file_path])
+        if result.returncode == 0:
+            return
+    except FileNotFoundError:
+        pass
+    try:
+        if sys.platform == "win32":
+            os.startfile(file_path)
+        elif sys.platform == "darwin":
+            subprocess.run(["open", file_path])
+        else:
+            subprocess.run(["xdg-open", file_path])
+        return
+    except Exception:
+        pass
+    print(f"Warning: could not open {file_path} automatically. Open it manually.")
+
+
 if __name__ == "__main__":
     pass
