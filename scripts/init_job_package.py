@@ -57,7 +57,8 @@ def create_job_folder(packages_dir: str, role: str) -> str:
 
 def create_job_description(folder_path: str) -> str:
     jd_path = os.path.join(folder_path, "job_description.txt")
-    open(jd_path, "w").close()
+    with open(jd_path, "w"):
+        pass
     return jd_path
 
 
