@@ -2,7 +2,7 @@ import csv
 import os
 import pytest
 from datetime import date
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 from scripts.init_job_package import (
     validate_role,
     validate_req,
@@ -12,6 +12,7 @@ from scripts.init_job_package import (
     create_job_description,
     append_csv_row,
     open_file_in_editor,
+    main,
 )
 
 
@@ -155,3 +156,119 @@ def test_open_file_in_editor_non_fatal_when_both_fail(tmp_path, capsys):
                 open_file_in_editor(dummy_file)  # must not raise
     captured = capsys.readouterr()
     assert "Warning" in captured.out
+
+
+def test_main_happy_path_calls_all_side_effects(tmp_path, capsys):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found,company,title,location,salary_range,url\n"
+    )
+    mock_folder_creator = MagicMock(return_value=str(tmp_path / "Anduril_SE"))
+    mock_file_creator = MagicMock(
+        return_value=str(tmp_path / "Anduril_SE" / "job_description.txt")
+    )
+    mock_csv_appender = MagicMock()
+    mock_file_opener = MagicMock()
+
+    exit_code = main(
+        role="Anduril_SE",
+        req="REQ-1",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=mock_folder_creator,
+        file_creator=mock_file_creator,
+        csv_appender=mock_csv_appender,
+        file_opener=mock_file_opener,
+        folder_exists=lambda p: False,
+    )
+
+    assert exit_code == 0
+    mock_folder_creator.assert_called_once_with(str(tmp_path), "Anduril_SE")
+    mock_file_creator.assert_called_once()
+    mock_csv_appender.assert_called_once()
+    mock_file_opener.assert_called_once()
+    captured = capsys.readouterr()
+    assert "job_description.txt" in captured.out
+
+
+def test_main_true_duplicate_exits_without_side_effects(tmp_path, capsys):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found\nAnduril_SE,PURSUE,REQ-1,2026-01-01\n"
+    )
+    mock_folder_creator = MagicMock()
+    mock_csv_appender = MagicMock()
+
+    exit_code = main(
+        role="Anduril_SE",
+        req="REQ-1",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=mock_folder_creator,
+        file_creator=MagicMock(),
+        csv_appender=mock_csv_appender,
+        file_opener=MagicMock(),
+        folder_exists=lambda p: False,
+    )
+
+    assert exit_code == 1
+    mock_folder_creator.assert_not_called()
+    mock_csv_appender.assert_not_called()
+    captured = capsys.readouterr()
+    assert "REQ-1" in captured.out
+
+
+def test_main_inactive_reactivation_exits_with_instructions(tmp_path, capsys):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found\nAnduril_SE,SKIP,REQ-1,2026-01-01\n"
+    )
+    mock_folder_creator = MagicMock()
+
+    exit_code = main(
+        role="Anduril_SE",
+        req="REQ-1",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=mock_folder_creator,
+        file_creator=MagicMock(),
+        csv_appender=MagicMock(),
+        file_opener=MagicMock(),
+        folder_exists=lambda p: False,
+    )
+
+    assert exit_code == 1
+    mock_folder_creator.assert_not_called()
+    captured = capsys.readouterr()
+    assert "reactivat" in captured.out.lower() or "inactive" in captured.out.lower()
+
+
+def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_path, capsys):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found,company,title,location,salary_range,url\n"
+    )
+    # folder_exists returns True for "Anduril_SE", False for "Anduril_SE_2"
+    def folder_exists(path):
+        return os.path.basename(path) == "Anduril_SE"
+
+    mock_folder_creator = MagicMock(return_value=str(tmp_path / "Anduril_SE_2"))
+    mock_file_creator = MagicMock(
+        return_value=str(tmp_path / "Anduril_SE_2" / "job_description.txt")
+    )
+
+    exit_code = main(
+        role="Anduril_SE",
+        req="REQ-99",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=mock_folder_creator,
+        file_creator=mock_file_creator,
+        csv_appender=MagicMock(),
+        file_opener=MagicMock(),
+        folder_exists=folder_exists,
+        input_fn=lambda _: "_2",
+    )
+
+    assert exit_code == 0
+    mock_folder_creator.assert_called_once_with(str(tmp_path), "Anduril_SE_2")

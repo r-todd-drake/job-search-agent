@@ -94,5 +94,70 @@ def open_file_in_editor(file_path: str) -> None:
     print(f"Warning: could not open {file_path} automatically. Open it manually.")
 
 
+def main(
+    role: str,
+    req: str,
+    packages_dir: str = PACKAGES_DIR,
+    jobs_csv: str = JOBS_CSV,
+    folder_creator=create_job_folder,
+    file_creator=create_job_description,
+    csv_appender=append_csv_row,
+    file_opener=open_file_in_editor,
+    folder_exists=os.path.exists,
+    input_fn=input,
+) -> int:
+    rows = load_csv_rows(jobs_csv)
+    conflict = check_conflicts(rows, role, req)
+
+    if conflict == "true_duplicate":
+        print(
+            f"Error: req# {req!r} already exists in jobs.csv with an active status. "
+            "No changes made."
+        )
+        return 1
+
+    if conflict == "inactive_reactivation":
+        print(
+            f"Error: req# {req!r} exists in jobs.csv with an inactive status.\n"
+            "This looks like a reactivation, not a new role.\n"
+            f"To reactivate: manually move the folder from inactive/{role}/ back to "
+            f"{packages_dir}/{role}/ and update the status in jobs.csv."
+        )
+        return 1
+
+    final_role = role
+    while folder_exists(os.path.join(packages_dir, final_role)):
+        print(f"Warning: folder '{final_role}' already exists in {packages_dir}/.")
+        suffix = input_fn("Enter a disambiguating suffix (e.g., '_2'): ").strip()
+        if not suffix:
+            print("Suffix cannot be empty. Try again.")
+            continue
+        final_role = role + suffix
+
+    folder_path = folder_creator(packages_dir, final_role)
+    jd_path = file_creator(folder_path)
+    csv_appender(jobs_csv, final_role, req)
+
+    print(f"\nCreated: {jd_path}")
+    print("Next steps:")
+    print("  1. Paste the job description text into the file above.")
+    print(f"  2. Confirm the role name in the file header matches: {final_role}")
+
+    file_opener(jd_path)
+    return 0
+
+
 if __name__ == "__main__":
-    pass
+    parser = argparse.ArgumentParser(description="Initialize a new job package.")
+    parser.add_argument("--role", required=True, help="Role folder name (underscores, no special chars)")
+    parser.add_argument("--req", required=True, help="Requisition number")
+    args = parser.parse_args()
+
+    try:
+        validate_role(args.role)
+        validate_req(args.req)
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    sys.exit(main(args.role, args.req))
