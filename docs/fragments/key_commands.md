@@ -4,6 +4,9 @@
 pytest tests/ -m "not live" -v          # Tier 1 mock suite — all must pass
 pytest -m live -v                        # Tier 2 live API (before promoting a phase)
 
+# Job package initialization
+python -m scripts.init_job_package --role [role] --req [req#]
+
 # Pipeline
 python -m scripts.pipeline_report
 python -m scripts.phase2_job_ranking

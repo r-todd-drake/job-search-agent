@@ -1,7 +1,7 @@
 # Parking Lot
 # Load for: planning next development session, prioritizing work items
 # When an Item is complete summarize in context/PARKING_LOT_DONE.md
-Last updated: 21 Apr 2026
+Last updated: 21 Apr 2026 (item 13 completed)
 
 ## Active Items
 
@@ -51,6 +51,7 @@ Last updated: 21 Apr 2026
 
 12. **Folder naming QC -- underscores throughout
     - Normalize all folder names to underscores to match file naming convention. Find-and-replace folder path strings in scripts, then rename actual directories. docs/ and context/ are low-effort (documentation only). data/job_packages/ and any role folder references in scripts are the higher-effort surface. Defer until a natural touch-point -- do not sprint this standalone.
+
 
 ## Standing / Evergreen Tasks
 - **Experience library tool equivalence review**
