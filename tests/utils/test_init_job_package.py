@@ -184,8 +184,8 @@ def test_main_happy_path_calls_all_side_effects(tmp_path, capsys):
 
     assert exit_code == 0
     mock_folder_creator.assert_called_once_with(str(tmp_path), "Anduril_SE")
-    mock_file_creator.assert_called_once()
-    mock_csv_appender.assert_called_once()
+    mock_file_creator.assert_called_once_with(str(tmp_path / "Anduril_SE"))
+    mock_csv_appender.assert_called_once_with(str(csv_file), "Anduril_SE", "REQ-1")
     mock_file_opener.assert_called_once()
     captured = capsys.readouterr()
     assert "job_description.txt" in captured.out
@@ -224,6 +224,7 @@ def test_main_inactive_reactivation_exits_with_instructions(tmp_path, capsys):
         "package_folder,status,req_number,date_found\nAnduril_SE,SKIP,REQ-1,2026-01-01\n"
     )
     mock_folder_creator = MagicMock()
+    mock_csv_appender = MagicMock()
 
     exit_code = main(
         role="Anduril_SE",
@@ -232,15 +233,16 @@ def test_main_inactive_reactivation_exits_with_instructions(tmp_path, capsys):
         jobs_csv=str(csv_file),
         folder_creator=mock_folder_creator,
         file_creator=MagicMock(),
-        csv_appender=MagicMock(),
+        csv_appender=mock_csv_appender,
         file_opener=MagicMock(),
         folder_exists=lambda p: False,
     )
 
     assert exit_code == 1
     mock_folder_creator.assert_not_called()
+    mock_csv_appender.assert_not_called()
     captured = capsys.readouterr()
-    assert "reactivat" in captured.out.lower() or "inactive" in captured.out.lower()
+    assert "reactivat" in captured.out.lower()
 
 
 def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_path, capsys):
@@ -256,6 +258,7 @@ def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_
     mock_file_creator = MagicMock(
         return_value=str(tmp_path / "Anduril_SE_2" / "job_description.txt")
     )
+    mock_csv_appender = MagicMock()
 
     exit_code = main(
         role="Anduril_SE",
@@ -264,7 +267,7 @@ def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_
         jobs_csv=str(csv_file),
         folder_creator=mock_folder_creator,
         file_creator=mock_file_creator,
-        csv_appender=MagicMock(),
+        csv_appender=mock_csv_appender,
         file_opener=MagicMock(),
         folder_exists=folder_exists,
         input_fn=lambda _: "_2",
@@ -272,3 +275,4 @@ def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_
 
     assert exit_code == 0
     mock_folder_creator.assert_called_once_with(str(tmp_path), "Anduril_SE_2")
+    mock_csv_appender.assert_called_once_with(str(csv_file), "Anduril_SE_2", "REQ-99")
