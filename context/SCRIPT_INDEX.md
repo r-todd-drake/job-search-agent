@@ -5,6 +5,12 @@ For full structure see README.md.
 
 ---
 
+## Initialization
+
+| Script | Purpose | Key flags |
+|---|---|---|
+| `init_job_package.py` | Create a new job package folder, empty `job_description.txt`, and `jobs.csv` row; opens file in editor | `--role` `--req` |
+
 ## Pipeline scripts
 
 | Script | Purpose | Key flags |
