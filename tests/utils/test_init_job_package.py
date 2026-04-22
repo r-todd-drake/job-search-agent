@@ -1,6 +1,7 @@
 import csv
 import os
 import pytest
+from datetime import date
 from unittest.mock import patch, MagicMock
 from scripts.init_job_package import (
     validate_role,
@@ -97,7 +98,8 @@ def test_create_job_description_creates_empty_file(tmp_path):
     folder.mkdir()
     jd_path = create_job_description(str(folder))
     assert os.path.isfile(jd_path)
-    assert open(jd_path).read() == ""
+    with open(jd_path) as f:
+        assert f.read() == ""
 
 
 def test_append_csv_row_adds_row(tmp_path):
@@ -114,8 +116,6 @@ def test_append_csv_row_adds_row(tmp_path):
 
 
 def test_append_csv_row_sets_date_found(tmp_path):
-    from datetime import date
-
     csv_file = tmp_path / "jobs.csv"
     csv_file.write_text(
         "package_folder,status,req_number,date_found,company,title,location,salary_range,url\n"
