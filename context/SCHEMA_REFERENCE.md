@@ -127,6 +127,7 @@ at least one interviewer with a non-null `name`.
 ```
 
 **Duplicate detection keys:**
+
 - Stories: `employer` (case-insensitive) + primary tag
 - Gap responses: `gap_label` (case-insensitive)
 - Questions: first 60 chars of `text` (case-insensitive)

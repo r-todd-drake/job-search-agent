@@ -1,12 +1,15 @@
 <!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
+
 # AI Job Search Agent — Project Context
+
 Last updated: 21 Apr 2026
 
 ## About This File
-Lean index file for quick orientation. Load supporting context files as needed.
-Do not bulk-load all context files into every session — load only what is relevant.
+
+Lean index file for quick orientation. Load supporting context files as needed.Do not bulk-load all context files into every session — load only what is relevant.
 
 ## What This Project Is
+
 A multi-phase AI-powered job search automation system built as both a practical tool for managing an active senior defense SE job search and a portfolio project demonstrating Python development, API integration, and AI agent design.
 
 Candidate: [CANDIDATE] — Senior Systems Engineer, San Diego CA, Current TS/SCI.
@@ -25,12 +28,11 @@ Performed using Claude web chat for resume tailoring, interview prep,
 story workshopping, and pipeline management.
 Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 
-
 ## Current Phase Status
 
 <!-- fragment: current_phase_status -->
 | Phase | Description | Status |
-|-------|-------------|--------|
+| ----- | ----------- | ------ |
 | 1 | Pipeline report script and tracker schema | ✅ Complete |
 | 2 | Job ranking and semantic fit analysis | ✅ Complete |
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
@@ -39,8 +41,8 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 | 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
-
 ## V&V Framework (added 07 Apr 2026)
+
 A two-tier pytest suite now covers the full pipeline. This is the baseline for all future script changes.
 
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
@@ -51,7 +53,9 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 
 ### Scripts refactored for testability (07 Apr 2026)
+
 All 8 scripts below had module-level execution removed so they can be imported by tests:
+
 - `pipeline_report.py` — extracted `analyze_applications()`, `detect_duplicates()`
 - `phase2_job_ranking.py` — extracted `detect_duplicates()`, added `ACTIONABLE_STATUSES` / `EXCLUDED_STATUSES`
 - `phase2_semantic_analyzer.py` — extracted `analyze_job()`
@@ -59,11 +63,11 @@ All 8 scripts below had module-level execution removed so they can be imported b
 - `phase3_build_candidate_profile.py` — **PII remediated** (KNOWN_FACTS hardcoded values → `os.getenv()`), extracted `build_profile()`; add `CANDIDATE_LOCATION` to `.env`
 - `phase4_resume_generator.py` — extracted `run_stage1()`, `run_stage3()`, `run_stage4()`
 - `phase4_cover_letter.py` — extracted `run_cl_stage1()`, `run_cl_stage4()`
-- `phase5_interview_prep.py` — extracted `generate_prep()`
-
+- `phase5_interview_prep.py` — extracted `generate_prep()`  
 Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `phase3_parse_library.py`, `phase3_parse_employer.py`, `check_resume.py`.
 
 ## Non-Negotiable Rules (always in scope)
+
 - En dashes only — never em dashes (em dashes signal AI-generated content)
 - Stage files are source of truth — never edit .docx directly
 - Never git add . — always stage files explicitly
@@ -73,10 +77,11 @@ Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `p
 - Python 3.11 compat required: no backslash escapes inside f-string `{}` expressions
 
 ## Supporting Context Files
+
 Load these as needed for the session type:
 
 | File | Load When |
-|------|-----------|
+| ------ | ---------- |
 | context/CANDIDATE_BACKGROUND.md | Resume tailoring, interview prep, story workshopping |
 | context/PIPELINE_STATUS.md | Pipeline management, application decisions, recruiter comms |
 | context/DECISIONS_LOG.md | Script development, architecture decisions, coding conventions |
@@ -85,7 +90,7 @@ Load these as needed for the session type:
 
 ## Project Structure (top level)
 <!-- fragment: project_structure -->
-```
+```bash
 Job_search_agent/
 ├── .github/workflows/test.yml            # GitHub Actions CI — mock suite on every push
 ├── context/                              # Context data store
@@ -170,10 +175,9 @@ Job_search_agent/
 └── README.md
 ```
 
-
 ## Quick Reference — Key Commands
 <!-- fragment: key_commands -->
-```
+```Bash
 # Tests (run after any script change)
 pytest tests/ -m "not live" -v          # Tier 1 mock suite — all must pass
 pytest -m live -v                        # Tier 2 live API (before promoting a phase)
@@ -209,4 +213,3 @@ python -m scripts.phase3_compile_library
 python scripts/utils/build_docs.py                   # rebuild all
 python scripts/utils/build_docs.py --doc README.md   # rebuild one
 ```
-

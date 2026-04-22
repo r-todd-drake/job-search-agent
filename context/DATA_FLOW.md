@@ -10,7 +10,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 ## Pipeline scripts
 
 | Script | Reads | Writes |
-|--------|-------|--------|
+| ------ | ----- | ------- |
 | `pipeline_report.py` | `data/tracker/job_pipeline.xlsx` | `outputs/pipeline_report_YYYYMMDD_HHMM.txt` |
 | `phase2_job_ranking.py` | `data/jobs.csv`, `data/job_packages/[role]/job_description.txt` | `outputs/ranked_jobs.csv`, `outputs/ranking_report_YYYYMMDD_HHMM.txt` |
 | `phase2_semantic_analyzer.py` | `data/jobs.csv`, `data/job_packages/[role]/job_description.txt`, `data/experience_library/candidate_profile.md`, `outputs/ranked_jobs.csv` (optional) | `outputs/semantic_analysis_YYYYMMDD_HHMM.txt` |
@@ -18,7 +18,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 ## Phase 3 — Experience library
 
 | Script | Reads | Writes |
-|--------|-------|--------|
+| ------ | ----- | ------- |
 | `phase3_parse_library.py` | `data/experience_library/experience_library.md` | `data/experience_library/employers/[employer_slug].json`, `data/experience_library/summaries.json` |
 | `phase3_parse_employer.py` | `data/experience_library/experience_library.md` | `data/experience_library/employers/[employer_slug].json` |
 | `phase3_compile_library.py` | `data/experience_library/employers/*.json`, `data/experience_library/summaries.json` | `data/experience_library/experience_library.json` |
@@ -27,7 +27,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 ## Phase 4 — Resume and cover letter
 
 | Script | Reads | Writes |
-|--------|-------|--------|
+| ------ | ----- | ------- |
 | `phase4_resume_generator.py --stage 1` | `data/job_packages/[role]/job_description.txt`, `data/experience_library/experience_library.json`, `data/experience_library/candidate_profile.md` | `data/job_packages/[role]/stage1_draft.txt` |
 | `phase4_resume_generator.py --stage 3` | `data/job_packages/[role]/stage2_approved.txt`, `data/job_packages/[role]/job_description.txt` | `data/job_packages/[role]/stage3_review.txt` |
 | `phase4_resume_generator.py --stage 4` | `data/job_packages/[role]/stage4_final.txt` (optional, fallback: `stage2_approved.txt`), `templates_local/resume_template.docx` | `resumes/tailored/[role]/[role]_Resume.docx` |
@@ -39,7 +39,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 ## Phase 5 — Interview
 
 | Script | Reads | Writes |
-|--------|-------|--------|
+| ------ | ----- | ------- |
 | `phase5_interview_prep.py` | `data/job_packages/[role]/job_description.txt`, `data/interview_library.json`, `data/experience_library/candidate_profile.md` | `data/job_packages/[role]/interview_prep_[stage].txt`, `data/job_packages/[role]/interview_prep_[stage].docx` |
 | `phase5_workshop_capture.py` | `data/job_packages/[role]/interview_prep_[stage].docx` | `data/interview_library.json` (appends/updates) |
 | `phase5_debrief.py --init` | `templates/interview_debrief_template.yaml` | `data/debriefs/[role]/debrief_[stage]_draft.yaml` |
@@ -52,7 +52,7 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 ## Shared modules
 
 | Module | Reads / writes on behalf of callers |
-|--------|--------------------------------------|
+| ------ | ------------------------------------ |
 | `utils/library_parser.py` | Reads `data/experience_library/experience_library.md` |
 | `utils/pii_filter.py` | Reads `.env` (PII values to strip before API calls — not a data file) |
 | `interview_library_parser.py` | Reads and writes `data/interview_library.json`; reads `data/interview_library_tags.json` |
