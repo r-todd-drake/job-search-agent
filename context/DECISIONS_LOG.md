@@ -55,11 +55,11 @@ These are separate concerns — keep them in separate Claude projects where poss
   CANDIDATE_EMAIL, CANDIDATE_LINKEDIN, CANDIDATE_GITHUB
 - pii_filter.py is on GitHub — contains no personal data
 - All personal data excluded from git via .gitignore
-- CLAUDE.md prohibits CC from reading data/, resumes/, outputs/, templates/, .env
+- CLAUDE.md prohibits CC from writing to data/, resumes/, outputs/, templates/, .env
 - .gitignore does NOT restrict CC tool access — CLAUDE.md is the right control
 
 ### Git
-- Never git add . — always stage explicitly
+- Never recommend the user employ git add . — always stage explicitly
 - .gitignore must have dot prefix — verify before committing
 - Commit messages describe code changes, not personal data content
 - Anthropic API: inputs not used for model training (commercial terms confirmed)
