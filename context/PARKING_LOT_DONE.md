@@ -3,6 +3,8 @@
 Last updated: 21 Apr 2026
 
 ## Completed (recent)
+- Job Package Initializer — COMPLETE (21 Apr 2026)
+  `scripts/init_job_package.py` — CLI: `python -m scripts.init_job_package --role [role] --req [req#]`. Creates job package folder and empty job_description.txt, appends jobs.csv row (blank status for Phase 2 review), opens file in editor. Full conflict detection: true duplicate (same req# + same role + active status), inactive reactivation (any non-active status), folder collision with interactive suffix prompt. 25 unit tests. PR #3.
 - candidate_profile.md rebuild — COMPLETE (21 Apr 2026)
   Security+ flagged as (lapsed); HAIPE-enabled architectures added to KForce employer bullet and confirmed in Domain Knowledge. Profile regenerated 19 Apr 2026.
 - Phase 5 HAIPE gap false positive — COMPLETE (21 Apr 2026)

@@ -46,6 +46,7 @@ Job_search_agent/
 ├── templates_local/                      # Binary/personal templates (local only)
 │   └── resume_template.docx              # Resume template (local only)
 ├── scripts/
+│   ├── init_job_package.py               # Initialize new job package folder, job_description.txt, and jobs.csv row
 │   ├── pipeline_report.py                # Pipeline metrics + duplicate req detection
 │   ├── phase2_job_ranking.py             # Keyword scoring + req number tracking
 │   ├── phase2_semantic_analyzer.py       # Claude API semantic fit analysis
