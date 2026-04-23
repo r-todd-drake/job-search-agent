@@ -76,4 +76,4 @@ if __name__ == "__main__":
     print(f"  Summaries: {len(summaries)}")
     print(f"  Output directory: {EMPLOYERS_DIR}")
     print(f"{'=' * 60}")
-    print(f"\nNext step: run phase3_compile_library.py to merge into experience_library.json")
+    print(f"\nNext step: run manually python -m scripts.phase3_compile_library to merge into experience_library.json")
