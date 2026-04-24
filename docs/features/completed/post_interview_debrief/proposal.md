@@ -8,7 +8,7 @@
 ### Acceptance Criteria (AC)
 
 **Debrief Template (`interview_debrief_template.md`)**
-- Template exists at `docs/features/post-interview-debrief/interview_debrief_template.md`
+- Template exists at `docs/features/post_interview_debrief/interview_debrief_template.md`
 - Template contains the following sections:
   - **Interview Metadata**: date, role slug, company, interviewer name and title, interview stage (recruiter screen / hiring manager / panel / final), format (phone / video / onsite)
   - **Advancement Read**: single-select field with four values -- `for sure`, `maybe`, `doubt it`, `definitely not` -- plus a free-text notes field

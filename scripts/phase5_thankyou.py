@@ -9,9 +9,9 @@
 #
 # Usage:
 #   python -m scripts.phase5_thankyou \
-#     --role Viasat_SE_IS --stage hiring_manager
+#     --role Acme_SE_Systems --stage hiring_manager
 #   python -m scripts.phase5_thankyou \
-#     --role Viasat_SE_IS --stage panel --panel_label se_team
+#     --role Acme_SE_Systems --stage panel --panel_label se_team
 # ==============================================
 
 import os
@@ -28,6 +28,7 @@ from docx.shared import Pt, Inches
 # Add project root to path for utils import
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
+from scripts.config import JOBS_PACKAGES_DIR, CANDIDATE_PROFILE_PATH, MODEL_SONNET as MODEL
 
 load_dotenv()
 
@@ -35,11 +36,7 @@ load_dotenv()
 # CONFIGURATION
 # ==============================================
 
-JOBS_PACKAGES_DIR = "data/job_packages"
 DEBRIEFS_DIR = "data/debriefs"
-CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
-
-MODEL = "claude-sonnet-4-20250514"
 
 # ==============================================
 # SYSTEM PROMPT
@@ -480,7 +477,7 @@ def main():
     )
     parser.add_argument(
         "--role", type=str, required=True,
-        help="Role package folder name (e.g. Viasat_SE_IS)"
+        help="Role package folder name (e.g. Acme_SE_Systems)"
     )
     parser.add_argument(
         "--stage", type=str, required=True,

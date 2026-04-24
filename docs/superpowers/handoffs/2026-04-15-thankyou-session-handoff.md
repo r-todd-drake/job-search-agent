@@ -17,7 +17,7 @@
 | File | Why |
 |---|---|
 | `CLAUDE.md` | Safety rules, code style (en dashes, PII filter, never touch `data/`) |
-| `docs/features/phase5-thankyou-letters/phase5_thankyou_proposal.md` | Full spec -- AC, system prompt, output schema, tests |
+| `docs/features/phase5_thankyou_letters/phase5_thankyou_proposal.md` | Full spec -- AC, system prompt, output schema, tests |
 | `scripts/phase5_interview_prep.py` | **Primary analog** -- proposal explicitly says to follow its patterns for Claude API calls, system prompt structure, and .docx output |
 | `scripts/phase5_debrief.py` | Read `build_json_output` and `run_interactive` to understand the exact debrief JSON schema the thankyou script reads |
 

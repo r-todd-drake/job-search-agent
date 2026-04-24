@@ -2,10 +2,18 @@
 # Parking Lot Done
 
 __Load for: planning next development session, understancing completed items__  
-Last updated: 21 Apr 2026
+Last updated: 23 Apr 2026
 
 ## Completed (recent)
 
+- Move generate_test_fixture.py to tests/utils/ (item #15) — COMPLETE (23 Apr 2026)
+  `scripts/utils/generate_test_fixture.py` moved to `tests/utils/generate_test_fixture.py` via `git mv`. Path was already project-root-relative — no fix needed. Correctly classified as a dev utility, not a production module.
+- Archive stale plan doc (item #16) — COMPLETE (23 Apr 2026)
+  `docs/superpowers/plans/2026-04-13-post-interview-debrief-old.md` (~1,500 lines) moved to `docs/superpowers/plans/archive/` via `git mv`.
+- Folder naming QC (item #12) — COMPLETE (23 Apr 2026)
+  8 folders renamed via `git mv` (hyphens to underscores): `docs/features/completed/context_indexes`, `interview_prep_stage_awareness`, `phase5_library_integration`, `phase5_thankyou_letters`, `phase5_workflow_orchestration`, `phase5_workshop_capture`, `post_interview_debrief`, and `docs/web-skills/interview_prep`. `docs/features/README.md` naming convention updated. 8 superpowers plan docs updated for internal cross-references via sed. Zero hyphenated folder refs remain outside archive. `data/job_packages/` role folders were out of scope (gitignored personal data). pytest: 384 passed, 0 failures.
+- Codebase cleanup — COMPLETE (23 Apr 2026)
+  Four mechanical improvements from codebase audit: (1) `resumes/tailored/` path renamed to `resumes/` in `phase4_resume_generator.py` and `phase4_cover_letter.py`; (2) dead `RESUMES_TAILORED_DIR` constant removed from `phase5_interview_prep.py`; (3) `phase4_cover_letter.py` template path corrected from `templates/` to `templates_local/` (was a misconfiguration vs. resume generator); `DATA_FLOW.md` updated to match; (4) 5 Phase 5 test files moved from `tests/` root to `tests/phase5/` via `git mv` (`test_phase5_debrief.py`, `test_phase5_debrief_utils.py`, `test_phase5_thankyou.py`, `test_phase5_workshop_capture.py`, `test_interview_library_parser.py`). `build_docs.py` run after; README and PROJECT_CONTEXT rebuilt. pytest: 384 passed, 0 failures.
 - Job Package Initializer — COMPLETE (21 Apr 2026)
   `scripts/init_job_package.py` — CLI: `python -m scripts.init_job_package --role [role] --req [req#]`. Creates job package folder and empty job_description.txt, appends jobs.csv row (blank status for Phase 2 review), opens file in editor. Full conflict detection: true duplicate (same req# + same role + active status), inactive reactivation (any non-active status), folder collision with interactive suffix prompt. 25 unit tests. PR #3.
 - candidate_profile.md rebuild — COMPLETE (21 Apr 2026)

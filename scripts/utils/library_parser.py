@@ -10,6 +10,7 @@ import os
 import re
 import json
 import time
+from scripts.config import MODEL_SONNET
 
 # ==============================================
 # HELPERS
@@ -39,7 +40,7 @@ def get_keywords(client, bullet_text):
     """Call Claude API to extract keywords from a bullet."""
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=MODEL_SONNET,
             max_tokens=200,
             messages=[{
                 "role": "user",

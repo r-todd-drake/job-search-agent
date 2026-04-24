@@ -413,7 +413,7 @@ Job_search_agent/
 |   │    └── README.txt                   # Tracker workbook README
 |   └── jobs.csv                          # Example Pipeline - status + req number tracking
 ├── outputs                               # Generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
-├── resumes/tailored/                     # Generated resumes (local only)
+├── resumes/                              # Generated resumes (local only)
 ├── templates/                            # Script input templates (tracked — YAML, plain-text)
 │   └── interview_debrief_template.yaml   # Debrief YAML template for --init mode
 ├── templates_local/                      # Binary/personal templates (local only)

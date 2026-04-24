@@ -11,7 +11,7 @@
 # Usage:
 #   python -m scripts.check_cover_letter --role [role]
 # Example:
-#   python -m scripts.check_cover_letter --role BAH_LCI_MBSE
+#   python -m scripts.check_cover_letter --role Acme_MBSE_Lead
 # ==============================================
 
 import io
@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
+from scripts.config import JOBS_PACKAGES_DIR, MODEL_SONNET as MODEL
 
 load_dotenv()
 
@@ -34,8 +35,6 @@ load_dotenv()
 # ==============================================
 
 CANDIDATE_BACKGROUND_PATH = "context/CANDIDATE_BACKGROUND.md"
-JOBS_PACKAGES_DIR = "data/job_packages"
-MODEL = "claude-sonnet-4-20250514"
 
 SYSTEM_PROMPT = (
     "You are a cover letter quality reviewer for a defense and aerospace systems engineering candidate. "
@@ -353,7 +352,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Cover letter quality checker \u2013 Layer 1 string matching + Layer 2 API assessment"
     )
-    parser.add_argument("--role", required=True, help="Role folder name (e.g. BAH_LCI_MBSE)")
+    parser.add_argument("--role", required=True, help="Role folder name (e.g. Acme_MBSE_Lead)")
     args = parser.parse_args()
 
     ROLE = args.role

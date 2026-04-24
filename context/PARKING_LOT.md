@@ -3,7 +3,7 @@
 
 __Load for: planning next development session, prioritizing work items__  
 *When an Item is complete summarize in context/PARKING_LOT_DONE.md*  
-Last updated: 21 Apr 2026 (item 13 completed)
+Last updated: 23 Apr 2026 (items 12, 15, 16 completed; codebase cleanup items 1-4)
 
 ## Active Items
 
@@ -51,8 +51,15 @@ Last updated: 21 Apr 2026 (item 13 completed)
 11. Phase 0 — Candidate Onboarding Process documentation
     - Document the structured prompts and instructions to capture existing experinect in the form of resumes into the working experience library.
 
-12. **Folder naming QC -- underscores throughout
-    - Normalize all folder names to underscores to match file naming convention. Find-and-replace folder path strings in scripts, then rename actual directories. docs/ and context/ are low-effort (documentation only). data/job_packages/ and any role folder references in scripts are the higher-effort surface. Defer until a natural touch-point -- do not sprint this standalone.
+### Housekeeping
+
+14. Create scripts/config.py — shared constants
+    - 9+ scripts each hardcode the same path and model strings independently
+    - Proposed constants: JOBS_PACKAGES_DIR, EXPERIENCE_LIBRARY_JSON, CANDIDATE_PROFILE_PATH,
+      RESUMES_DIR, RESUME_TEMPLATE, MODEL_SONNET, MODEL_HAIKU
+    - Key benefit: model version upgrade requires 1 edit instead of 9
+    - Note: phase5_debrief.py intentionally uses Haiku (cost optimization) — config.py makes this explicit
+    - Medium effort: requires updating all callers after extracting constants
 
 ## Standing / Evergreen Tasks
 

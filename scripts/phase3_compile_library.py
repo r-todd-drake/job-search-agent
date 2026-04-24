@@ -1,11 +1,11 @@
 import os
 import json
 from datetime import datetime
+from scripts.config import EXPERIENCE_LIBRARY_JSON as OUTPUT_PATH
 
 
 EMPLOYERS_DIR = "data/experience_library/employers"
 SUMMARIES_PATH = "data/experience_library/summaries.json"
-OUTPUT_PATH = "data/experience_library/experience_library.json"
 
 
 def compile_library(employers_dir, summaries_path):

@@ -23,7 +23,7 @@ docs/features/
 Work with Claude Chat to define the feature. Chat uses `user_story_template.md` to produce `proposal.md` covering the user story, acceptance criteria, and out-of-scope boundaries.
 
 ### 2 — Create feature folder
-Create `docs/features/[feature-name]/` using lowercase hyphenated naming (e.g., `post-interview-debrief`, `phase6-networking`). Add `proposal.md` to the folder.
+Create `docs/features/[feature_name]/` using lowercase underscore naming (e.g., `post_interview_debrief`, `phase6_networking`). Add `proposal.md` to the folder.
 
 ### 3 — Develop spec and/or plan (CC)
 CC reads `proposal.md` and relevant context documents, then develops a design spec, implementation plan, or both. CC writes output to the feature folder. User provides input during the session as needed.
@@ -60,7 +60,7 @@ All `⚠ REVIEW:` items must be resolved before `prompt_handoff.md` is written.
 
 ## Naming Convention
 
-Folder names use lowercase with hyphens: `post-interview-debrief`, `interview-library`, `phase6-networking`.
+Folder names use lowercase with underscores: `post_interview_debrief`, `interview_library`, `phase6_networking`.
 
 ---
 

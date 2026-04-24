@@ -5,8 +5,8 @@
 # experience_library.md.
 #
 # Usage:
-#   python -m scripts.phase4_backport --role Viasat_SE_IS
-#   python -m scripts.phase4_backport --role Viasat_SE_IS --dry-run
+#   python -m scripts.phase4_backport --role Acme_SE_Systems
+#   python -m scripts.phase4_backport --role Acme_SE_Systems --dry-run
 # ==============================================
 
 import os
@@ -15,8 +15,7 @@ import json
 import argparse
 from datetime import date
 from rapidfuzz import fuzz as _fuzz
-
-JOBS_PACKAGES_DIR = "data/job_packages"
+from scripts.config import JOBS_PACKAGES_DIR
 LIBRARY_MD_PATH = "data/experience_library/experience_library.md"
 REGISTRY_PATH = "data/backport_registry.json"
 
@@ -473,7 +472,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Stage net-new resume bullets for backport into experience_library.md"
     )
-    parser.add_argument("--role", required=True, help="Role slug (e.g. Viasat_SE_IS)")
+    parser.add_argument("--role", required=True, help="Role slug (e.g. Acme_SE_Systems)")
     parser.add_argument("--dry-run", action="store_true", help="Print findings without writing files")
     parser.add_argument("--net-new-threshold", type=float, default=85.0,
                         help="Fuzzy match threshold for 'present' classification (default: 85)")

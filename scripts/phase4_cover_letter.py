@@ -12,11 +12,11 @@
 #   cl_stage3_review.txt    <- check_cover_letter.py writes
 #   cl_stage4_final.txt     <- user saves manually (source for docx)
 #
-# Docx output: resumes/tailored/[role]/[role]_CoverLetter.docx
+# Docx output: resumes/[role]/[role]_CoverLetter.docx
 #
 # Usage:
-#   python -m scripts.phase4_cover_letter --stage 1 --role BAH_LCI_MBSE
-#   python -m scripts.phase4_cover_letter --stage 4 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_cover_letter --stage 1 --role Acme_MBSE_Lead
+#   python -m scripts.phase4_cover_letter --stage 4 --role Acme_MBSE_Lead
 # ==============================================
 
 import os
@@ -30,6 +30,7 @@ from docx import Document
 from docx.shared import Pt, Inches
 
 from scripts.utils.pii_filter import strip_pii
+from scripts.config import JOBS_PACKAGES_DIR, RESUMES_DIR, RESUME_TEMPLATE, MODEL_SONNET as MODEL
 
 load_dotenv()
 
@@ -37,11 +38,7 @@ load_dotenv()
 # CONFIGURATION
 # ==============================================
 
-JOBS_PACKAGES_DIR = "data/job_packages"
-RESUMES_TAILORED_DIR = "resumes/tailored"
 CANDIDATE_BACKGROUND_PATH = "context/CANDIDATE_BACKGROUND.md"
-RESUME_TEMPLATE = "templates/resume_template.docx"
-MODEL = "claude-sonnet-4-20250514"
 
 CL_STAGE1 = "cl_stage1_draft.txt"
 CL_STAGE4 = "cl_stage4_final.txt"
@@ -486,7 +483,7 @@ def main():
     parser.add_argument('--stage', type=int, required=True, choices=[1, 4],
                         help='Stage to run (1=generate draft, 4=build docx)')
     parser.add_argument('--role', type=str, required=True,
-                        help='Role package folder name (e.g. BAH_LCI_MBSE)')
+                        help='Role package folder name (e.g. Acme_MBSE_Lead)')
     args = parser.parse_args()
 
     STAGE = args.stage
@@ -499,8 +496,8 @@ def main():
     STAGE2_RESUME_PATH = os.path.join(PACKAGE_DIR, "stage2_approved.txt") # fallback bullets
     CL_STAGE1_PATH = os.path.join(PACKAGE_DIR, CL_STAGE1)
     CL_STAGE4_PATH = os.path.join(PACKAGE_DIR, CL_STAGE4)
-    TAILORED_DIR = os.path.join(RESUMES_TAILORED_DIR, ROLE)
-    DOCX_PATH = os.path.join(TAILORED_DIR, f"{ROLE}_CoverLetter.docx")
+    ROLE_DIR = os.path.join(RESUMES_DIR, ROLE)
+    DOCX_PATH = os.path.join(ROLE_DIR, f"{ROLE}_CoverLetter.docx")
 
     if STAGE == 1:
         print("=" * 60)
@@ -623,8 +620,8 @@ def main():
         if not check_overwrite(DOCX_PATH, f"{ROLE}_CoverLetter.docx"):
             sys.exit(0)
 
-        # Ensure tailored output directory exists
-        os.makedirs(TAILORED_DIR, exist_ok=True)
+        # Ensure role output directory exists
+        os.makedirs(ROLE_DIR, exist_ok=True)
 
         print(f"\nParsing {CL_STAGE4}...")
         with open(CL_STAGE4_PATH, encoding='utf-8') as f:

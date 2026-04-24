@@ -4,7 +4,7 @@
 # and a new row in jobs.csv. Opens the file for editing.
 #
 # Usage:
-#   python -m scripts.init_job_package --role Anduril_EW_SE --req REQ-12345
+#   python -m scripts.init_job_package --role Acme_EW_SE --req REQ-12345
 # ==============================================
 
 import argparse
@@ -15,8 +15,9 @@ import subprocess
 import sys
 from datetime import date
 
+from scripts.config import JOBS_PACKAGES_DIR as PACKAGES_DIR
+
 JOBS_CSV = "data/jobs.csv"
-PACKAGES_DIR = "data/job_packages"
 ACTIVE_STATUSES = {"", "PURSUE", "CONSIDER", "APPLIED"}
 
 
