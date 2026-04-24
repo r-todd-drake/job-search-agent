@@ -14,7 +14,7 @@
 
 | File | Action | Responsibility |
 |---|---|---|
-| `docs/features/post-interview-debrief/interview_debrief_template.yaml` | Create | Reference YAML template -- source of truth for field structure and inline comments |
+| `docs/features/post_interview_debrief/interview_debrief_template.yaml` | Create | Reference YAML template -- source of truth for field structure and inline comments |
 | `scripts/phase_debrief.py` | Create | All three modes, validation helpers, AI follow-up integration |
 | `tests/test_phase_debrief.py` | Create | Unit tests for validators; integration tests for each mode |
 | `requirements.txt` | Modify | Add `pyyaml` |
@@ -24,7 +24,7 @@
 ## Task 1: YAML Template + Dependency
 
 **Files:**
-- Create: `docs/features/post-interview-debrief/interview_debrief_template.yaml`
+- Create: `docs/features/post_interview_debrief/interview_debrief_template.yaml`
 - Modify: `requirements.txt`
 
 - [ ] **Step 1: Add pyyaml to requirements.txt**
@@ -37,7 +37,7 @@ pip install pyyaml
 
 - [ ] **Step 2: Create the reference YAML template**
 
-Create `docs/features/post-interview-debrief/interview_debrief_template.yaml`:
+Create `docs/features/post_interview_debrief/interview_debrief_template.yaml`:
 
 ```yaml
 # Post-Interview Debrief
@@ -83,7 +83,7 @@ open_notes: null                 # anything else worth capturing
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/features/post-interview-debrief/interview_debrief_template.yaml requirements.txt
+git add docs/features/post_interview_debrief/interview_debrief_template.yaml requirements.txt
 git commit -m "Add debrief YAML template and pyyaml dependency"
 ```
 
@@ -196,7 +196,7 @@ load_dotenv()
 # CONFIGURATION
 # ==============================================
 
-TEMPLATE_PATH = "docs/features/post-interview-debrief/interview_debrief_template.yaml"
+TEMPLATE_PATH = "docs/features/post_interview_debrief/interview_debrief_template.yaml"
 DEBRIEFS_DIR = "data/debriefs"
 MODEL = "claude-haiku-4-5-20251001"
 

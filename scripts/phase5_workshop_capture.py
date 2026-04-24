@@ -8,7 +8,7 @@
 #
 # Usage:
 #   python -m scripts.phase5_workshop_capture \
-#     --role Viasat_SE_IS --stage hiring_manager
+#     --role Acme_SE_Systems --stage hiring_manager
 # ==============================================
 
 import os
@@ -22,8 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.interview_library_parser import (
     LIBRARY_PATH, TAGS_PATH, init_library, load_tags, _load_library
 )
-
-JOBS_PACKAGES_DIR = "data/job_packages"
+from scripts.config import JOBS_PACKAGES_DIR
 
 # ── Tag keyword map for auto-suggestion ──────────────────────────────────────
 # Keys match controlled vocabulary in interview_library_tags.json.
@@ -60,7 +59,7 @@ TAG_KEYWORDS = {
 def build_parser():
     parser = argparse.ArgumentParser(description="Phase 5 Workshop Capture")
     parser.add_argument("--role", required=True,
-                        help="Role package folder name (e.g. Viasat_SE_IS)")
+                        help="Role package folder name (e.g. Acme_SE_Systems)")
     parser.add_argument("--stage", required=True,
                         help="Interview stage (e.g. hiring_manager, team_panel)")
     return parser

@@ -28,10 +28,10 @@
 #
 # Usage:
 #   python -m scripts.phase5_interview_prep \
-#     --role Viasat_SE_IS \
+#     --role Acme_SE_Systems \
 #     --interview_stage hiring_manager
 #   python -m scripts.phase5_interview_prep \
-#     --role Viasat_SE_IS --dry_run
+#     --role Acme_SE_Systems --dry_run
 # ==============================================
 
 import os
@@ -50,6 +50,12 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
 import scripts.interview_library_parser as _ilp
+from scripts.config import (
+    JOBS_PACKAGES_DIR,
+    CANDIDATE_PROFILE_PATH,
+    EXPERIENCE_LIBRARY_JSON as EXPERIENCE_LIBRARY,
+    MODEL_SONNET as MODEL,
+)
 
 load_dotenv()
 
@@ -57,14 +63,8 @@ load_dotenv()
 # CONFIGURATION
 # ==============================================
 
-JOBS_PACKAGES_DIR = "data/job_packages"
-RESUMES_TAILORED_DIR = "resumes/tailored"
-CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
-EXPERIENCE_LIBRARY = "data/experience_library/experience_library.json"
 OUTPUT_FILENAME = "interview_prep.txt"
 OUTPUT_DOCX_FILENAME = "interview_prep.docx"
-
-MODEL = "claude-sonnet-4-20250514"
 
 # ==============================================
 # SYSTEM PROMPT
@@ -1230,7 +1230,7 @@ def _parse_stage_text(stage_text, source_label="stage_text"):
 def main():
     parser = argparse.ArgumentParser(description='Phase 5 Interview Prep Generator')
     parser.add_argument('--role', type=str, required=True,
-                        help='Role package folder name (e.g. Viasat_SE_IS)')
+                        help='Role package folder name (e.g. Acme_SE_Systems)')
     parser.add_argument('--interview_stage', type=str, default=None,
                         choices=VALID_STAGES,
                         help=f'Interview stage: {", ".join(VALID_STAGES)}')

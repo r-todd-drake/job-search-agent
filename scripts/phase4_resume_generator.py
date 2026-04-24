@@ -20,9 +20,9 @@
 #          generates .docx + runs check_resume.py
 #
 # Usage:
-#   python -m scripts.phase4_resume_generator --stage 1 --role BAH_LCI_MBSE
-#   python -m scripts.phase4_resume_generator --stage 3 --role BAH_LCI_MBSE
-#   python -m scripts.phase4_resume_generator --stage 4 --role BAH_LCI_MBSE
+#   python -m scripts.phase4_resume_generator --stage 1 --role Acme_MBSE_Lead
+#   python -m scripts.phase4_resume_generator --stage 3 --role Acme_MBSE_Lead
+#   python -m scripts.phase4_resume_generator --stage 4 --role Acme_MBSE_Lead
 # ==============================================
 
 import os
@@ -46,15 +46,19 @@ import docx
 
 load_dotenv()
 
+from scripts.config import (
+    JOBS_PACKAGES_DIR,
+    EXPERIENCE_LIBRARY_JSON as EXPERIENCE_LIBRARY,
+    CANDIDATE_PROFILE_PATH,
+    RESUME_TEMPLATE,
+    RESUMES_DIR,
+    MODEL_SONNET,
+)
+
 # ==============================================
 # CONFIGURATION
 # ==============================================
 
-JOBS_PACKAGES_DIR = "data/job_packages"
-EXPERIENCE_LIBRARY = "data/experience_library/experience_library.json"
-CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
-RESUME_TEMPLATE = "templates_local/resume_template.docx"
-RESUMES_TAILORED_DIR = "resumes/tailored"
 CHECK_RESUME_SCRIPT = "scripts/check_resume.py"
 
 # Employer tier definitions - controls bullet priority and trimming order
@@ -301,7 +305,7 @@ EMPLOYER: [next employer]
 Do not include any other text. Follow the format exactly."""
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=MODEL_SONNET,
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -339,7 +343,7 @@ Rules:
 Return ONLY the competency lines, one per line, no numbering, no extra text."""
 
     comp_response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=MODEL_SONNET,
         max_tokens=500,
         messages=[{"role": "user", "content": comp_prompt}]
     )
@@ -554,7 +558,7 @@ OVERALL ASSESSMENT:
 [1-2 sentences on overall fit and readiness for Stage 4.]"""
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=MODEL_SONNET,
         max_tokens=3000,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -862,13 +866,13 @@ def main():
     parser.add_argument('--stage', type=int, required=True, choices=[1, 3, 4],
                         help='Stage to run (1, 3, or 4)')
     parser.add_argument('--role', type=str, required=True,
-                        help='Role package folder name (e.g. BAH_LCI_MBSE)')
+                        help='Role package folder name (e.g. Acme_MBSE_Lead)')
     args = parser.parse_args()
 
     role = args.role
     stage = args.stage
     package_dir = os.path.join(JOBS_PACKAGES_DIR, role)
-    resume_output_dir = os.path.join(RESUMES_TAILORED_DIR, role)
+    resume_output_dir = os.path.join(RESUMES_DIR, role)
 
     # File paths
     jd_path = os.path.join(package_dir, "job_description.txt")

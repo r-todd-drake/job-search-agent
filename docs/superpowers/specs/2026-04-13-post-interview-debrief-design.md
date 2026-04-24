@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-13
 **Feature:** A (of 3-part sequence: A=capture, B=library extraction, C=Phase 5 integration)
-**Proposal:** `docs/features/post-interview-debrief/proposal.md`
+**Proposal:** `docs/features/post_interview_debrief/proposal.md`
 **Review status:** All items resolved — ready to build
 
 ---
@@ -44,7 +44,7 @@ Both write to `data/debriefs/[role-slug]/` — the path already referenced in th
 
 ## YAML Template
 
-**Reference template location:** `docs/features/post-interview-debrief/interview_debrief_template.yaml`
+**Reference template location:** `docs/features/post_interview_debrief/interview_debrief_template.yaml`
 
 **Draft location (created by `--init`):** `data/debriefs/[role]/debrief_[stage]_draft.yaml`
 
@@ -255,6 +255,6 @@ A draft already exists for [role]/[stage]. --interactive will create a separate 
 
 ## Downstream Compatibility
 
-The JSON schema is designed against the phase5-library-integration proposal (`docs/features/phase5-library-integration/proposal.md`), which reads:
+The JSON schema is designed against the phase5-library-integration proposal (`docs/features/phase5_library_integration/proposal.md`), which reads:
 - `data/debriefs/[role-slug]/` for salary fields and continuity summary
 - `what_i_said`, `advancement_read`, `stories_used` (labels), `gaps_surfaced` (labels) per debrief file

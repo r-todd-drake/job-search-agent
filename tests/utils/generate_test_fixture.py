@@ -3,15 +3,15 @@
 # One-time dev utility. Generates tests/fixtures/library/experience_library.md
 # from the real experience_library.md, preserving real format fidelity.
 #
-# Usage:
-#   python scripts/utils/generate_test_fixture.py
-#   python scripts/utils/generate_test_fixture.py --employers 3 --summaries 3
+# Usage (run from project root):
+#   python tests/utils/generate_test_fixture.py
+#   python tests/utils/generate_test_fixture.py --employers 3 --summaries 3
 # ==============================================
 
 import argparse
 import re
 
-LIBRARY_PATH = "../../data/experience_library/experience_library.md"
+LIBRARY_PATH = "data/experience_library/experience_library.md"
 OUTPUT_PATH = "tests/fixtures/library/experience_library.md"
 
 

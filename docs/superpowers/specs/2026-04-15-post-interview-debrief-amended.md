@@ -194,7 +194,7 @@ Read in this order. Do not read files not on this list.
 | File | Purpose | Required? |
 |---|---|---|
 | `CLAUDE.md` | Safety rules, code style (en dashes, no PII, strip_pii usage) | Yes |
-| `docs/features/post-interview-debrief/debrief_proposal_amended.md` | Acceptance criteria for the amendment | Yes |
+| `docs/features/post_interview_debrief/debrief_proposal_amended.md` | Acceptance criteria for the amendment | Yes |
 | `docs/superpowers/specs/2026-04-13-post-interview-debrief-design.md` | Original design spec -- read to understand existing behavior; do not reimplement | Reference |
 | `scripts/phase5_debrief.py` | Existing script to amend | Yes |
 | `tests/test_phase5_debrief.py` | Regression baseline -- 51 tests must pass | Yes |

@@ -21,6 +21,11 @@ from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from scripts.utils.pii_filter import strip_pii
+from scripts.config import (
+    EXPERIENCE_LIBRARY_JSON as LIBRARY_JSON,
+    CANDIDATE_PROFILE_PATH as OUTPUT_PATH,
+    MODEL_SONNET,
+)
 
 load_dotenv()
 
@@ -28,10 +33,8 @@ load_dotenv()
 # CONFIGURATION
 # ==============================================
 
-LIBRARY_JSON = "data/experience_library/experience_library.json"
 EMPLOYERS_DIR = "data/experience_library/employers"
 SUMMARIES_PATH = "data/experience_library/summaries.json"
-OUTPUT_PATH = "data/experience_library/candidate_profile.md"
 API_DELAY = 0.5  # seconds between calls
 
 # Known facts not derivable from bullets alone
@@ -199,7 +202,7 @@ Be conservative. Only list what is explicitly demonstrated, not what can be infe
 
         try:
             response = client.messages.create(
-                model="claude-sonnet-4-20250514",
+                model=MODEL_SONNET,
                 max_tokens=1500,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": safe_prompt}]
@@ -244,7 +247,7 @@ POSITIONING TO AVOID:
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=MODEL_SONNET,
             max_tokens=800,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": safe_summary_prompt}]
@@ -337,7 +340,7 @@ Be thorough on the CONFIRMED GAPS section - it is the most important part of thi
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=MODEL_SONNET,
             max_tokens=4000,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": safe_compile_prompt}]

@@ -15,6 +15,7 @@ from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from scripts.utils.pii_filter import strip_pii
+from scripts.config import JOBS_PACKAGES_DIR as PACKAGES_DIR, CANDIDATE_PROFILE_PATH, MODEL_SONNET as MODEL
 
 load_dotenv()
 
@@ -23,12 +24,8 @@ load_dotenv()
 # ==============================================
 
 JOBS_CSV = "data/jobs.csv"
-PACKAGES_DIR = "data/job_packages"
 OUTPUT_DIR = "outputs"
 RANKED_CSV = os.path.join(OUTPUT_DIR, "ranked_jobs.csv")
-CANDIDATE_PROFILE_PATH = "data/experience_library/candidate_profile.md"
-
-MODEL = "claude-sonnet-4-20250514"
 
 # Only these statuses get semantic analysis - API calls cost money
 ANALYZE_STATUSES = {"PURSUE", "CONSIDER"}

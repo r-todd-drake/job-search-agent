@@ -1,5 +1,5 @@
 # AI Job Search Agent — Project Context
-Last updated: 21 Apr 2026
+Last updated: 23 Apr 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -24,7 +24,7 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
 - **Tier 2 (live):** `pytest -m live -v` — run before promoting a phase or after API changes
 - **CI:** GitHub Actions at `.github/workflows/test.yml` — green badge on README
-- **359 mock tests** across utils, phases 1–5. All passing on master as of 21 Apr 2026.
+- **384 mock tests** across utils, phases 1–5. All passing on master as of 23 Apr 2026.
 - **Test dependencies:** `requirements-dev.txt` (pytest, pytest-mock)
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 

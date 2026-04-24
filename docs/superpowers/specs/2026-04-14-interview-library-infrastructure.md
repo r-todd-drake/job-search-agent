@@ -18,7 +18,7 @@ Read this document completely before entering Plan mode.
 
 Phase 5 owns everything from interview prep generation through post-interview capture
 and library maintenance. The full workflow is documented at:
-`docs/features/phase5-workflow-orchestration/phase5_workflow_orchestration.md`
+`docs/features/phase5_workflow_orchestration/phase5_workflow_orchestration.md`
 
 The short version:
 
@@ -252,9 +252,9 @@ Unit tests must cover:
 
 Read these before entering Plan mode:
 
-1. `docs/features/phase5-workshop-capture/proposal.md` -- full AC for the capture
+1. `docs/features/phase5_workshop_capture/proposal.md` -- full AC for the capture
    script that will consume this infrastructure (read to understand consumer needs)
-2. `docs/features/phase5-library-integration/proposal.md` -- AC for library
+2. `docs/features/phase5_library_integration/proposal.md` -- AC for library
    integration into prep (read to understand the other consumer)
 3. `scripts/phase5_debrief.py` -- understand existing patterns (imports, structure,
    CLAUDE.md compliance)

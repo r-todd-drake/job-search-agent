@@ -10,9 +10,9 @@
 # Output: data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json
 #
 # Usage:
-#   python -m scripts.phase5_debrief --role Viasat_SE_IS --stage hiring_manager --init
-#   python -m scripts.phase5_debrief --role Viasat_SE_IS --stage hiring_manager --convert
-#   python -m scripts.phase5_debrief --role Viasat_SE_IS --stage hiring_manager --interactive
+#   python -m scripts.phase5_debrief --role Acme_SE_Systems --stage hiring_manager --init
+#   python -m scripts.phase5_debrief --role Acme_SE_Systems --stage hiring_manager --convert
+#   python -m scripts.phase5_debrief --role Acme_SE_Systems --stage hiring_manager --interactive
 # ==============================================
 
 import os
@@ -27,6 +27,7 @@ from anthropic import Anthropic
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
+from scripts.config import MODEL_HAIKU as MODEL
 
 load_dotenv()
 
@@ -36,7 +37,6 @@ load_dotenv()
 
 TEMPLATE_PATH = "templates/interview_debrief_template.yaml"
 DEBRIEFS_DIR = "data/debriefs"
-MODEL = "claude-haiku-4-5-20251001"
 
 VALID_STAGES = ["recruiter_screen", "hiring_manager", "panel", "final"]
 VALID_FORMATS = ["phone", "video", "onsite"]
@@ -71,7 +71,7 @@ def get_followup_question(client, section_name: str, response: str) -> str:
 
 def build_parser():
     parser = argparse.ArgumentParser(description="Post-interview debrief capture")
-    parser.add_argument("--role", required=True, help="Role slug (e.g. Viasat_SE_IS)")
+    parser.add_argument("--role", required=True, help="Role slug (e.g. Acme_SE_Systems)")
     parser.add_argument(
         "--stage", required=True, choices=VALID_STAGES, help="Interview stage"
     )

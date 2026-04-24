@@ -30,10 +30,10 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 | ------ | ----- | ------- |
 | `phase4_resume_generator.py --stage 1` | `data/job_packages/[role]/job_description.txt`, `data/experience_library/experience_library.json`, `data/experience_library/candidate_profile.md` | `data/job_packages/[role]/stage1_draft.txt` |
 | `phase4_resume_generator.py --stage 3` | `data/job_packages/[role]/stage2_approved.txt`, `data/job_packages/[role]/job_description.txt` | `data/job_packages/[role]/stage3_review.txt` |
-| `phase4_resume_generator.py --stage 4` | `data/job_packages/[role]/stage4_final.txt` (optional, fallback: `stage2_approved.txt`), `templates_local/resume_template.docx` | `resumes/tailored/[role]/[role]_Resume.docx` |
+| `phase4_resume_generator.py --stage 4` | `data/job_packages/[role]/stage4_final.txt` (optional, fallback: `stage2_approved.txt`), `templates_local/resume_template.docx` | `resumes/[role]/[role]_Resume.docx` |
 | `check_resume.py` | `data/job_packages/[role]/stage2_approved.txt`, `context/CANDIDATE_BACKGROUND.md` | `data/job_packages/[role]/check_results.txt` |
 | `phase4_cover_letter.py --stage 1` | `data/job_packages/[role]/job_description.txt`, `context/CANDIDATE_BACKGROUND.md` | `data/job_packages/[role]/cl_stage1_draft.txt` |
-| `phase4_cover_letter.py --stage 4` | `data/job_packages/[role]/cl_stage4_final.txt`, `templates/resume_template.docx` | `resumes/tailored/[role]/[role]_CoverLetter.docx` |
+| `phase4_cover_letter.py --stage 4` | `data/job_packages/[role]/cl_stage4_final.txt`, `templates_local/resume_template.docx` | `resumes/[role]/[role]_CoverLetter.docx` |
 | `check_cover_letter.py` | `data/job_packages/[role]/cl_stage2_approved.txt`, `context/CANDIDATE_BACKGROUND.md` | `data/job_packages/[role]/cl_stage3_review.txt` |
 
 ## Phase 5 — Interview

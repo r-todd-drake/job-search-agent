@@ -28,7 +28,7 @@
 
 **Read before starting -- in this order:**
 1. `CLAUDE.md` -- safety rules, code style (en dashes, no PII)
-2. `docs/features/phase5-workshop-capture/proposal.md` -- primary spec; all acceptance criteria
+2. `docs/features/phase5_workshop_capture/proposal.md` -- primary spec; all acceptance criteria
 3. `docs/superpowers/plans/2026-04-15-workshop-capture.md` -- this plan
 4. `tests/test_phase5_thankyou.py` -- test pattern reference (monkeypatch, tmp_path, MagicMock style used in this project)
 
@@ -637,7 +637,7 @@ git commit -m "Add interview_library_parser.py: init, load, get_stories/gaps/que
 ##
 ## For a fresh CC instance starting Session B, provide:
 ##   - CLAUDE.md
-##   - docs/features/phase5-workshop-capture/proposal.md
+##   - docs/features/phase5_workshop_capture/proposal.md
 ##   - docs/superpowers/plans/2026-04-15-workshop-capture.md  (this file)
 ##   - scripts/interview_library_parser.py  (the Session A output)
 ##   - scripts/phase5_interview_prep.py  (to understand docx structure)

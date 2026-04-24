@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-15
 **Status:** Approved
-**Proposal:** `docs/features/phase5-thankyou-letters/phase5_thankyou_proposal.md`
+**Proposal:** `docs/features/phase5_thankyou_letters/phase5_thankyou_proposal.md`
 
 ---
 

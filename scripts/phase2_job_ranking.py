@@ -16,6 +16,7 @@ import csv
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+from scripts.config import JOBS_PACKAGES_DIR as PACKAGES_DIR
 
 load_dotenv()
 
@@ -24,7 +25,6 @@ load_dotenv()
 # ==============================================
 
 JOBS_CSV = "data/jobs.csv"
-PACKAGES_DIR = "data/job_packages"
 OUTPUT_DIR = "outputs"
 RANKED_OUTPUT = os.path.join(OUTPUT_DIR, "ranked_jobs.csv")
 REPORT_OUTPUT = os.path.join(OUTPUT_DIR, f"ranking_report_{datetime.now().strftime('%Y%m%d_%H%M')}.txt")
