@@ -9,6 +9,24 @@ Last updated: 23 Apr 2026 (items 12, 15, 16 completed; codebase cleanup items 1-
 
 ### Development
 
+17. __URGENT — Generalize candidate data out of all scripts__ *(GitHub exposure risk)*
+   - Problem: `phase3_build_candidate_profile.py` and other scripts contain hardcoded
+     personal information (intro monologue, short tenure explanation, education, military
+     service, clearance, confirmed gaps) that is specific to one candidate. Scripts pushed
+     to GitHub expose this information and cannot be used by anyone else without modification.
+   - Goal 1: Scripts should be usable by any candidate who downloads them from GitHub
+   - Goal 2: All candidate-specific content must live outside tracked scripts
+   - Proposed approach: design a candidate data layer — likely a combination of `.env`
+     (for PII: name, contact, clearance) and a tracked template/config file
+     (for career narrative: intro monologue, short tenure explanation, known facts,
+     confirmed gaps) that each candidate fills in for themselves
+   - Candidates to assess: how much of `KNOWN_FACTS`, `INTRO_MONOLOGUE`, and
+     `SHORT_TENURE_EXPLANATION` can be externalized to `.env` vs. a YAML/markdown
+     template vs. left as structured prompts for the candidate to fill in
+   - Do NOT begin implementation until the data layer design is decided
+   - __Interim mitigation (in progress):__ manual scrub of all scripts containing PII;
+     add affected scripts to `.gitignore` until they are generalized
+
 4. __Phase 6 — Networking support__
    - Scoped and ready to build
    - Standalone script: python scripts/phase6_networking.py --role [role]
