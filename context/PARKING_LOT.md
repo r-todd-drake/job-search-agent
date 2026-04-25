@@ -9,23 +9,42 @@ Last updated: 23 Apr 2026 (items 12, 15, 16 completed; codebase cleanup items 1-
 
 ### Development
 
-17. __URGENT — Generalize candidate data out of all scripts__ *(GitHub exposure risk)*
-   - Problem: `phase3_build_candidate_profile.py` and other scripts contain hardcoded
-     personal information (intro monologue, short tenure explanation, education, military
-     service, clearance, confirmed gaps) that is specific to one candidate. Scripts pushed
-     to GitHub expose this information and cannot be used by anyone else without modification.
-   - Goal 1: Scripts should be usable by any candidate who downloads them from GitHub
-   - Goal 2: All candidate-specific content must live outside tracked scripts
-   - Proposed approach: design a candidate data layer — likely a combination of `.env`
-     (for PII: name, contact, clearance) and a tracked template/config file
-     (for career narrative: intro monologue, short tenure explanation, known facts,
-     confirmed gaps) that each candidate fills in for themselves
-   - Candidates to assess: how much of `KNOWN_FACTS`, `INTRO_MONOLOGUE`, and
-     `SHORT_TENURE_EXPLANATION` can be externalized to `.env` vs. a YAML/markdown
-     template vs. left as structured prompts for the candidate to fill in
-   - Do NOT begin implementation until the data layer design is decided
-   - __Interim mitigation (in progress):__ manual scrub of all scripts containing PII;
-     add affected scripts to `.gitignore` until they are generalized
+17a. __URGENT — Remove PII from scripts; house in `context/candidate/` data store__
+   - Problem: 6 scripts are gitignored because they contain hardcoded personal data
+     (education, military history, certs, confirmed gaps, intro monologue, short tenure
+     explanation). They need to be back on GitHub as shareable framework code.
+   - Decided architecture: `context/candidate/` folder
+     - Entire folder gitignored via `context/candidate/*` (single rule)
+     - Exception: `context/candidate/candidate_config.example.yaml` tracked —
+       blank template with comments; what a new user fills in when they clone the repo
+     - `context/candidate/candidate_config.yaml` — structured career narrative:
+       education, certs, military service, confirmed skills, confirmed gaps,
+       intro monologue, short tenure explanation
+     - `.env` — already handles scalar PII (name, phone, email, clearance, API key);
+       extend with any remaining scalars not already covered
+   - New loader: `scripts/utils/candidate_config.py` (tracked) — loads and exposes
+     all fields from `candidate_config.yaml`; gitignored scripts import from here
+     instead of defining constants locally; scripts become PII-free
+   - Also move `context/CANDIDATE_BACKGROUND.md` and `context/PIPELINE_STATUS.md`
+     into `context/candidate/` for complete separation of project docs from personal data
+     (requires updating `.gitignore`, `CLAUDE.md`, and `PROJECT_CONTEXT.md` references)
+   - Refactor order: (1) audit 5 remaining gitignored scripts to inventory all hardcoded
+     PII; (2) design `candidate_config.yaml` schema to cover all fields; (3) build loader;
+     (4) refactor scripts one at a time and restore to git tracking as each is cleaned
+   - Sets up the 17b pattern naturally: `context/domain/` for domain config
+   - Can proceed concurrently with 17b — they touch different parts of the codebase
+   - Design summary: `docs/superpowers/specs/2026-04-25-candidate-data-store.md`
+   - __Interim:__ affected scripts remain gitignored until refactored
+
+17b. __NOT URGENT — Generalize domain-specific vocabulary and prompt language__
+   - Problem: tag lists, keyword sets, and prompt language are tuned for defense SE;
+     the pipeline cannot serve a different domain without modifying scripts directly
+   - Examples: `data/interview_library_tags.json` (20-tag defense vocabulary),
+     system prompt phrases like "defense and aerospace", "TS/SCI", "MBSE" in Phase 4/5
+   - Goal: `context/domain/domain_config.yaml` (gitignored) holds all domain-specific
+     config; `context/domain/domain_config.example.yaml` (tracked) ships as blank template
+   - Pattern mirrors 17a — do NOT begin until 17a loader design is finalized, since
+     the same pattern will apply
 
 4. __Phase 6 — Networking support__
    - Scoped and ready to build
