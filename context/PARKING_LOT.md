@@ -3,38 +3,11 @@
 
 __Load for: planning next development session, prioritizing work items__  
 *When an Item is complete summarize in context/PARKING_LOT_DONE.md*  
-Last updated: 23 Apr 2026 (items 12, 15, 16 completed; codebase cleanup items 1-4)
+Last updated: 25 Apr 2026 (item 17a complete — candidate data store)
 
 ## Active Items
 
 ### Development
-
-17a. __URGENT — Remove PII from scripts; house in `context/candidate/` data store__
-   - Problem: 6 scripts are gitignored because they contain hardcoded personal data
-     (education, military history, certs, confirmed gaps, intro monologue, short tenure
-     explanation). They need to be back on GitHub as shareable framework code.
-   - Decided architecture: `context/candidate/` folder
-     - Entire folder gitignored via `context/candidate/*` (single rule)
-     - Exception: `context/candidate/candidate_config.example.yaml` tracked —
-       blank template with comments; what a new user fills in when they clone the repo
-     - `context/candidate/candidate_config.yaml` — structured career narrative:
-       education, certs, military service, confirmed skills, confirmed gaps,
-       intro monologue, short tenure explanation
-     - `.env` — already handles scalar PII (name, phone, email, clearance, API key);
-       extend with any remaining scalars not already covered
-   - New loader: `scripts/utils/candidate_config.py` (tracked) — loads and exposes
-     all fields from `candidate_config.yaml`; gitignored scripts import from here
-     instead of defining constants locally; scripts become PII-free
-   - Also move `context/CANDIDATE_BACKGROUND.md` and `context/PIPELINE_STATUS.md`
-     into `context/candidate/` for complete separation of project docs from personal data
-     (requires updating `.gitignore`, `CLAUDE.md`, and `PROJECT_CONTEXT.md` references)
-   - Refactor order: (1) audit 5 remaining gitignored scripts to inventory all hardcoded
-     PII; (2) design `candidate_config.yaml` schema to cover all fields; (3) build loader;
-     (4) refactor scripts one at a time and restore to git tracking as each is cleaned
-   - Sets up the 17b pattern naturally: `context/domain/` for domain config
-   - Can proceed concurrently with 17b — they touch different parts of the codebase
-   - Design summary: `docs/superpowers/specs/2026-04-25-candidate-data-store.md`
-   - __Interim:__ affected scripts remain gitignored until refactored
 
 17b. __NOT URGENT — Generalize domain-specific vocabulary and prompt language__
    - Problem: tag lists, keyword sets, and prompt language are tuned for defense SE;

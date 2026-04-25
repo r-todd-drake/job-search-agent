@@ -2,9 +2,12 @@
 # Parking Lot Done
 
 __Load for: planning next development session, understancing completed items__  
-Last updated: 23 Apr 2026
+Last updated: 25 Apr 2026
 
 ## Completed (recent)
+
+- Candidate data store — 17a — COMPLETE (25 Apr 2026)
+  `context/candidate/` folder created and gitignored via single rule. `candidate_config.example.yaml` tracked as blank template. `scripts/utils/candidate_config.py` loader built with `load()`, `get_hardcoded_rules()`, `build_known_facts()`. All 6 formerly-gitignored scripts refactored to PII-free and restored to git tracking: `check_resume.py`, `check_cover_letter.py` (HARDCODED_RULES → loader), `phase4_resume_generator.py` (EMPLOYER_TIERS, CHRONOLOGICAL_ORDER, build_docx strings → loader), `phase2_semantic_analyzer.py` (hardcoded fallback profile → loader), `phase3_build_candidate_profile.py` (KNOWN_FACTS, INTRO_MONOLOGUE, SHORT_TENURE_EXPLANATION → loader), `phase2_job_ranking.py` (no PII — restored directly; KEYWORDS generalization deferred to 17b). `CANDIDATE_BACKGROUND.md` and `PIPELINE_STATUS.md` moved to `context/candidate/`. `.gitignore`, `CLAUDE.md`, `SCRIPT_INDEX`, `PROJECT_CONTEXT.md` all updated. 8 loader unit tests. 392 mock tests passing.
 
 - Move generate_test_fixture.py to tests/utils/ (item #15) — COMPLETE (23 Apr 2026)
   `scripts/utils/generate_test_fixture.py` moved to `tests/utils/generate_test_fixture.py` via `git mv`. Path was already project-root-relative — no fix needed. Correctly classified as a dev utility, not a production module.
