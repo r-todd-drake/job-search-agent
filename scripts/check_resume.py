@@ -27,6 +27,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
 from scripts.config import JOBS_PACKAGES_DIR, MODEL_SONNET as MODEL
+from scripts.utils import candidate_config
 
 load_dotenv()
 
@@ -42,52 +43,6 @@ SYSTEM_PROMPT = (
     "You flag overclaiming, implied gaps, and language violations. "
     "Return only valid JSON – no markdown fences, no preamble, no explanation."
 )
-
-# Hardcoded Layer 1 rules: (rule_name, pattern, fix, case_sensitive)
-HARDCODED_RULES = [
-    (
-        "Em dash",
-        "\u2014",
-        "Replace \u2014 with \u2013 (en dash)",
-        True,
-    ),
-    (
-        "CompTIA Security+ reference",
-        "CompTIA Security+",
-        "Remove – certification is lapsed and must not appear on resume",
-        False,
-    ),
-    (
-        "Active TS/SCI",
-        "Active TS/SCI",
-        "Use 'Current TS/SCI' between employers – 'Active' only when employed on a program",
-        True,
-    ),
-    (
-        "Plank Holder (capitalized)",
-        "Plank Holder",
-        "Use 'Plank Owner' (two words, capitalized)",
-        True,
-    ),
-    (
-        "plank holder (lowercase)",
-        "plank holder",
-        "Use 'Plank Owner' (two words, capitalized)",
-        False,
-    ),
-    (
-        "plankowner (one word)",
-        "plankowner",
-        "Use 'Plank Owner' (two words, capitalized)",
-        False,
-    ),
-    (
-        "safety-critical",
-        "safety-critical",
-        "Use 'mission-critical' instead",
-        False,
-    ),
-]
 
 GAP_STOP_WORDS = {
     'NO', 'OR', 'AND', 'THE', 'NOT', 'USE', 'VIA', 'ANY', 'ONLY', 'NEVER',
@@ -180,7 +135,7 @@ def run_layer1(resume_lines, gap_terms):
     findings = []
 
     # Hardcoded rules
-    for rule_name, pattern, fix, case_sensitive in HARDCODED_RULES:
+    for rule_name, pattern, fix, case_sensitive in candidate_config.get_hardcoded_rules("resume"):
         for i, line in enumerate(resume_lines, start=1):
             if not line.strip():
                 continue
