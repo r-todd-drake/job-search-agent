@@ -16,7 +16,7 @@ def load():
                 f"fill in your data, and save as candidate_config.yaml."
             )
         with open(_CONFIG_PATH, encoding="utf-8") as f:
-            _config = yaml.safe_load(f)
+            _config = yaml.safe_load(f) or {}
     return _config
 
 
@@ -32,7 +32,7 @@ def get_hardcoded_rules(document_type="resume"):
     rules.append((
         "Em dash",
         "—",
-        "Replace — with – (en dash)",
+        "Replace em dash with en dash",
         True,
     ))
 
@@ -59,7 +59,7 @@ def get_hardcoded_rules(document_type="resume"):
         rules.append((
             term.get("rule_name", term["pattern"]),
             term["pattern"],
-            f"Use '{term['replacement']}' instead",
+            f"Use '{term.get('replacement', '')}' instead",
             term.get("case_sensitive", False),
         ))
 
