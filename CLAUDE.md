@@ -12,12 +12,19 @@ AI-powered job search automation system. Python scripts for job ranking, resume 
 - data/ — contains personal career data, resumes, job packages
 - resumes/ — contains tailored resume documents
 - outputs/ — contains generated reports
+- context/candidate/candidate_config.example.yaml — blank template (tracked, read-only)
 
 **Important:** .gitignore does NOT prevent Claude's tools (Glob, Read) from accessing these paths. Do not browse these directories unprompted or include them in exploratory searches.
+
+### Gitignored (personal data, never commit):
+- context/candidate/candidate_config.yaml — personal career data (gitignored)
+- context/candidate/CANDIDATE_BACKGROUND.md — moved from context/ root (gitignored)
+- context/candidate/PIPELINE_STATUS.md — moved from context/ root (gitignored)
 
 ### Safe to read and edit:
 - scripts/*.py — all Python automation scripts
 - scripts/utils/*.py — utility scripts
+- scripts/utils/candidate_config.py — candidate data loader
 - context/*.md — candidate background, decisions log, project context
 - README.md
 - requirements.txt
