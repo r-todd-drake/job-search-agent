@@ -1,0 +1,401 @@
+# ==============================================
+# check_resume.py
+# API-based resume quality checker.
+# Two-layer architecture:
+#   Layer 1 – fast pre-flight string matching
+#   Layer 2 – single API call for nuanced assessment
+#
+# Reads stage2_approved.txt (text stage file).
+# Constraints loaded dynamically from CANDIDATE_BACKGROUND.md.
+#
+# Usage:
+#   python -m scripts.check_resume --role [role]
+# Example:
+#   python -m scripts.check_resume --role Acme_MBSE_Lead
+# ==============================================
+
+import io
+import os
+import re
+import sys
+import json
+import argparse
+
+import anthropic
+from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from scripts.utils.pii_filter import strip_pii
+from scripts.config import JOBS_PACKAGES_DIR, MODEL_SONNET as MODEL
+from scripts.utils import candidate_config
+
+load_dotenv()
+
+# ==============================================
+# CONSTANTS
+# ==============================================
+
+CANDIDATE_BACKGROUND_PATH = "context/candidate/CANDIDATE_BACKGROUND.md"
+
+SYSTEM_PROMPT = (
+    "You are a resume quality reviewer for a defense and aerospace systems engineering candidate. "
+    "You assess resumes for accuracy, honesty, and alignment with confirmed experience. "
+    "You flag overclaiming, implied gaps, and language violations. "
+    "Return only valid JSON – no markdown fences, no preamble, no explanation."
+)
+
+GAP_STOP_WORDS = {
+    'NO', 'OR', 'AND', 'THE', 'NOT', 'USE', 'VIA', 'ANY', 'ONLY', 'NEVER',
+    'CLAIM', 'THESE', 'ETC', 'SE', 'DO', 'AS', 'AT', 'IN', 'OF', 'TO',
+    'BE', 'BY', 'IF', 'IS', 'IT', 'AN', 'ON', 'UP',
+    'AI',  # too generic – Shield AI, etc. would produce false positives
+}
+
+GAP_TERM_MIN_LENGTH = 3  # filters out "AI" and other 2-char noise
+
+
+# ==============================================
+# SECTION EXTRACTION
+# ==============================================
+
+def extract_section(text, heading):
+    """Extract content between heading and next ## heading."""
+    lines = text.splitlines()
+    in_section = False
+    result = []
+    for line in lines:
+        if line.startswith(heading):
+            in_section = True
+            continue
+        if in_section and line.startswith('## '):
+            break
+        if in_section:
+            result.append(line)
+    return '\n'.join(result)
+
+
+# ==============================================
+# GAP TERM EXTRACTION
+# ==============================================
+
+def extract_gap_terms(background_text):
+    """
+    Dynamically extract tool/credential names from the Confirmed Gaps section
+    of CANDIDATE_BACKGROUND.md. Returns a set of lowercase strings for matching.
+    """
+    gaps_section = extract_section(background_text, "## Confirmed Gaps")
+    terms = set()
+
+    for line in gaps_section.splitlines():
+        if not line.strip().startswith('-'):
+            continue
+
+        # Pass 1 – content inside parentheses, comma-split
+        paren_matches = re.findall(r'\(([^)]+)\)', line)
+        for match in paren_matches:
+            for part in match.split(','):
+                part = part.strip().rstrip('.')
+                # Strip trailing qualifiers like "etc."
+                part = re.sub(r'\s+etc\.?$', '', part).strip()
+                if part and len(part) >= 2:
+                    terms.add(part)
+
+        # Pass 2 – ALL-CAPS acronyms and hyphenated standards
+        acronyms = re.findall(
+            r'\b(?:[A-Z]{2,}(?:[/-][A-Z0-9]+)*|DO-\d+|MIL-STD-\d+)\b', line
+        )
+        for term in acronyms:
+            if term not in GAP_STOP_WORDS:
+                terms.add(term)
+
+        # Pass 3 – CamelCase product names
+        camel = re.findall(r'\b[A-Z][a-z]+(?:[A-Z][a-z]*)+\b', line)
+        for term in camel:
+            if term not in GAP_STOP_WORDS:
+                terms.add(term)
+
+    # Remove short or stop-word-only terms
+    cleaned = set()
+    for t in terms:
+        if len(t) >= GAP_TERM_MIN_LENGTH and t.upper() not in GAP_STOP_WORDS:
+            cleaned.add(t)
+
+    return cleaned
+
+
+# ==============================================
+# LAYER 1 – STRING MATCHING
+# ==============================================
+
+def run_layer1(resume_lines, gap_terms):
+    """
+    Run pre-flight string checks against resume lines.
+    Returns list of finding dicts.
+    """
+    findings = []
+
+    # Hardcoded rules
+    for rule_name, pattern, fix, case_sensitive in candidate_config.get_hardcoded_rules("resume"):
+        for i, line in enumerate(resume_lines, start=1):
+            if not line.strip():
+                continue
+            check_line = line if case_sensitive else line.lower()
+            check_pattern = pattern if case_sensitive else pattern.lower()
+            if check_pattern in check_line:
+                snippet = line.strip()[:120] + ('...' if len(line.strip()) > 120 else '')
+                findings.append({
+                    "layer": 1,
+                    "rule": rule_name,
+                    "line": i,
+                    "flagged_text": snippet,
+                    "fix": fix,
+                })
+                break  # Flag each rule once
+
+    # Dynamic gap term rules – skip section headers to avoid matching employer names
+    for term in sorted(gap_terms):
+        for i, line in enumerate(resume_lines, start=1):
+            if not line.strip():
+                continue
+            if line.strip().startswith('##'):
+                continue
+            # Word-boundary match, case-insensitive
+            # Escape special regex chars in term
+            try:
+                pattern = r'\b' + re.escape(term) + r'\b'
+                if re.search(pattern, line, re.IGNORECASE):
+                    snippet = line.strip()[:120] + ('...' if len(line.strip()) > 120 else '')
+                    findings.append({
+                        "layer": 1,
+                        "rule": f"Confirmed gap referenced: {term}",
+                        "line": i,
+                        "flagged_text": snippet,
+                        "fix": f"Remove or rephrase – '{term}' is in the confirmed gaps list (no professional experience to claim)",
+                    })
+                    break
+            except re.error:
+                continue
+
+    return findings
+
+
+# ==============================================
+# LAYER 2 – API ASSESSMENT
+# ==============================================
+
+def run_layer2(client, resume_text, gaps_section, banned_section):
+    """
+    Single API call for nuanced gap and claims assessment.
+    Returns list of finding dicts. Falls back to raw output on JSON parse failure.
+    """
+    prompt = f"""Review this resume text for violations against the confirmed gaps and banned language rules below.
+
+CONFIRMED GAPS (candidate has no professional experience with these – do not claim or imply):
+{gaps_section}
+
+BANNED / CORRECTED LANGUAGE (specific terms and their correct replacements):
+{banned_section}
+
+RESUME TEXT:
+{resume_text}
+
+Assess the resume for:
+- Claims that imply experience with confirmed gap tools, credentials, or domains
+- Use of banned terms or language that should be corrected
+- Overclaiming seniority, scope, or leadership beyond what the role history supports
+- Implied experience (e.g. phrases that suggest tool ownership or domain authority not in confirmed tools)
+- Anything a string match would miss but a careful reviewer would catch
+
+IMPORTANT – EM DASH CLARIFICATION:
+The em dash is the specific character \u2014 (–). Only flag this character as a violation.
+Hyphens (-) in compound words such as "end-to-end", "system-of-systems", "mission-critical",
+"real-time" are correct usage and must NOT be flagged as em dash violations.
+
+IMPORTANT – ONLY FLAG ACTUAL VIOLATIONS:
+Only flag language that is actually wrong in the resume text. Do NOT flag language that already
+conforms to the rules. Examples of correct language that must NOT be flagged:
+- "mission-critical" – already the correct term, do not flag
+- "Current TS/SCI" – already the correct form, do not flag
+- "Plank Owner" – already the correct form, do not flag
+Flag only what is actually present and actually wrong, not what demonstrates compliance.
+
+Return ONLY a raw JSON array. No markdown fences. No explanation. No preamble.
+If no violations found, return an empty array: []
+
+Each finding must follow this exact structure:
+{{
+  "violation_type": "short label",
+  "line_reference": "line N" or "N/A",
+  "flagged_text": "exact quoted text from resume (keep short)",
+  "suggested_fix": "specific correction"
+}}"""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=1500,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    raw = response.content[0].text.strip()
+
+    try:
+        findings_raw = json.loads(raw)
+        findings = []
+        for f in findings_raw:
+            findings.append({
+                "layer": 2,
+                "rule": f.get("violation_type", "Unknown"),
+                "line": f.get("line_reference", "N/A"),
+                "flagged_text": f.get("flagged_text", ""),
+                "fix": f.get("suggested_fix", ""),
+            })
+        return findings
+    except json.JSONDecodeError:
+        print("\n  WARNING: Layer 2 response was not valid JSON. Raw output:")
+        print("  " + raw[:500])
+        # Count as 1 finding for exit code purposes
+        return [{
+            "layer": 2,
+            "rule": "JSON parse failure",
+            "line": "N/A",
+            "flagged_text": raw[:200],
+            "fix": "Review raw API output above manually",
+        }]
+
+
+# ==============================================
+# OUTPUT FORMATTING
+# ==============================================
+
+def print_findings(findings, layer_num, layer_label):
+    """Print findings for one layer. Returns count."""
+    layer_findings = [f for f in findings if f["layer"] == layer_num]
+    if not layer_findings:
+        print(f"  {layer_label}: No violations found.")
+    else:
+        for f in layer_findings:
+            line_ref = f"Line {f['line']}" if str(f['line']).isdigit() else f['line']
+            print(f"\n  [L{f['layer']} \u2013 {f['rule']}]")
+            print(f"    {line_ref}: \"{f['flagged_text']}\"")
+            print(f"    Fix: {f['fix']}")
+    return len(layer_findings)
+
+
+# ==============================================
+# VALIDATION
+# ==============================================
+
+def validate_inputs(package_dir, stage2_path):
+    errors = []
+    if not os.path.exists(package_dir):
+        errors.append(f"Package folder not found: {package_dir}")
+    if not os.path.exists(stage2_path):
+        errors.append(f"stage2_approved.txt not found: {stage2_path}")
+    if not os.path.exists(CANDIDATE_BACKGROUND_PATH):
+        errors.append(f"CANDIDATE_BACKGROUND.md not found: {CANDIDATE_BACKGROUND_PATH}")
+    if errors:
+        print("============================================================")
+        print("RESUME QUALITY CHECK v2 \u2013 INPUT ERROR")
+        print("============================================================")
+        for e in errors:
+            print(f"  ERROR: {e}")
+        sys.exit(1)
+
+
+# ==============================================
+# MAIN
+# ==============================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Resume quality checker v2 – Layer 1 string matching + Layer 2 API assessment"
+    )
+    parser.add_argument("--role", required=True, help="Role folder name (e.g. Acme_MBSE_Lead)")
+    args = parser.parse_args()
+
+    ROLE = args.role
+    PACKAGE_DIR = os.path.join(JOBS_PACKAGES_DIR, ROLE)
+    STAGE2_PATH = os.path.join(PACKAGE_DIR, "stage2_approved.txt")
+
+    validate_inputs(PACKAGE_DIR, STAGE2_PATH)
+
+    RESULTS_PATH = os.path.join(PACKAGE_DIR, "check_results.txt")
+
+    # Capture all output to file – validation errors above still go to terminal
+    buffer = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buffer
+
+    try:
+        _run_checks(ROLE, PACKAGE_DIR, STAGE2_PATH)
+    finally:
+        sys.stdout = old_stdout
+
+    output = buffer.getvalue()
+    with open(RESULTS_PATH, 'w', encoding='utf-8') as f:
+        f.write(output)
+
+    print(f"Results written to {RESULTS_PATH}")
+
+    # Determine exit code from output content
+    sys.exit(1 if "Status: FAIL" in output else 0)
+
+
+def _run_checks(ROLE, PACKAGE_DIR, STAGE2_PATH):
+    """Run both check layers. All output goes to stdout (captured by caller)."""
+    print("============================================================")
+    print("RESUME QUALITY CHECK v2")
+    print("============================================================")
+    print(f"Role:   {ROLE}")
+    print(f"Source: {STAGE2_PATH}")
+
+    # Load resume text
+    with open(STAGE2_PATH, 'r', encoding='utf-8') as f:
+        resume_text = f.read()
+    resume_lines = resume_text.splitlines()
+
+    # Load background
+    with open(CANDIDATE_BACKGROUND_PATH, 'r', encoding='utf-8') as f:
+        background_text = f.read()
+
+    # ── LAYER 1 ────────────────────────────────────────────────
+    print("\n--- LAYER 1: Pre-flight checks ---")
+    print("Loading CANDIDATE_BACKGROUND.md...")
+    gap_terms = extract_gap_terms(background_text)
+    print(f"  Gap terms extracted: {len(gap_terms)} terms")
+    print("Running string checks...")
+
+    l1_findings = run_layer1(resume_lines, gap_terms)
+    l1_count = print_findings(l1_findings, 1, "LAYER 1")
+
+    # ── LAYER 2 ────────────────────────────────────────────────
+    print("\n--- LAYER 2: API assessment ---")
+    print("Stripping PII...")
+    safe_resume = strip_pii(resume_text)
+    gaps_section = extract_section(background_text, "## Confirmed Gaps")
+    banned_section = extract_section(background_text, "## Banned / Corrected Language")
+
+    print("Calling API...")
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    l2_findings = run_layer2(client, safe_resume, gaps_section, banned_section)
+    l2_count = print_findings(l2_findings, 2, "LAYER 2")
+
+    # ── SUMMARY ────────────────────────────────────────────────
+    total = l1_count + l2_count
+    print("\n============================================================")
+    print("SUMMARY")
+    print("============================================================")
+    print(f"Layer 1: {l1_count} violation(s)")
+    print(f"Layer 2: {l2_count} finding(s)")
+    print(f"Total:   {total}")
+    print()
+    if total == 0:
+        print("Status: PASS")
+    else:
+        print(f"Status: FAIL \u2013 {total} violation(s) found. Correct stage2_approved.txt and rerun.")
+    print("============================================================")
+
+
+if __name__ == "__main__":
+    main()
