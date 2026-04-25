@@ -15,6 +15,7 @@ from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from scripts.utils.pii_filter import strip_pii
+from scripts.utils import candidate_config
 from scripts.config import JOBS_PACKAGES_DIR as PACKAGES_DIR, CANDIDATE_PROFILE_PATH, MODEL_SONNET as MODEL
 
 load_dotenv()
@@ -42,14 +43,14 @@ def load_candidate_profile():
         print(f"WARNING: candidate_profile.md not found at {CANDIDATE_PROFILE_PATH}")
         print("  Run phase3_build_candidate_profile.py to generate it.")
         print("  Using fallback minimal profile.")
-        return """
-CANDIDATE: [CANDIDATE]
-CLEARANCE: Current TS/SCI
-LOCATION: San Diego, CA
-EXPERIENCE: 20+ years defense systems engineering
-SIGNATURE CREDENTIAL: Functional MBSE Pillar Lead, Project Overmatch (CNO priority)
-CONSTRAINTS: Not a pure modeler, no FAA/DO-178, no INCOSE certification
-"""
+        try:
+            return candidate_config.build_known_facts()
+        except FileNotFoundError:
+            return (
+                "\nCANDIDATE: [CANDIDATE]\n"
+                "Fallback: candidate_config.yaml not found and candidate_profile.md not found.\n"
+                "Run phase3_build_candidate_profile.py to generate candidate_profile.md.\n"
+            )
 
 # ==============================================
 # SYSTEM PROMPT
