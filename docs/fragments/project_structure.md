@@ -6,8 +6,11 @@ Job_search_agent/
 │   ├── PROJECT_CONTEXT.md                # Lean index — load this first
 │   ├── DECISIONS_LOG.md                  # Coding conventions + architecture decisions
 │   ├── PARKING_LOT.md                    # Outstanding work items and priorities
-│   ├── CANDIDATE_BACKGROUND.md           # Career background (local only)
-│   └── PIPELINE_STATUS.md                # Active applications (local only)
+│   └── candidate/                        # Personal data — gitignored
+│       ├── candidate_config.yaml         # Structured career data (local only)
+│       ├── candidate_config.example.yaml # Blank template (tracked)
+│       ├── CANDIDATE_BACKGROUND.md       # Career background (local only)
+│       └── PIPELINE_STATUS.md            # Active applications (local only)
 ├── data/
 │   ├── jobs.csv                          # Pipeline — status + req number tracking
 │   ├── job_packages/[role]/              # JD, stage files, interview prep (active)
@@ -66,6 +69,7 @@ Job_search_agent/
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
 │       ├── build_docs.py                 # Assemble README + PROJECT_CONTEXT from fragments
+│       ├── candidate_config.py           # Candidate career data loader (load, get_hardcoded_rules, build_known_facts)
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       ├── normalize_library.py          # One-time cleanup — merge tranche-suffixed employer sections
 │       └── pii_filter.py                 # PII stripping — safe for GitHub

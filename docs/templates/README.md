@@ -248,11 +248,12 @@ it is lost.
 ## Security & Privacy
 
 PII is stripped from all API calls before any data leaves the local machine.
-`pii_filter.py` loads PII values from `.env` at runtime — no personal data
-is hardcoded in the published code.
+`pii_filter.py` loads scalar PII values from `.env`; structured career data
+(education, certifications, military history, confirmed gaps, etc.) is stored in
+`context/candidate/candidate_config.yaml`. Neither file is hardcoded in the published code.
 
-All personal data (experience library, resumes, job packages, tracker, and
-candidate background files) is excluded from version control via `.gitignore`.
+All personal data (experience library, resumes, job packages, tracker, career config,
+and candidate background files) is excluded from version control via `.gitignore`.
 
 Anthropic API: inputs are not used for model training under commercial terms.
 
@@ -303,6 +304,7 @@ CANDIDATE_LOCATION=City, ST
 - Experience library: `data/experience_library/experience_library.md`
 - Resume template: `templates_local/resume_template.docx`
 - Tracker: `data/tracker/job_pipeline.xlsx`
+- Career data: copy `context/candidate/candidate_config.example.yaml` → `context/candidate/candidate_config.yaml` and fill in your data
 
 ### 5. Build the experience library
 ```bash
