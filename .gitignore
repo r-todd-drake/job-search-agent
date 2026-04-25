@@ -12,15 +12,8 @@ templates_local/
 .env
 project_career_resume.md
 RESUME_TAILORING_CONTEXT.md
-context/CANDIDATE_BACKGROUND.md
-context/PIPELINE_STATUS.md
-
-# Scripts containing personal data
-scripts/phase3_build_candidate_profile.py
-scripts/check_cover_letter.py
-scripts/check_resume.py
-scripts/phase2_semantic_analyzer.py
-scripts/phase4_resume_generator.py
+context/candidate/*
+!context/candidate/candidate_config.example.yaml
 
 
 # Utility scripts containing personal data or local file paths
