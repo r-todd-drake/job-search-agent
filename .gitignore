@@ -19,7 +19,6 @@ context/PIPELINE_STATUS.md
 scripts/phase3_build_candidate_profile.py
 scripts/check_cover_letter.py
 scripts/check_resume.py
-scripts/phase2_job_ranking.py
 scripts/phase2_semantic_analyzer.py
 scripts/phase4_resume_generator.py
 
