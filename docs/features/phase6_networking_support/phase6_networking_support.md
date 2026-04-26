@@ -123,7 +123,7 @@ Each stage produces a message calibrated to the contact's warmth level and the c
 - **Email sending** — script produces draft text; candidate sends manually.
 - **Message history storage** — sent messages, timestamps, and response content are tracked in the `notes` field of `contact_pipeline.xlsx` by the candidate. No automated logging of sent messages.
 - **Contact discovery guidance** — search query recommendations for finding contacts on LinkedIn or elsewhere. This belongs to Phase 7.
-- **Per-contact YAML or folder structure** — contacts do not accumulate artifacts the way job applications do; flat CSV is the correct data model.
+- **Per-contact YAML or folder structure** — contacts do not accumulate artifacts the way job applications do; the flat xlsx tracker is the correct data model.
 - **Referral bonus lookup** — the script uses the `referral_bonus` field only if the candidate has populated it manually. No automated lookup.
 - **Phase 5 next-steps reference** — PARKING_LOT item 5 (add Phase 6 prompt to Phase 4 Stage 4 next steps output) remains deferred until Phase 6 is stable and promoted.
 

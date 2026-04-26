@@ -214,7 +214,16 @@ Role fit: [one-line rationale]
 
 ### Fixture (`tests/fixtures/contact_fixture.py`)
 
-Fictional contact data in xlsx-row dict format. Four variants of Jane Q. Applicant — one per warmth tier — against Acme Defense Systems.
+Fictional contact data in xlsx-row dict format. Four variants of Jane Q. Applicant against Acme Defense Systems — one per warmth tier:
+
+| Variant | `warmth` | `notes` content | Test purpose |
+|---|---|---|---|
+| Cold | Cold | *(blank)* | No placeholder; full 300-char budget |
+| Acquaintance | Acquaintance | "Met at AUSA Annual Meeting 2024, discussed LTAMDS program sustainment" | Shared touchpoint context; `[HOW YOU KNOW THIS PERSON]` must appear in output |
+| Former Colleague | Former Colleague | "Worked together at Raytheon, Advanced Concepts group, 2019–2022" | Shared employer context; `[WHERE YOU WORKED TOGETHER]` must appear in output |
+| Strong | Strong | "Close colleague from Raytheon; collaborated on multiple capture efforts" | No placeholder; full 300-char budget |
+
+All four variants use: `company` = "Acme Defense Systems", `title` = "Systems Engineering Director", `stage` = 1, `status` = "Active".
 
 ### Regression
 
