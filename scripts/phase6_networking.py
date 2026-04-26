@@ -49,3 +49,45 @@ You never:
 - Invent or guess shared history not explicitly provided
 - Reference a specific role unless one is provided
 - Use filler phrases or overly formal language"""
+
+# ==============================================
+# XLSX I/O
+# ==============================================
+
+COLUMNS = [
+    "contact_name", "company", "title", "linkedin_url", "warmth",
+    "source", "first_contact", "response_date", "stage", "status",
+    "role_activated", "referral_bonus", "notes",
+]
+
+
+def load_contacts(path: str) -> list:
+    """Load all contacts from xlsx. Returns list of dicts keyed by column name."""
+    wb = openpyxl.load_workbook(path)
+    ws = wb.active
+    headers = [cell.value for cell in ws[1]]
+    contacts = []
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if all(v is None for v in row):
+            continue
+        contacts.append(dict(zip(headers, row)))
+    return contacts
+
+
+def find_contact(contacts: list, name: str) -> dict:
+    """Case-insensitive partial match on contact_name. Raises ValueError if ambiguous or not found."""
+    name_lower = name.lower()
+
+    # First try exact match (case-insensitive)
+    exact_matches = [c for c in contacts if (c.get("contact_name") or "").lower() == name_lower]
+    if len(exact_matches) > 0:
+        return exact_matches[0]
+
+    # Fall back to partial matches
+    matches = [c for c in contacts if name_lower in (c.get("contact_name") or "").lower()]
+    if len(matches) == 0:
+        raise ValueError(f"Contact '{name}' not found in contact_pipeline.xlsx.")
+    if len(matches) > 1:
+        found = ", ".join(c["contact_name"] for c in matches)
+        raise ValueError(f"Contact '{name}' is ambiguous — matched: {found}. Use a more specific name.")
+    return matches[0]
