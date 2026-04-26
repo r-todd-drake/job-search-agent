@@ -30,7 +30,7 @@ ACQUAINTANCE = {
 FORMER_COLLEAGUE = {
     **BASE,
     "warmth": "Former Colleague",
-    "notes": "Worked together at Raytheon, Advanced Concepts group, 2019-2022",
+    "notes": "Worked together at Raytheon, Advanced Concepts group, 2019–2022",
 }
 
 STRONG = {
