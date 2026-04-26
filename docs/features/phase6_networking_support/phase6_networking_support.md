@@ -12,39 +12,36 @@
 
 #### AC-1 — Contact tracking schema
 
-- A `contacts.csv` file serves as the machine-readable pipeline spine
-- A `contact_pipeline.xlsx` serves as the human-facing tracker view, mirroring the structure and conventions of `job_pipeline_example.xlsx`
-- Both files are gitignored (contain real names and personal relationship data)
+- `contact_pipeline.xlsx` is the sole contact data store — both machine-readable (script reads it directly via openpyxl) and human-facing. Mirrors the conventions of `job_pipeline_example.xlsx`. *(DA-1: contacts.csv removed; see Review Annotations.)*
+- `contact_pipeline.xlsx` is gitignored (contains real names and personal relationship data)
 - A `contact_pipeline_example.xlsx` with fictional data (Jane Q. Applicant identity) is tracked in `example_data/`
-- `contacts.csv` contains the following fields at minimum:
+- `contact_pipeline.xlsx` contains the following columns:
 
-| Field | Description |
-|---|---|
-| `contact_name` | Full name |
-| `company` | Current employer |
-| `title` | Their role |
-| `linkedin_url` | Profile link |
-| `warmth` | Cold / Acquaintance / Former Colleague / Strong |
-| `source` | How identified (LinkedIn search, industry publication, referral, former colleague) |
-| `first_contact` | Date of Stage 1 outreach |
-| `response_date` | Date of first response |
-| `stage` | Current stage: 1 / 2 / 3 / 4 |
-| `status` | Active / Warm / Activated / No Response / Declined / Referred / Closed |
-| `role_activated` | Job package folder name if Stage 2 activated (e.g., `vehicle-systems-lead-saronic`) |
-| `referral_bonus` | Known referral bonus amount if available — blank if unknown |
-| `notes` | Freeform — recruiter name, conversation summary, follow-up cues |
-
-- A blank `contacts_template.csv` with headers only is tracked in `templates/` for onboarding new searches
+| Column | Description | Written by |
+|---|---|---|
+| `contact_name` | Full name | User |
+| `company` | Current employer | User |
+| `title` | Their role | User |
+| `linkedin_url` | Profile link | User |
+| `warmth` | Cold / Acquaintance / Former Colleague / Strong | User |
+| `source` | How identified (LinkedIn search, industry publication, referral, former colleague) | User |
+| `first_contact` | Date of Stage 1 outreach | Script (Stage 1 confirm) |
+| `response_date` | Date of first response — manual only; script never writes | User |
+| `stage` | Current stage: 1 / 2 / 3 / 4 | Script (on confirm) |
+| `status` | Active / Warm / Activated / No Response / Declined / Referred / Closed | Script (Stage 4 → Closed); otherwise user |
+| `role_activated` | Job package folder name if Stage 2 activated (e.g., `vehicle-systems-lead-saronic`) | Script (Stage 2 confirm) |
+| `referral_bonus` | Known referral bonus amount if available — blank if unknown | User |
+| `notes` | Freeform — recruiter name, conversation summary, follow-up cues | User |
 
 ---
 
 #### AC-2 — Script interface
 
 - Script is invoked as: `python -m scripts.phase6_networking --contact "[contact_name]" --stage [1|2|3|4]`
-- `--contact` matches against `contact_name` field in `contacts.csv` (case-insensitive, partial match acceptable if unambiguous)
-- `--stage` selects the message generation mode (see AC-3)
+- `--contact` matches against `contact_name` column in `contact_pipeline.xlsx` (case-insensitive, partial match acceptable if unambiguous; error if ambiguous or not found)
+- `--stage` selects the message generation mode (see AC-3); if `--stage` does not match the contact's current `stage` value in the xlsx, the script prints a warning and proceeds
 - At Stage 2, `--role [role]` is also required; script raises a clear error if omitted
-- `--list` flag prints all contacts with their current stage and status — no message generation
+- `--list` flag prints all contacts as a table (`contact_name`, `company`, `stage`, `status`, `role_activated`), sorted by stage ascending — no message generation
 - Script reads candidate background from `context/candidate/candidate_config.yaml` via the existing `candidate_config.py` loader
 - Script reads job package JD at Stage 2 from `data/job_packages/[role]/job_description.txt`
 - PII in API calls is stripped via `pii_filter.py` consistent with all other phases
@@ -58,7 +55,7 @@ Each stage produces a message calibrated to the contact's warmth level and the c
 **Stage 1 — Initial outreach (no specific role)**
 - Goal: open a relationship or re-activate a dormant one; no immediate ask
 - Output: LinkedIn connection request (300 character hard limit enforced) + optional follow-up message if already connected
-- Warmth variants: Cold and Acquaintance/Former Colleague produce meaningfully different tone and content
+- Warmth variants: all four tiers (Cold, Acquaintance, Former Colleague, Strong) produce distinct tone and content; see DA-4
 - References candidate background from `candidate_config.yaml` to personalize the angle
 - Does not reference a specific role or opening
 
@@ -66,10 +63,10 @@ Each stage produces a message calibrated to the contact's warmth level and the c
 - Goal: convert a warm contact into a referral submission for a specific role
 - Requires `--role` flag; reads JD from job package
 - Output: LinkedIn message or email draft calibrated to warmth level
-- Referral bonus angle included when `referral_bonus` field is populated in contacts.csv; framed neutrally as mutual upside, not transactional pressure
+- Referral bonus angle included when `referral_bonus` column is populated in `contact_pipeline.xlsx`; framed neutrally as mutual upside, not transactional pressure
 - Referral bonus angle omitted (not invented) when field is blank
 - Message references specific role title and company; does not paste JD content verbatim
-- Warmth variants: Acquaintance/Former Colleague and Strong produce different levels of directness in the ask
+- Warmth variants: all four tiers produce different levels of directness and personalization in the ask; see DA-4
 
 **Stage 3 — Follow-up**
 - Goal: re-engage a contact who has not responded to Stage 1 or Stage 2 outreach
@@ -104,9 +101,17 @@ Each stage produces a message calibrated to the contact's warmth level and the c
 #### AC-6 — Testability
 
 - Script exposes a `generate_message()` function importable by tests (no module-level execution)
-- Tier 1 mock tests cover: schema validation, stage routing logic, character count enforcement, missing `--role` error at Stage 2, `--list` output format
-- Tier 2 live tests cover: Stage 1 and Stage 2 message generation via Claude API with fixture contact (Jane Q. Applicant / Acme Defense Systems)
-- Fixture contacts added to `tests/fixtures/` — fictional identity only
+- Tier 1 mock tests cover: schema validation, stage routing logic, character count enforcement (>300 Cold/Strong; >180 Acquaintance/Former Colleague), missing `--role` error at Stage 2, placeholder presence in Acquaintance/Former Colleague output, absence of placeholder in Cold/Strong output, `--list` output format and sort order, xlsx write-back per stage, `response_date` never written
+- Tier 2 live tests cover: Stage 1 and Stage 2 message generation via Claude API with fixture contact (Jane Q. Applicant / Acme Defense Systems), all four warmth tiers exercised for Stage 1
+- Fixture contacts defined in `tests/fixtures/contact_fixture.py` — fictional identity only. Four variants of Jane Q. Applicant against Acme Defense Systems:
+
+| Variant | `warmth` | `notes` content | Purpose |
+|---|---|---|---|
+| Cold | Cold | *(blank)* | No placeholder; full 300-char budget |
+| Acquaintance | Acquaintance | "Met at AUSA Annual Meeting 2024, discussed LTAMDS program sustainment" | Provides shared touchpoint context; placeholder `[HOW YOU KNOW THIS PERSON]` must appear in output |
+| Former Colleague | Former Colleague | "Worked together at Raytheon, Advanced Concepts group, 2019–2022" | Provides shared employer context; placeholder `[WHERE YOU WORKED TOGETHER]` must appear in output |
+| Strong | Strong | "Close colleague from Raytheon; collaborated on multiple capture efforts" | No placeholder; full 300-char budget |
+
 - All existing 392 mock tests continue to pass after Phase 6 is merged
 
 ---
@@ -116,7 +121,7 @@ Each stage produces a message calibrated to the contact's warmth level and the c
 - **Autonomous contact discovery** — identifying contacts via web search, LinkedIn search, industry publications, or any automated scraping. Deferred to Phase 7, which will discover both roles and contacts and feed both Phase 2 and Phase 6.
 - **LinkedIn API integration** — LinkedIn blocks automation. All outreach is manual; the script generates message text only.
 - **Email sending** — script produces draft text; candidate sends manually.
-- **Message history storage** — sent messages, timestamps, and response content are tracked in the `notes` field of `contacts.csv` by the candidate. No automated logging of sent messages.
+- **Message history storage** — sent messages, timestamps, and response content are tracked in the `notes` field of `contact_pipeline.xlsx` by the candidate. No automated logging of sent messages.
 - **Contact discovery guidance** — search query recommendations for finding contacts on LinkedIn or elsewhere. This belongs to Phase 7.
 - **Per-contact YAML or folder structure** — contacts do not accumulate artifacts the way job applications do; flat CSV is the correct data model.
 - **Referral bonus lookup** — the script uses the `referral_bonus` field only if the candidate has populated it manually. No automated lookup.
