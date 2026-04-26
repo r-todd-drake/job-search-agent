@@ -66,6 +66,16 @@ python -m scripts.phase6_networking --list
 | `--role` | Stage 2 only | Required at Stage 2; clear error if omitted. Ignored at all other stages. |
 | `--list` | No | Prints all contacts as a formatted table: `contact_name`, `company`, `stage`, `status`, `role_activated` (blank if none). Sorted by stage ascending. No message generation. Mutually exclusive with `--contact`/`--stage`. |
 
+### Stage Mismatch Behaviour
+
+If `--stage N` does not match the contact's current `stage` value in the xlsx, the script prints a warning and proceeds:
+
+```
+Warning: contact_pipeline.xlsx shows Jane Smith at stage 1, but --stage 3 was requested. Generating Stage 3 message anyway.
+```
+
+Rationale: the script's job is to generate the message the user asked for. The xlsx stage is informational state — the user may legitimately want to generate a message for a different stage (e.g., previewing Stage 2 language, or catching up after forgetting to confirm a prior send). Aborting on mismatch would be too restrictive. The warning ensures the user is aware of the discrepancy without blocking them.
+
 ---
 
 ## 3. Contact Tracker Schema
