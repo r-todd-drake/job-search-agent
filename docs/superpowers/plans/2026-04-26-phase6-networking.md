@@ -260,8 +260,13 @@ def test_find_contact_partial_match(tmp_path):
 
 
 def test_find_contact_ambiguous_raises(tmp_path):
-    path = _make_xlsx(tmp_path)  # all four share same name — ambiguous
-    contacts = pn.load_contacts(path)
+    # Two different contacts whose names both contain the search term
+    rows = [
+        {**COLD, "contact_name": "Jane Smith"},
+        {**COLD, "contact_name": "Jane Doe"},
+    ]
+    path = _make_xlsx(tmp_path, rows=rows)
+    contacts = pn.load_contacts(str(path))
     with pytest.raises(ValueError, match="ambiguous"):
         pn.find_contact(contacts, "Jane")
 
@@ -581,7 +586,12 @@ Append to `scripts/phase6_networking.py`:
 # ==============================================
 
 def _build_candidate_context(candidate: dict) -> str:
-    """Extract networking-relevant candidate context from candidate_config dict."""
+    """Extract networking-relevant candidate context from candidate_config dict.
+
+    Name and location come from env vars (CANDIDATE_NAME, CANDIDATE_LOCATION) —
+    this matches the existing pattern in candidate_config.build_known_facts().
+    Structured fields (clearance, military, skills) come from the YAML dict.
+    """
     lines = [
         f"Name: {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')}",
         f"Location: {os.getenv('CANDIDATE_LOCATION', '[LOCATION]')}",
@@ -1094,10 +1104,11 @@ def _enforce_char_limit(raw: str, warmth: str, client) -> str:
         return raw
 
     retry_prompt = (
-        f"Your connection request was {len(connection_request)} characters, "
-        f"which exceeds the {limit}-character limit. "
-        f"Rewrite it to fit within {limit} characters — same structure, tighter language. "
-        f"Then include the follow-up message again after '---FOLLOW-UP---'."
+        f"The connection request you wrote was {len(connection_request)} characters:\n\n"
+        f"{connection_request}\n\n"
+        f"That exceeds the {limit}-character limit. Rewrite it to fit within {limit} characters "
+        f"— same structure and warmth, tighter language. Then include the follow-up message "
+        f"again after '---FOLLOW-UP---'."
     )
     response = client.messages.create(
         model=MODEL,
@@ -1491,6 +1502,7 @@ ws.append(COLUMNS)
 for row in ROWS:
     ws.append(row)
 
+os.makedirs("example_data/tracker", exist_ok=True)
 wb.save("example_data/tracker/contact_pipeline_example.xlsx")
 print("Created example_data/tracker/contact_pipeline_example.xlsx")
 EOF
@@ -1644,7 +1656,15 @@ git commit -m "test(phase6): Tier 2 live API tests"
 - Modify: `context/SCRIPT_INDEX.md`
 - Modify: `context/DATA_FLOW.md`
 
-- [ ] **Step 1: Add phase6_networking.py to SCRIPT_INDEX.md**
+- [ ] **Step 1: Verify context files exist**
+
+```bash
+ls context/SCRIPT_INDEX.md context/DATA_FLOW.md
+```
+
+Expected: both files listed. If either is missing, stop and report — do not create from scratch.
+
+- [ ] **Step 2: Add phase6_networking.py to SCRIPT_INDEX.md**
 
 In `context/SCRIPT_INDEX.md`, add a new Phase 6 section after the Phase 5 table:
 
@@ -1656,7 +1676,7 @@ In `context/SCRIPT_INDEX.md`, add a new Phase 6 section after the Phase 5 table:
 | `phase6_networking.py` | Contact-centric outreach message generator; reads/writes `contact_pipeline.xlsx` | `--contact` `--stage` `--role` `--list` |
 ```
 
-- [ ] **Step 2: Add phase6_networking.py to DATA_FLOW.md**
+- [ ] **Step 3: Add phase6_networking.py to DATA_FLOW.md**
 
 In `context/DATA_FLOW.md`, add a Phase 6 section:
 
@@ -1668,7 +1688,7 @@ In `context/DATA_FLOW.md`, add a Phase 6 section:
 | `phase6_networking.py` | `data/tracker/contact_pipeline.xlsx`, `context/candidate/candidate_config.yaml`, `data/job_packages/[role]/job_description.txt` (Stage 2 only) | `data/tracker/contact_pipeline.xlsx` (stage advance + date fields on y confirm) |
 ```
 
-- [ ] **Step 3: Rebuild docs if build_docs.py is used**
+- [ ] **Step 4: Rebuild docs if build_docs.py is used**
 
 ```bash
 python scripts/utils/build_docs.py
@@ -1676,7 +1696,7 @@ python scripts/utils/build_docs.py
 
 If this fails (fragments not updated), skip — the SCRIPT_INDEX and DATA_FLOW edits are sufficient.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add context/SCRIPT_INDEX.md context/DATA_FLOW.md
@@ -1713,4 +1733,5 @@ Spec coverage check:
 | AC-6: Tier 1 mock tests | Tasks 2–8 |
 | AC-6: Tier 2 live tests | Task 11 |
 | AC-6: fixture content (4 variants with notes) | Task 1 (contact_fixture.py) |
+| AC-6: response_date never written by script | Task 3 (test_update_contact_never_writes_response_date) |
 | AC-6: 392 existing tests pass | Task 10 (regression check) |
