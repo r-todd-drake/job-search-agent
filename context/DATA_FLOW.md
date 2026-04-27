@@ -49,6 +49,14 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 
 ---
 
+## Phase 6 -- Networking
+
+| Script | Reads | Writes |
+| ------ | ----- | ------- |
+| `phase6_networking.py` | `data/tracker/contact_pipeline.xlsx`, `context/candidate/candidate_config.yaml`, `data/job_packages/[role]/job_description.txt` (Stage 2 only) | `data/tracker/contact_pipeline.xlsx` (stage advance + date fields on y confirm) |
+
+---
+
 ## Shared modules
 
 | Module | Reads / writes on behalf of callers |
