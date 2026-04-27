@@ -90,3 +90,67 @@ def test_find_contact_not_found_raises(tmp_path):
     contacts = pn.load_contacts(path)
     with pytest.raises(ValueError, match="not found"):
         pn.find_contact(contacts, "Nonexistent Person")
+
+
+# ==============================================
+# update_contact
+# ==============================================
+
+def test_update_contact_stage1_advances_stage_and_sets_first_contact(tmp_path):
+    from datetime import date
+    path = _make_xlsx(tmp_path, rows=[COLD])
+    pn.update_contact(str(path), "Jane Q. Applicant", {"stage": 2, "first_contact": date(2026, 4, 26)})
+    contacts = pn.load_contacts(str(path))
+    assert contacts[0]["stage"] == 2
+    assert contacts[0]["first_contact"] == date(2026, 4, 26)
+
+
+def test_update_contact_stage2_sets_role_activated(tmp_path):
+    path = _make_xlsx(tmp_path, rows=[COLD])
+    pn.update_contact(str(path), "Jane Q. Applicant", {"stage": 3, "role_activated": "acme-systems-se"})
+    contacts = pn.load_contacts(str(path))
+    assert contacts[0]["stage"] == 3
+    assert contacts[0]["role_activated"] == "acme-systems-se"
+
+
+def test_update_contact_never_writes_response_date(tmp_path):
+    from datetime import date
+    path = _make_xlsx(tmp_path, rows=[COLD])
+    pn.update_contact(str(path), "Jane Q. Applicant", {"stage": 2, "first_contact": date(2026, 4, 26)})
+    contacts = pn.load_contacts(str(path))
+    assert contacts[0]["response_date"] is None
+
+
+def test_update_contact_stage4_sets_status_closed(tmp_path):
+    path = _make_xlsx(tmp_path, rows=[COLD])
+    pn.update_contact(str(path), "Jane Q. Applicant", {"status": "Closed"})
+    contacts = pn.load_contacts(str(path))
+    assert contacts[0]["status"] == "Closed"
+
+
+# ==============================================
+# list_contacts
+# ==============================================
+
+def test_list_contacts_sorted_by_stage(tmp_path, capsys):
+    rows = [
+        {**COLD, "contact_name": "Alpha", "stage": 3, "status": "Active", "role_activated": None},
+        {**COLD, "contact_name": "Beta", "stage": 1, "status": "Active", "role_activated": None},
+    ]
+    path = _make_xlsx(tmp_path, rows=rows)
+    contacts = pn.load_contacts(str(path))
+    pn.list_contacts(contacts)
+    captured = capsys.readouterr()
+    lines = [l for l in captured.out.splitlines() if l.strip()]
+    beta_pos = next(i for i, l in enumerate(lines) if "Beta" in l)
+    alpha_pos = next(i for i, l in enumerate(lines) if "Alpha" in l)
+    assert beta_pos < alpha_pos
+
+
+def test_list_contacts_includes_required_columns(tmp_path, capsys):
+    path = _make_xlsx(tmp_path, rows=[COLD])
+    contacts = pn.load_contacts(str(path))
+    pn.list_contacts(contacts)
+    captured = capsys.readouterr()
+    for col in ("contact_name", "company", "stage", "status"):
+        assert col in captured.out.lower() or "Jane" in captured.out
