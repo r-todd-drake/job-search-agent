@@ -109,6 +109,91 @@ def update_contact(path: str, contact_name: str, updates: dict) -> None:
     wb.save(path)
 
 
+# ==============================================
+# CANDIDATE CONTEXT
+# ==============================================
+
+def _build_candidate_context(candidate: dict) -> str:
+    """Extract networking-relevant candidate context from candidate_config dict."""
+    lines = [
+        f"Name: {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')}",
+        f"Location: {os.getenv('CANDIDATE_LOCATION', '[LOCATION]')}",
+    ]
+    cl = candidate.get("clearance", {})
+    if cl:
+        lines.append(f"Clearance: {cl.get('status', '')} {cl.get('level', '')}")
+    for svc in candidate.get("military", {}).get("service", []):
+        branch = svc.get("branch", "")
+        dates = svc.get("dates", "")
+        if branch:
+            lines.append(f"Military: {branch} {dates}".strip())
+    prog = candidate.get("confirmed_skills", {}).get("programming", "")
+    if prog:
+        lines.append(f"Technical skills: {prog}")
+    return "\n".join(lines)
+
+
+# ==============================================
+# WARMTH HELPER
+# ==============================================
+
+def _warmth_context(warmth: str) -> str:
+    """Return placeholder instruction for Claude based on warmth tier."""
+    w = warmth.lower()
+    if "acquaintance" in w:
+        return (
+            "Include the placeholder [HOW YOU KNOW THIS PERSON] exactly where you would "
+            "reference the shared connection. Do not invent or guess the shared context. "
+            "Keep surrounding text to approximately 180 characters to leave room for the fill."
+        )
+    if "former colleague" in w:
+        return (
+            "Include the placeholder [WHERE YOU WORKED TOGETHER] exactly where you would "
+            "reference the shared employer or project. Do not invent or guess the shared context. "
+            "Keep surrounding text to approximately 180 characters to leave room for the fill."
+        )
+    return ""
+
+
+# ==============================================
+# PROMPT BUILDERS
+# ==============================================
+
+def _build_stage1_prompt(contact: dict, candidate: dict) -> str:
+    warmth_instruction = _warmth_context(contact.get("warmth", ""))
+    char_limit = "180 characters for the surrounding text" if warmth_instruction else "300 characters total"
+
+    parts = [
+        f"Write a LinkedIn connection request from {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')} "
+        f"to {contact['contact_name']}, a {contact.get('title', 'professional')} at {contact.get('company', 'their company')}.",
+        "",
+        "Candidate background:",
+        _build_candidate_context(candidate),
+        "",
+        f"Warmth level: {contact.get('warmth', 'Cold')}",
+        f"Notes on the relationship: {contact.get('notes') or 'No prior contact.'}",
+        "",
+        "Connection request requirements:",
+        f"- HARD LIMIT: {char_limit}",
+        "- Specific and genuine -- no 'I came across your profile' openers",
+        "- No role ask -- relationship-building only",
+        "- Write the connection request text only -- no labels, no preamble",
+    ]
+
+    if warmth_instruction:
+        parts.append(f"- {warmth_instruction}")
+
+    parts.extend([
+        "",
+        "Then write a follow-up message for if the candidate is already connected with "
+        f"{contact['contact_name']}. The follow-up should be 2-3 sentences -- concise and warm.",
+        "Separate the two outputs with exactly this delimiter on its own line: ---FOLLOW-UP---",
+        "Format: [connection request text]\\n---FOLLOW-UP---\\n[follow-up message text]",
+    ])
+
+    return "\n".join(parts)
+
+
 def list_contacts(contacts: list) -> None:
     """Print all contacts as a table sorted by stage ascending."""
     sorted_contacts = sorted(contacts, key=lambda c: (c.get("stage") or 0))
