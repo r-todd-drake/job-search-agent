@@ -61,6 +61,14 @@ For full structure see README.md.
 
 ---
 
+## Phase 6 -- Networking
+
+| Script | Purpose | Key flags |
+| --- | --- | --- |
+| `phase6_networking.py` | Contact-centric outreach message generator; reads/writes `contact_pipeline.xlsx` | `--contact` `--stage` `--role` `--list` |
+
+---
+
 ## One-time / utility scripts
 
 | Script                 | Purpose                                                                                                |
