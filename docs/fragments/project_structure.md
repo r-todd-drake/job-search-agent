@@ -40,7 +40,8 @@ Job_search_agent/
 |   ├── job_packages/[role]/              # Example JD, stage files
 |   ├── outputs/                          # Example generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 |   ├── tracker/job_pipeline_example.xlsx # Example job pipeline tracker
-|   │    └── README.txt                   # Tracker workbook README
+|   │    ├── README.txt                   # Tracker workbook README
+|   │    └── contact_pipeline_example.xlsx # Example contact tracker (fictional data)
 |   └── jobs.csv                          # Example Pipeline - status + req number tracking
 ├── outputs                               # Generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 ├── resumes/                              # Generated resumes (local only)
@@ -65,6 +66,7 @@ Job_search_agent/
 │   ├── phase5_workshop_capture.py        # Parses workshopped prep .docx into interview_library.json
 │   ├── phase5_debrief_utils.py           # Shared utility — load filed debrief JSON
 │   ├── interview_library_parser.py       # Shared module — read/write interview_library.json
+│   ├── phase6_networking.py              # Warmth-calibrated outreach message generator; reads/writes contact_pipeline.xlsx
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
@@ -77,7 +79,7 @@ Job_search_agent/
 │   ├── conftest.py                       # Shared fixtures and fictional test identity
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
 │   ├── utils/                            # pii_filter, library_parser, build_docs tests
-│   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
+│   └── phase1/ … phase6/                 # Per-phase test files mirroring scripts/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
 ├── requirements.txt                      # Runtime dependencies

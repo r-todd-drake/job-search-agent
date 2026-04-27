@@ -3,7 +3,7 @@
 
 __Load for: planning next development session, prioritizing work items__  
 *When an Item is complete summarize in context/PARKING_LOT_DONE.md*  
-Last updated: 25 Apr 2026 (item 17a complete — candidate data store)
+Last updated: 27 Apr 2026 (Phase 6 complete — networking and outreach support)
 
 ## Active Items
 
@@ -19,19 +19,10 @@ Last updated: 25 Apr 2026 (item 17a complete — candidate data store)
    - Pattern mirrors 17a — do NOT begin until 17a loader design is finalized, since
      the same pattern will apply
 
-4. __Phase 6 — Networking support__
-   - Scoped and ready to build
-   - Standalone script: python scripts/phase6_networking.py --role [role]
-   - Section 1: LinkedIn search guidance (queries, filters, who to look for)
-   - Section 2: Connection request message (300 char limit)
-   - Section 3: Follow-up message after connecting
-   - Section 4: Cold outreach / InMail template
-   - Section 5: Informational interview request
-   - User performs LinkedIn searches manually — script provides guidance
-   - Once stable: add Phase 6 reference to Phase 4 Stage 4 next steps output
-
-5. Phase 4 Stage 4 — Add Phase 6 prompt to next steps
-   - Deferred until Phase 6 is stable
+5. __Phase 4 Stage 4 — Add Phase 6 prompt to next steps__
+   - Phase 6 is now stable — this item is unblocked
+   - Add a note to the Stage 4 output of phase4_resume_generator.py pointing to phase6_networking.py
+   - Goal: remind user to build contact outreach after submitting each application
 
 8. Script identifier audit — GitHub exposure risk
    - Concern: hardcoded strings in scripts or comments that combine identifiers

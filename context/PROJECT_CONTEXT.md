@@ -1,6 +1,6 @@
 <!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
 # AI Job Search Agent — Project Context
-Last updated: 25 Apr 2026
+Last updated: 27 Apr 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -36,7 +36,7 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
 | 5 | Interview preparation — stage-aware prep packages (recruiter / hiring manager / team panel) | ✅ Complete |
-| 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
+| 6 | Networking and outreach support — warmth-calibrated LinkedIn and email outreach messages across four contact stages | ✅ Complete |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
 
@@ -46,7 +46,7 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
 - **Tier 2 (live):** `pytest -m live -v` — run before promoting a phase or after API changes
 - **CI:** GitHub Actions at `.github/workflows/test.yml` — green badge on README
-- **392 mock tests** across utils, phases 1–5. All passing on master as of 25 Apr 2026.
+- **444 mock tests** across utils, phases 1–6. All passing on master as of 27 Apr 2026.
 - **Test dependencies:** `requirements-dev.txt` (pytest, pytest-mock)
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 
@@ -62,6 +62,17 @@ All 8 scripts below had module-level execution removed so they can be imported b
 - `phase5_interview_prep.py` — extracted `generate_prep()`
 
 Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `phase3_parse_library.py`, `phase3_parse_employer.py`, `check_resume.py`.
+
+### Phase 6 — Networking and outreach support (27 Apr 2026)
+`scripts/phase6_networking.py` — contact-centric outreach message generator:
+- Reads/writes `data/tracker/contact_pipeline.xlsx` (gitignored)
+- Four stages: connection request (Stage 1), referral ask (Stage 2), follow-up nudge (Stage 3), close the loop (Stage 4)
+- Four warmth tiers: Cold, Acquaintance, Former Colleague, Strong — each with calibrated tone and placeholder markers
+- Stage 1: 300-char connection request limit enforced with one API retry; Acquaintance/Former Colleague get character budget display for fill-in placeholders
+- Stage 2: conditional referral bonus angle; role-fit rationale separator
+- Interactive y/n confirm before writing stage advance back to xlsx
+- `generate_message()` is pure/importable — injectable client for testing
+- 52 Tier 1 mock tests; 6 Tier 2 live API tests
 
 ### Candidate data store — 17a (25 Apr 2026)
 All personal constants migrated from 6 formerly-gitignored scripts to `context/candidate/candidate_config.yaml`:
@@ -136,7 +147,8 @@ Job_search_agent/
 |   ├── job_packages/[role]/              # Example JD, stage files
 |   ├── outputs/                          # Example generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 |   ├── tracker/job_pipeline_example.xlsx # Example job pipeline tracker
-|   │    └── README.txt                   # Tracker workbook README
+|   │    ├── README.txt                   # Tracker workbook README
+|   │    └── contact_pipeline_example.xlsx # Example contact tracker (fictional data)
 |   └── jobs.csv                          # Example Pipeline - status + req number tracking
 ├── outputs                               # Generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 ├── resumes/                              # Generated resumes (local only)
@@ -161,6 +173,7 @@ Job_search_agent/
 │   ├── phase5_workshop_capture.py        # Parses workshopped prep .docx into interview_library.json
 │   ├── phase5_debrief_utils.py           # Shared utility — load filed debrief JSON
 │   ├── interview_library_parser.py       # Shared module — read/write interview_library.json
+│   ├── phase6_networking.py              # Warmth-calibrated outreach message generator; reads/writes contact_pipeline.xlsx
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
@@ -173,7 +186,7 @@ Job_search_agent/
 │   ├── conftest.py                       # Shared fixtures and fictional test identity
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
 │   ├── utils/                            # pii_filter, library_parser, build_docs tests
-│   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
+│   └── phase1/ … phase6/                 # Per-phase test files mirroring scripts/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
 ├── requirements.txt                      # Runtime dependencies
@@ -218,6 +231,11 @@ python -m scripts.phase3_parse_library
 python -m scripts.phase3_parse_employer "[employer name]"
 python -m scripts.phase3_build_candidate_profile
 python -m scripts.phase3_compile_library
+
+# Networking outreach
+python -m scripts.phase6_networking --list
+python -m scripts.phase6_networking --contact "[name]" --stage [1-4]
+python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
 
 # Document assembly (run after editing any fragment or template)
 python scripts/utils/build_docs.py                   # rebuild all

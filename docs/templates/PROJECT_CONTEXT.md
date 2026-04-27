@@ -1,5 +1,5 @@
 # AI Job Search Agent — Project Context
-Last updated: 25 Apr 2026
+Last updated: 27 Apr 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -24,7 +24,7 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
 - **Tier 2 (live):** `pytest -m live -v` — run before promoting a phase or after API changes
 - **CI:** GitHub Actions at `.github/workflows/test.yml` — green badge on README
-- **392 mock tests** across utils, phases 1–5. All passing on master as of 25 Apr 2026.
+- **444 mock tests** across utils, phases 1–6. All passing on master as of 27 Apr 2026.
 - **Test dependencies:** `requirements-dev.txt` (pytest, pytest-mock)
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 
@@ -40,6 +40,17 @@ All 8 scripts below had module-level execution removed so they can be imported b
 - `phase5_interview_prep.py` — extracted `generate_prep()`
 
 Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `phase3_parse_library.py`, `phase3_parse_employer.py`, `check_resume.py`.
+
+### Phase 6 — Networking and outreach support (27 Apr 2026)
+`scripts/phase6_networking.py` — contact-centric outreach message generator:
+- Reads/writes `data/tracker/contact_pipeline.xlsx` (gitignored)
+- Four stages: connection request (Stage 1), referral ask (Stage 2), follow-up nudge (Stage 3), close the loop (Stage 4)
+- Four warmth tiers: Cold, Acquaintance, Former Colleague, Strong — each with calibrated tone and placeholder markers
+- Stage 1: 300-char connection request limit enforced with one API retry; Acquaintance/Former Colleague get character budget display for fill-in placeholders
+- Stage 2: conditional referral bonus angle; role-fit rationale separator
+- Interactive y/n confirm before writing stage advance back to xlsx
+- `generate_message()` is pure/importable — injectable client for testing
+- 52 Tier 1 mock tests; 6 Tier 2 live API tests
 
 ### Candidate data store — 17a (25 Apr 2026)
 All personal constants migrated from 6 formerly-gitignored scripts to `context/candidate/candidate_config.yaml`:

@@ -2,9 +2,12 @@
 # Parking Lot Done
 
 __Load for: planning next development session, understancing completed items__  
-Last updated: 25 Apr 2026
+Last updated: 27 Apr 2026
 
 ## Completed (recent)
+
+- Phase 6 — Networking and outreach support — COMPLETE (27 Apr 2026)
+  `scripts/phase6_networking.py` — warmth-calibrated outreach message generator. Reads contact list from `data/tracker/contact_pipeline.xlsx` (gitignored). Four stages: Stage 1 = LinkedIn connection request (300-char hard limit, one API retry if over) + follow-up; Stage 2 = referral ask with conditional referral bonus angle and role-fit rationale; Stage 3 = follow-up nudge (warmth-calibrated tone); Stage 4 = close the loop. Four warmth tiers: Cold, Acquaintance, Former Colleague, Strong — Acquaintance and Former Colleague receive placeholder markers ([HOW YOU KNOW THIS PERSON] / [WHERE YOU WORKED TOGETHER]) for user fill-in. Interactive y/n confirm before writing stage advance back to xlsx. `generate_message()` is a pure importable function with injectable client for testing. 52 Tier 1 mock tests, 6 Tier 2 live API tests. `@pytest.mark.live` added so CI skips live tests. `SCRIPT_INDEX.md` and `DATA_FLOW.md` updated. Example tracker at `example_data/tracker/contact_pipeline_example.xlsx`. Parking lot item 4 closed; item 5 (Phase 4 Stage 4 next steps prompt) unblocked.
 
 - Candidate data store — 17a — COMPLETE (25 Apr 2026)
   `context/candidate/` folder created and gitignored via single rule. `candidate_config.example.yaml` tracked as blank template. `scripts/utils/candidate_config.py` loader built with `load()`, `get_hardcoded_rules()`, `build_known_facts()`. All 6 formerly-gitignored scripts refactored to PII-free and restored to git tracking: `check_resume.py`, `check_cover_letter.py` (HARDCODED_RULES → loader), `phase4_resume_generator.py` (EMPLOYER_TIERS, CHRONOLOGICAL_ORDER, build_docx strings → loader), `phase2_semantic_analyzer.py` (hardcoded fallback profile → loader), `phase3_build_candidate_profile.py` (KNOWN_FACTS, INTRO_MONOLOGUE, SHORT_TENURE_EXPLANATION → loader), `phase2_job_ranking.py` (no PII — restored directly; KEYWORDS generalization deferred to 17b). `CANDIDATE_BACKGROUND.md` and `PIPELINE_STATUS.md` moved to `context/candidate/`. `.gitignore`, `CLAUDE.md`, `SCRIPT_INDEX`, `PROJECT_CONTEXT.md` all updated. 8 loader unit tests. 392 mock tests passing.

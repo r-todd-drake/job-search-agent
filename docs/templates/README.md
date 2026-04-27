@@ -60,6 +60,12 @@ Instead of manually searching, scoring, and tailoring applications one at a time
 10. Run phase5_thankyou.py to generate thank-you letters
    → One .txt and .docx per interviewer, drawn from the filed debrief
    → Use --panel_label for panel interviews with multiple interviewers
+11. Run phase6_networking.py to generate outreach messages
+   → --list to see all contacts and their current stage
+   → --contact "[name]" --stage 1 for connection request + follow-up (warmth-calibrated)
+   → --contact "[name]" --stage 2 --role [role] for referral ask (loads JD automatically)
+   → --contact "[name]" --stage 3/4 for follow-up / close the loop
+   → Responds y to confirm sends and advances contact stage in contact_pipeline.xlsx
 
 ```
 
@@ -231,6 +237,43 @@ it is lost.
 
 ---
 
+## Phase 6 — Networking and Outreach
+
+Generates warmth-calibrated outreach messages for contacts in `data/tracker/contact_pipeline.xlsx`.
+Four relationship stages, four warmth tiers (Cold / Acquaintance / Former Colleague / Strong).
+No automated sending — all output is terminal only. Contact stage advances on interactive confirm.
+
+```bash
+# List all contacts with current stage and status
+python -m scripts.phase6_networking --list
+
+# Stage 1 — connection request + follow-up (warmth-calibrated)
+python -m scripts.phase6_networking --contact "[name]" --stage 1
+
+# Stage 2 — referral ask (loads job description from data/job_packages/[role]/)
+python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
+
+# Stage 3 — follow-up nudge
+python -m scripts.phase6_networking --contact "[name]" --stage 3
+
+# Stage 4 — close the loop after role resolution
+python -m scripts.phase6_networking --contact "[name]" --stage 4
+```
+
+**Stage behavior:**
+
+| Stage | Message type | Warmth calibration | Write-back on y |
+|-------|-------------|-------------------|-----------------|
+| 1 | Connection request (300-char limit) + follow-up | Placeholder markers for Acquaintance / Former Colleague | stage → 2, first_contact = today |
+| 2 | Referral ask; conditional referral bonus mention | Tone scales from neutral → direct | stage → 3, role_activated = [role] |
+| 3 | Follow-up nudge — no repeat pitch | Low-pressure (Cold) or warm/direct (others) | stage → 4 |
+| 4 | Close the loop — outcome + keep warm | All tiers | status → Closed |
+
+Contact tracker: `data/tracker/contact_pipeline.xlsx` (gitignored — personal data).
+Example tracker with fictional data: `example_data/tracker/contact_pipeline_example.xlsx`.
+
+---
+
 ## Tech Stack
 
 - **Python 3.x** — core scripting and automation
@@ -359,7 +402,6 @@ python -m scripts.phase5_thankyou --role [role] --stage [recruiter_screen|hiring
 
 | Item | Description |
 |------|-------------|
-| Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
 | Pipeline report | Pull interview stage from job_pipeline.xlsx into pipeline_report.py output |
 
