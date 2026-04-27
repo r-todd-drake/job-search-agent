@@ -238,3 +238,44 @@ def test_build_candidate_context_military_service_none():
     }
     result = pn._build_candidate_context(candidate)
     assert "Python" in result  # does not crash on None service
+
+
+# ==============================================
+# _build_stage2_prompt
+# ==============================================
+
+JD_FIXTURE = "Systems Engineering Director responsible for MBSE and digital engineering..."
+
+
+def test_stage2_prompt_contains_role_fit_delimiter():
+    contact = {**STRONG, "referral_bonus": None}
+    prompt = pn._build_stage2_prompt(contact, CANDIDATE_FIXTURE, JD_FIXTURE)
+    assert "---ROLE-FIT---" in prompt
+
+
+def test_stage2_prompt_includes_referral_bonus_when_populated():
+    contact = {**STRONG, "referral_bonus": "$5,000"}
+    prompt = pn._build_stage2_prompt(contact, CANDIDATE_FIXTURE, JD_FIXTURE)
+    assert "referral" in prompt.lower()
+    assert "$5,000" in prompt
+
+
+def test_stage2_prompt_omits_referral_angle_when_blank():
+    contact = {**STRONG, "referral_bonus": None}
+    prompt = pn._build_stage2_prompt(contact, CANDIDATE_FIXTURE, JD_FIXTURE)
+    assert "referral bonus" not in prompt.lower()
+
+
+def test_stage2_prompt_includes_jd_content():
+    contact = {**STRONG, "referral_bonus": None}
+    prompt = pn._build_stage2_prompt(contact, CANDIDATE_FIXTURE, JD_FIXTURE)
+    assert "MBSE" in prompt
+
+
+def test_stage2_prompt_includes_warmth_calibration():
+    contact_strong = {**STRONG, "referral_bonus": None}
+    contact_acquaintance = {**ACQUAINTANCE, "referral_bonus": None}
+    prompt_strong = pn._build_stage2_prompt(contact_strong, CANDIDATE_FIXTURE, JD_FIXTURE)
+    prompt_acq = pn._build_stage2_prompt(contact_acquaintance, CANDIDATE_FIXTURE, JD_FIXTURE)
+    # Both should reference warmth in some way — they should differ
+    assert prompt_strong != prompt_acq

@@ -210,3 +210,57 @@ def _build_stage1_prompt(contact: dict, candidate: dict) -> str:
     ])
 
     return "\n".join(parts)
+
+
+def _build_stage2_prompt(contact: dict, candidate: dict, jd_text: str) -> str:
+    warmth = contact.get("warmth", "Cold")
+    warmth_instruction = _warmth_context(warmth)
+    referral_bonus = contact.get("referral_bonus")
+
+    directness = {
+        "cold": "professional and neutral – you have no prior relationship",
+        "acquaintance": "warm but measured – you have a limited prior connection",
+        "former colleague": "collegial and direct – you have a real working history together",
+        "strong": "direct and personal – this is a close professional contact",
+    }.get(warmth.lower(), "professional and warm")
+
+    parts = [
+        f"Write a LinkedIn message or email from {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')} "
+        f"to {contact['contact_name']}, a {contact.get('title', 'professional')} at {contact.get('company', 'their company')}, "
+        f"asking for a referral for a specific role.",
+        "",
+        "Candidate background:",
+        _build_candidate_context(candidate),
+        "",
+        f"Warmth level: {warmth}",
+        f"Tone: {directness}",
+        f"Notes on the relationship: {contact.get('notes') or 'No prior contact.'}",
+        "",
+        "Role being applied for (summary – do not paste verbatim):",
+        jd_text[:800],
+        "",
+        "Message requirements:",
+        "- Reference the specific role title and company; do not paste JD content verbatim",
+        "- Make the ask clear but not pressuring",
+        "- Keep to 3-4 short paragraphs",
+        "- No hollow openers",
+    ]
+
+    if warmth_instruction:
+        parts.append(f"- {warmth_instruction}")
+
+    if referral_bonus:
+        parts.extend([
+            f"- The referral bonus for this role is {referral_bonus}. Mention this as mutual upside "
+            "– frame it as a benefit to both parties, not as transactional pressure.",
+        ])
+
+    parts.extend([
+        "",
+        "First, on a single line, write a one-sentence role-fit rationale the candidate can use "
+        "to calibrate whether this message is accurate before sending.",
+        "Separate it from the message with exactly this delimiter on its own line: ---ROLE-FIT---",
+        "Format: [one-line rationale]\\n---ROLE-FIT---\\n[message text]",
+    ])
+
+    return "\n".join(parts)
