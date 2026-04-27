@@ -26,6 +26,7 @@ JD_FIXTURE = (
 )
 
 
+@pytest.mark.live
 @pytest.mark.parametrize("contact,label", [
     (COLD, "Cold"),
     (ACQUAINTANCE, "Acquaintance"),
@@ -43,6 +44,7 @@ def test_stage1_live_all_warmth_tiers(contact, label):
         assert "[WHERE YOU WORKED TOGETHER]" in result
 
 
+@pytest.mark.live
 def test_stage2_live_strong_with_referral_bonus():
     contact = {**STRONG, "referral_bonus": "$5,000"}
     result = pn.generate_message(2, contact, CANDIDATE_FIXTURE, jd_text=JD_FIXTURE)
@@ -51,6 +53,7 @@ def test_stage2_live_strong_with_referral_bonus():
     assert len(result) > 50
 
 
+@pytest.mark.live
 def test_stage2_live_acquaintance_no_referral_bonus():
     contact = {**ACQUAINTANCE, "referral_bonus": None}
     result = pn.generate_message(2, contact, CANDIDATE_FIXTURE, jd_text=JD_FIXTURE)
