@@ -268,7 +268,12 @@ def _build_stage2_prompt(contact: dict, candidate: dict, jd_text: str) -> str:
 
 def _build_stage3_prompt(contact: dict, candidate: dict) -> str:
     warmth = contact.get("warmth", "Cold")
-    weight = "light and low-pressure" if warmth.lower() == "cold" else "warm and direct"
+    weight = {
+        "cold": "light and low-pressure",
+        "acquaintance": "warm but measured",
+        "former colleague": "collegial and direct",
+        "strong": "warm and direct",
+    }.get(warmth.lower(), "warm and direct")
 
     return "\n".join([
         f"Write a brief follow-up message from {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')} "

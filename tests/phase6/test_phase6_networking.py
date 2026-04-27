@@ -314,3 +314,14 @@ def test_stage4_prompt_contains_close_instruction():
 def test_stage4_prompt_instructs_keep_warm():
     prompt = pn._build_stage4_prompt(COLD, CANDIDATE_FIXTURE)
     assert "warm" in prompt.lower() or "relationship" in prompt.lower()
+
+
+def test_stage3_prompt_acquaintance_tone_differs_from_strong():
+    prompt_acq = pn._build_stage3_prompt(ACQUAINTANCE, CANDIDATE_FIXTURE)
+    prompt_strong = pn._build_stage3_prompt(STRONG, CANDIDATE_FIXTURE)
+    assert prompt_acq != prompt_strong
+
+
+def test_stage4_prompt_includes_warmth_label():
+    prompt = pn._build_stage4_prompt(STRONG, CANDIDATE_FIXTURE)
+    assert "Strong" in prompt
