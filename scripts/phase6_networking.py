@@ -308,3 +308,77 @@ def _build_stage4_prompt(contact: dict, candidate: dict) -> str:
         "- 2-3 sentences maximum",
         "- No hollow closers like 'I hope to stay in touch'",
     ])
+
+
+# ==============================================
+# CHARACTER LIMIT ENFORCEMENT
+# ==============================================
+
+def _enforce_char_limit(raw: str, warmth: str, client) -> str:
+    """
+    For Stage 1: parse connection request, check against tier limit,
+    re-prompt Claude once if over. Returns final raw response string.
+    """
+    parts = raw.split("---FOLLOW-UP---")
+    connection_request = parts[0].strip()
+    follow_up = parts[1].strip() if len(parts) > 1 else ""
+
+    w = warmth.lower()
+    limit = 180 if "acquaintance" in w or "former colleague" in w else 300
+
+    if len(connection_request) <= limit:
+        return raw
+
+    retry_prompt = (
+        f"The connection request you wrote was {len(connection_request)} characters:\n\n"
+        f"{connection_request}\n\n"
+        f"That exceeds the {limit}-character limit. Rewrite it to fit within {limit} characters "
+        f"- same structure and warmth, tighter language. Then include the follow-up message "
+        f"again after '---FOLLOW-UP---'."
+    )
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=512,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": strip_pii(retry_prompt)}],
+    )
+    return response.content[0].text
+
+
+# ==============================================
+# GENERATE MESSAGE (importable pure function)
+# ==============================================
+
+def generate_message(stage: int, contact: dict, candidate: dict, jd_text: str = None, client=None) -> str:
+    """
+    Generate an outreach message for the given stage and contact.
+    Pure function - no file I/O. Injectable client for testing.
+    Raises ValueError for invalid stage or missing jd_text at Stage 2.
+    """
+    if client is None:
+        client = Anthropic()
+
+    if stage not in (1, 2, 3, 4):
+        raise ValueError(f"Invalid stage: {stage}. Must be 1-4.")
+    if stage == 2 and not jd_text:
+        raise ValueError("jd_text is required for Stage 2 - pass --role to load the job description.")
+
+    prompt_map = {
+        1: lambda: _build_stage1_prompt(contact, candidate),
+        2: lambda: _build_stage2_prompt(contact, candidate, jd_text),
+        3: lambda: _build_stage3_prompt(contact, candidate),
+        4: lambda: _build_stage4_prompt(contact, candidate),
+    }
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=1024,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": strip_pii(prompt_map[stage]())}],
+    )
+    raw = response.content[0].text
+
+    if stage == 1:
+        raw = _enforce_char_limit(raw, contact.get("warmth", "Cold"), client)
+
+    return raw

@@ -325,3 +325,124 @@ def test_stage3_prompt_acquaintance_tone_differs_from_strong():
 def test_stage4_prompt_includes_warmth_label():
     prompt = pn._build_stage4_prompt(STRONG, CANDIDATE_FIXTURE)
     assert "Strong" in prompt
+
+
+# ==============================================
+# generate_message
+# ==============================================
+
+def _mock_client(text="Generated message.\n---FOLLOW-UP---\nFollow-up message."):
+    client = MagicMock()
+    response = MagicMock()
+    response.content = [MagicMock(text=text)]
+    client.messages.create.return_value = response
+    return client
+
+
+def test_generate_message_stage1_calls_api(tmp_path):
+    client = _mock_client()
+    result = pn.generate_message(1, COLD, CANDIDATE_FIXTURE, client=client)
+    assert client.messages.create.called
+    assert isinstance(result, str)
+
+
+def test_generate_message_invalid_stage_raises():
+    with pytest.raises(ValueError, match="Invalid stage"):
+        pn.generate_message(5, COLD, CANDIDATE_FIXTURE, client=_mock_client())
+
+
+def test_generate_message_stage2_without_jd_raises():
+    with pytest.raises(ValueError, match="jd_text"):
+        pn.generate_message(2, STRONG, CANDIDATE_FIXTURE, client=_mock_client())
+
+
+def test_generate_message_stage2_with_jd_calls_api():
+    client = _mock_client("Role fit rationale here.\n---ROLE-FIT---\nReferral message.")
+    result = pn.generate_message(2, STRONG, CANDIDATE_FIXTURE, jd_text=JD_FIXTURE, client=client)
+    assert client.messages.create.called
+    assert isinstance(result, str)
+
+
+def test_generate_message_stage3_calls_api():
+    client = _mock_client("Brief follow-up.")
+    result = pn.generate_message(3, COLD, CANDIDATE_FIXTURE, client=client)
+    assert client.messages.create.called
+
+
+def test_generate_message_stage4_calls_api():
+    client = _mock_client("Closing message.")
+    result = pn.generate_message(4, COLD, CANDIDATE_FIXTURE, client=client)
+    assert client.messages.create.called
+
+
+# ==============================================
+# Character limit enforcement (Stage 1)
+# ==============================================
+
+def test_char_limit_cold_strong_300(tmp_path):
+    """Cold/Strong: connection request over 300 chars triggers retry."""
+    long_cr = "x" * 310
+    follow_up = "Follow-up text."
+    first_response = f"{long_cr}\n---FOLLOW-UP---\n{follow_up}"
+    good_cr = "x" * 290
+    second_response = f"{good_cr}\n---FOLLOW-UP---\n{follow_up}"
+
+    client = MagicMock()
+    r1 = MagicMock()
+    r1.content = [MagicMock(text=first_response)]
+    r2 = MagicMock()
+    r2.content = [MagicMock(text=second_response)]
+    client.messages.create.side_effect = [r1, r2]
+
+    result = pn.generate_message(1, COLD, CANDIDATE_FIXTURE, client=client)
+    assert client.messages.create.call_count == 2
+    assert good_cr in result
+
+
+def test_char_limit_acquaintance_180(tmp_path):
+    """Acquaintance: connection request over 180 chars triggers retry."""
+    long_cr = "x" * 190
+    follow_up = "Follow-up."
+    first_response = f"{long_cr}\n---FOLLOW-UP---\n{follow_up}"
+    good_cr = "x" * 170
+    second_response = f"{good_cr}\n---FOLLOW-UP---\n{follow_up}"
+
+    client = MagicMock()
+    r1 = MagicMock()
+    r1.content = [MagicMock(text=first_response)]
+    r2 = MagicMock()
+    r2.content = [MagicMock(text=second_response)]
+    client.messages.create.side_effect = [r1, r2]
+
+    result = pn.generate_message(1, ACQUAINTANCE, CANDIDATE_FIXTURE, client=client)
+    assert client.messages.create.call_count == 2
+
+
+def test_char_limit_within_budget_no_retry():
+    """No retry when connection request is within budget."""
+    cr = "x" * 250
+    response_text = f"{cr}\n---FOLLOW-UP---\nFollow-up."
+    client = _mock_client(response_text)
+    pn.generate_message(1, COLD, CANDIDATE_FIXTURE, client=client)
+    assert client.messages.create.call_count == 1
+
+
+def test_placeholder_in_acquaintance_output():
+    """Acquaintance output must contain the placeholder marker."""
+    response_text = (
+        "Hi [HOW YOU KNOW THIS PERSON], I wanted to reach out.\n"
+        "---FOLLOW-UP---\n"
+        "Great to be connected!"
+    )
+    client = _mock_client(response_text)
+    result = pn.generate_message(1, ACQUAINTANCE, CANDIDATE_FIXTURE, client=client)
+    assert "[HOW YOU KNOW THIS PERSON]" in result
+
+
+def test_no_placeholder_in_cold_output():
+    """Cold output must not contain any placeholder marker."""
+    response_text = "Cold outreach message.\n---FOLLOW-UP---\nFollow-up."
+    client = _mock_client(response_text)
+    result = pn.generate_message(1, COLD, CANDIDATE_FIXTURE, client=client)
+    assert "[HOW YOU KNOW THIS PERSON]" not in result
+    assert "[WHERE YOU WORKED TOGETHER]" not in result
