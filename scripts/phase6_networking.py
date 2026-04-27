@@ -96,6 +96,8 @@ def update_contact(path: str, contact_name: str, updates: dict) -> None:
             for field, value in updates.items():
                 if field == "response_date":
                     continue  # never written by script
+                if field not in headers:
+                    raise ValueError(f"update_contact: field '{field}' not in xlsx headers")
                 col_idx = headers.index(field)
                 row[col_idx].value = value
             break

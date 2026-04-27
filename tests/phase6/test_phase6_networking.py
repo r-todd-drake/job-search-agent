@@ -117,7 +117,11 @@ def test_update_contact_stage2_sets_role_activated(tmp_path):
 
 def test_update_contact_never_writes_response_date(tmp_path):
     path = _make_xlsx(tmp_path, rows=[COLD])
-    pn.update_contact(str(path), "Jane Q. Applicant", {"stage": 2, "first_contact": date(2026, 4, 26)})
+    pn.update_contact(str(path), "Jane Q. Applicant", {
+        "stage": 2,
+        "first_contact": date(2026, 4, 26),
+        "response_date": date(2026, 4, 27),  # should be silently ignored
+    })
     contacts = pn.load_contacts(str(path))
     assert contacts[0]["response_date"] is None
 
