@@ -82,7 +82,7 @@ def find_contact(contacts: list, name: str) -> dict:
         raise ValueError(f"Contact '{name}' not found in contact_pipeline.xlsx.")
     if len(matches) > 1:
         found = ", ".join(c["contact_name"] for c in matches)
-        raise ValueError(f"Contact '{name}' is ambiguous — matched: {found}. Use a more specific name.")
+        raise ValueError(f"Contact '{name}' is ambiguous – matched: {found}. Use a more specific name.")
     return matches[0]
 
 

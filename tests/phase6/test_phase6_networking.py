@@ -279,3 +279,9 @@ def test_stage2_prompt_includes_warmth_calibration():
     prompt_acq = pn._build_stage2_prompt(contact_acquaintance, CANDIDATE_FIXTURE, JD_FIXTURE)
     # Both should reference warmth in some way — they should differ
     assert prompt_strong != prompt_acq
+
+
+def test_stage2_prompt_referral_bonus_framed_as_mutual_upside():
+    contact = {**STRONG, "referral_bonus": "$5,000"}
+    prompt = pn._build_stage2_prompt(contact, CANDIDATE_FIXTURE, JD_FIXTURE)
+    assert "mutual upside" in prompt.lower()
