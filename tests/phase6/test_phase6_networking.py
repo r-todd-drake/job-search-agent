@@ -285,3 +285,32 @@ def test_stage2_prompt_referral_bonus_framed_as_mutual_upside():
     contact = {**STRONG, "referral_bonus": "$5,000"}
     prompt = pn._build_stage2_prompt(contact, CANDIDATE_FIXTURE, JD_FIXTURE)
     assert "mutual upside" in prompt.lower()
+
+
+# ==============================================
+# _build_stage3_prompt
+# ==============================================
+
+def test_stage3_prompt_contains_followup_instruction():
+    prompt = pn._build_stage3_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "follow" in prompt.lower()
+
+
+def test_stage3_prompt_cold_and_strong_differ():
+    prompt_cold = pn._build_stage3_prompt(COLD, CANDIDATE_FIXTURE)
+    prompt_strong = pn._build_stage3_prompt(STRONG, CANDIDATE_FIXTURE)
+    assert prompt_cold != prompt_strong
+
+
+# ==============================================
+# _build_stage4_prompt
+# ==============================================
+
+def test_stage4_prompt_contains_close_instruction():
+    prompt = pn._build_stage4_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "close" in prompt.lower() or "outcome" in prompt.lower() or "loop" in prompt.lower()
+
+
+def test_stage4_prompt_instructs_keep_warm():
+    prompt = pn._build_stage4_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "warm" in prompt.lower() or "relationship" in prompt.lower()

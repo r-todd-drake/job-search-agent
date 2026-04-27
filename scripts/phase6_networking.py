@@ -264,3 +264,42 @@ def _build_stage2_prompt(contact: dict, candidate: dict, jd_text: str) -> str:
     ])
 
     return "\n".join(parts)
+
+
+def _build_stage3_prompt(contact: dict, candidate: dict) -> str:
+    warmth = contact.get("warmth", "Cold")
+    weight = "light and low-pressure" if warmth.lower() == "cold" else "warm and direct"
+
+    return "\n".join([
+        f"Write a brief follow-up message from {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')} "
+        f"to {contact['contact_name']} at {contact.get('company', 'their company')}.",
+        "",
+        "Context: a prior outreach message was sent but has not received a response.",
+        f"Warmth level: {warmth}",
+        f"Notes: {contact.get('notes') or 'No prior contact.'}",
+        "",
+        "Requirements:",
+        f"- Tone: {weight}",
+        "- Acknowledge the prior message briefly – do not repeat the full pitch",
+        "- 2-3 sentences maximum",
+        "- Leave the door open – no pressure",
+        "- No hollow openers",
+    ])
+
+
+def _build_stage4_prompt(contact: dict, candidate: dict) -> str:
+    return "\n".join([
+        f"Write a brief closing message from {os.getenv('CANDIDATE_NAME', '[CANDIDATE]')} "
+        f"to {contact['contact_name']} at {contact.get('company', 'their company')} "
+        "to close the loop on a role that has now resolved.",
+        "",
+        f"Warmth level: {contact.get('warmth', 'Cold')}",
+        f"Notes: {contact.get('notes') or 'No prior contact.'}",
+        "",
+        "Requirements:",
+        "- Share the outcome briefly (the candidate will fill in: offer accepted / withdrawn / not selected)",
+        "- Thank the contact genuinely",
+        "- Keep the relationship warm regardless of outcome",
+        "- 2-3 sentences maximum",
+        "- No hollow closers like 'I hope to stay in touch'",
+    ])
