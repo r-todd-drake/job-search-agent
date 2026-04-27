@@ -51,6 +51,7 @@ Thumbs.db
 # Archived files
 .archive/
 docs/features/retired
+docs/web-skills
 
 # mempalace files
 entities.json
