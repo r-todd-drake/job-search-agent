@@ -204,7 +204,7 @@ def _build_stage1_prompt(contact: dict, candidate: dict) -> str:
     parts.extend([
         "",
         "Then write a follow-up message for if the candidate is already connected with "
-        f"{contact['contact_name']}. The follow-up should be 2-3 sentences — concise and warm.",
+        f"{contact['contact_name']}. The follow-up should be 2-3 sentences – concise and warm.",
         "Separate the two outputs with exactly this delimiter on its own line: ---FOLLOW-UP---",
         "Format: [connection request text]\\n---FOLLOW-UP---\\n[follow-up message text]",
     ])
