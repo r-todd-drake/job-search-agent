@@ -512,3 +512,20 @@ def test_format_stage1_output_cold_over_limit_shows_warning():
     raw = "x" * 310 + "\n---FOLLOW-UP---\nFollow-up."
     output = pn._format_stage1_output(raw, "Cold")
     assert "OVER" in output
+
+
+# ==============================================
+# _format_stage2_output
+# ==============================================
+
+def test_format_stage2_output_splits_on_delimiter():
+    raw = "Strong fit — SE background matches role.\n---ROLE-FIT---\nHi Jane, I wanted to reach out..."
+    output = pn._format_stage2_output(raw)
+    assert output.startswith("Role fit:")
+    assert "Hi Jane" in output
+
+
+def test_format_stage2_output_no_delimiter_returns_raw():
+    raw = "Message without delimiter."
+    output = pn._format_stage2_output(raw)
+    assert output == raw

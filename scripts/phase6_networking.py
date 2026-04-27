@@ -463,7 +463,11 @@ def main():
     parser.add_argument("--role", type=str, help="Job package role slug (required at Stage 2)")
     args = parser.parse_args()
 
-    contacts = load_contacts(CONTACTS_TRACKER_PATH)
+    try:
+        contacts = load_contacts(CONTACTS_TRACKER_PATH)
+    except FileNotFoundError:
+        print(f"Error: contact tracker not found at {CONTACTS_TRACKER_PATH}. Create the xlsx first.")
+        sys.exit(1)
 
     if args.list:
         list_contacts(contacts)
@@ -476,10 +480,13 @@ def main():
     _warn_if_stage_mismatch(contact, args.stage)
 
     if args.stage == 2 and not args.role:
-        print("Error: --role is required at Stage 2.")
-        sys.exit(1)
+        parser.error("--role is required at Stage 2")
 
-    candidate = candidate_config.load()
+    try:
+        candidate = candidate_config.load()
+    except Exception as e:
+        print(f"Error: could not load candidate config — {e}")
+        sys.exit(1)
     jd_text = None
     if args.stage == 2:
         jd_path = f"data/job_packages/{args.role}/job_description.txt"
