@@ -403,3 +403,68 @@ def test_no_placeholder_in_cold_output():
     result = pn.generate_message(1, COLD, CANDIDATE_FIXTURE, client=client)
     assert "[HOW YOU KNOW THIS PERSON]" not in result
     assert "[WHERE YOU WORKED TOGETHER]" not in result
+
+
+# ==============================================
+# Stage mismatch warning
+# ==============================================
+
+def test_stage_mismatch_prints_warning(tmp_path, capsys):
+    contact_at_stage1 = {**COLD, "stage": 1}
+    pn._warn_if_stage_mismatch(contact_at_stage1, requested_stage=3)
+    captured = capsys.readouterr()
+    assert "Warning" in captured.out
+    assert "stage 1" in captured.out.lower() or "stage: 1" in captured.out.lower()
+
+
+def test_stage_mismatch_no_warning_when_matching(tmp_path, capsys):
+    contact_at_stage1 = {**COLD, "stage": 1}
+    pn._warn_if_stage_mismatch(contact_at_stage1, requested_stage=1)
+    captured = capsys.readouterr()
+    assert "Warning" not in captured.out
+
+
+# ==============================================
+# _build_write_back
+# ==============================================
+
+def test_write_back_stage1_fields():
+    updates = pn._build_write_back(1)
+    assert updates["stage"] == 2
+    assert "first_contact" in updates
+
+
+def test_write_back_stage2_includes_role():
+    updates = pn._build_write_back(2, role="acme-systems-se")
+    assert updates["stage"] == 3
+    assert updates["role_activated"] == "acme-systems-se"
+
+
+def test_write_back_stage3_advances_stage():
+    assert pn._build_write_back(3) == {"stage": 4}
+
+
+def test_write_back_stage4_closes_status():
+    assert pn._build_write_back(4) == {"status": "Closed"}
+
+
+# ==============================================
+# _format_stage1_output
+# ==============================================
+
+def test_format_stage1_output_cold_shows_300_budget():
+    raw = "Short connection request.\n---FOLLOW-UP---\nFollow-up message."
+    output = pn._format_stage1_output(raw, "Cold")
+    assert "300" in output
+
+
+def test_format_stage1_output_acquaintance_shows_remaining_budget():
+    raw = "x" * 140 + "\n---FOLLOW-UP---\nFollow-up."
+    output = pn._format_stage1_output(raw, "Acquaintance")
+    assert "remaining" in output
+
+
+def test_format_stage1_output_cold_over_limit_shows_warning():
+    raw = "x" * 310 + "\n---FOLLOW-UP---\nFollow-up."
+    output = pn._format_stage1_output(raw, "Cold")
+    assert "OVER" in output

@@ -371,3 +371,130 @@ def list_contacts(contacts: list) -> None:
             f"{(c.get('status') or ''):<12}  "
             f"{(c.get('role_activated') or ''):<22}"
         )
+
+
+# ==============================================
+# CLI HELPERS
+# ==============================================
+
+def _warn_if_stage_mismatch(contact: dict, requested_stage: int) -> None:
+    """Print a warning if requested stage differs from contact's current xlsx stage."""
+    xlsx_stage = contact.get("stage")
+    if xlsx_stage is not None and int(xlsx_stage) != requested_stage:
+        print(
+            f"Warning: contact_pipeline.xlsx shows {contact['contact_name']} at stage {xlsx_stage}, "
+            f"but --stage {requested_stage} was requested. Generating Stage {requested_stage} message anyway."
+        )
+
+
+def _format_stage1_output(raw: str, warmth: str) -> str:
+    """Parse Stage 1 raw Claude output and format for display."""
+    parts = raw.split("---FOLLOW-UP---")
+    connection_request = parts[0].strip()
+    follow_up = parts[1].strip() if len(parts) > 1 else ""
+
+    w = warmth.lower()
+    limit = 180 if "acquaintance" in w or "former colleague" in w else 300
+    char_count = len(connection_request)
+
+    if "acquaintance" in w or "former colleague" in w:
+        char_line = f"[{char_count} chars generated | ~{limit - char_count} chars remaining for your fill]"
+        if char_count > limit:
+            char_line += f"  *** OVER {limit}-CHAR TARGET -- trim before sending ***"
+    else:
+        char_line = f"[{char_count} / {limit} characters]"
+        if char_count > limit:
+            char_line += "  *** OVER LIMIT -- trim before sending ***"
+
+    output = f"--- Connection Request ---\n{connection_request}\n\n{char_line}"
+    if follow_up:
+        output += f"\n\n--- Follow-Up (if already connected) ---\n{follow_up}"
+    return output
+
+
+def _format_stage2_output(raw: str) -> str:
+    """Parse Stage 2 raw Claude output and format for display."""
+    parts = raw.split("---ROLE-FIT---")
+    if len(parts) == 2:
+        rationale = parts[0].strip()
+        message = parts[1].strip()
+        return f"Role fit: {rationale}\n\n{message}"
+    return raw
+
+
+def _build_write_back(stage: int, role: str = None) -> dict:
+    """Return the dict of fields to write back on confirm for a given stage."""
+    today = date.today()
+    if stage == 1:
+        return {"stage": 2, "first_contact": today}
+    if stage == 2:
+        updates = {"stage": 3}
+        if role:
+            updates["role_activated"] = role
+        return updates
+    if stage == 3:
+        return {"stage": 4}
+    if stage == 4:
+        return {"status": "Closed"}
+    return {}
+
+
+# ==============================================
+# MAIN
+# ==============================================
+
+def main():
+    parser = argparse.ArgumentParser(description="Phase 6 -- Networking and Outreach Support")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--contact", type=str, help="Contact name (partial match)")
+    group.add_argument("--list", action="store_true", help="List all contacts")
+    parser.add_argument("--stage", type=int, choices=[1, 2, 3, 4], help="Message stage")
+    parser.add_argument("--role", type=str, help="Job package role slug (required at Stage 2)")
+    args = parser.parse_args()
+
+    contacts = load_contacts(CONTACTS_TRACKER_PATH)
+
+    if args.list:
+        list_contacts(contacts)
+        return
+
+    if args.stage is None:
+        parser.error("--stage is required when using --contact")
+
+    contact = find_contact(contacts, args.contact)
+    _warn_if_stage_mismatch(contact, args.stage)
+
+    if args.stage == 2 and not args.role:
+        print("Error: --role is required at Stage 2.")
+        sys.exit(1)
+
+    candidate = candidate_config.load()
+    jd_text = None
+    if args.stage == 2:
+        jd_path = f"data/job_packages/{args.role}/job_description.txt"
+        if not os.path.exists(jd_path):
+            print(f"Error: job description not found at {jd_path}")
+            sys.exit(1)
+        with open(jd_path, encoding="utf-8") as f:
+            jd_text = f.read()
+
+    print(f"\n=== Stage {args.stage} | {contact['contact_name']} @ {contact.get('company', '')} | {contact.get('warmth', '')} ===\n")
+
+    raw = generate_message(args.stage, contact, candidate, jd_text=jd_text)
+
+    if args.stage == 1:
+        print(_format_stage1_output(raw, contact.get("warmth", "Cold")))
+    elif args.stage == 2:
+        print(_format_stage2_output(raw))
+    else:
+        print(raw)
+
+    answer = input("\nDid you send this? (y/n): ").strip().lower()
+    if answer == "y":
+        updates = _build_write_back(args.stage, role=args.role)
+        update_contact(CONTACTS_TRACKER_PATH, contact["contact_name"], updates)
+        print(f"Updated {contact['contact_name']} in contact_pipeline.xlsx.")
+
+
+if __name__ == "__main__":
+    main()
