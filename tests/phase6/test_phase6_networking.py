@@ -258,3 +258,32 @@ def test_stage2_prompt_includes_warmth_calibration():
     prompt_strong = pn._build_stage2_prompt(contact_strong, CANDIDATE_FIXTURE, JD_FIXTURE)
     prompt_acq = pn._build_stage2_prompt(contact_acquaintance, CANDIDATE_FIXTURE, JD_FIXTURE)
     assert prompt_strong != prompt_acq
+
+
+# ==============================================
+# _build_stage3_prompt
+# ==============================================
+
+def test_stage3_prompt_contains_followup_instruction():
+    prompt = pn._build_stage3_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "follow" in prompt.lower()
+
+
+def test_stage3_prompt_cold_and_strong_differ():
+    prompt_cold = pn._build_stage3_prompt(COLD, CANDIDATE_FIXTURE)
+    prompt_strong = pn._build_stage3_prompt(STRONG, CANDIDATE_FIXTURE)
+    assert prompt_cold != prompt_strong
+
+
+# ==============================================
+# _build_stage4_prompt
+# ==============================================
+
+def test_stage4_prompt_contains_close_instruction():
+    prompt = pn._build_stage4_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "close" in prompt.lower() or "outcome" in prompt.lower() or "loop" in prompt.lower()
+
+
+def test_stage4_prompt_instructs_keep_warm():
+    prompt = pn._build_stage4_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "warm" in prompt.lower() or "relationship" in prompt.lower()
