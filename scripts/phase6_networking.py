@@ -84,3 +84,37 @@ def find_contact(contacts: list, name: str) -> dict:
         found = ", ".join(c["contact_name"] for c in matches)
         raise ValueError(f"Contact '{name}' is ambiguous — matched: {found}. Use a more specific name.")
     return matches[0]
+
+
+def update_contact(path: str, contact_name: str, updates: dict) -> None:
+    """Write field updates back to the xlsx row matching contact_name."""
+    wb = openpyxl.load_workbook(path)
+    ws = wb.active
+    headers = [cell.value for cell in ws[1]]
+    for row in ws.iter_rows(min_row=2):
+        if row[headers.index("contact_name")].value == contact_name:
+            for field, value in updates.items():
+                if field == "response_date":
+                    continue  # never written by script
+                col_idx = headers.index(field)
+                row[col_idx].value = value
+            break
+    wb.save(path)
+
+
+def list_contacts(contacts: list) -> None:
+    """Print all contacts as a table sorted by stage ascending."""
+    sorted_contacts = sorted(contacts, key=lambda c: (c.get("stage") or 0))
+    header = (
+        f"{'NAME':<25}  {'COMPANY':<22}  {'STG':<6}  {'STATUS':<12}  {'ROLE':<22}"
+    )
+    print(header)
+    print("-" * len(header))
+    for c in sorted_contacts:
+        print(
+            f"{(c.get('contact_name') or ''):<25}  "
+            f"{(c.get('company') or ''):<22}  "
+            f"{str(c.get('stage') or ''):<6}  "
+            f"{(c.get('status') or ''):<12}  "
+            f"{(c.get('role_activated') or ''):<22}"
+        )
