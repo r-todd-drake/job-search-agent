@@ -160,3 +160,67 @@ def test_list_contacts_includes_required_columns(tmp_path, capsys):
     captured = capsys.readouterr()
     for col in ("contact_name", "company", "stage", "status"):
         assert col in captured.out.lower() or "Jane" in captured.out
+
+
+# ==============================================
+# _warmth_context
+# ==============================================
+
+def test_warmth_context_cold_returns_empty():
+    assert pn._warmth_context("Cold") == ""
+
+
+def test_warmth_context_strong_returns_empty():
+    assert pn._warmth_context("Strong") == ""
+
+
+def test_warmth_context_acquaintance_returns_placeholder_instruction():
+    result = pn._warmth_context("Acquaintance")
+    assert "[HOW YOU KNOW THIS PERSON]" in result
+
+
+def test_warmth_context_former_colleague_returns_placeholder_instruction():
+    result = pn._warmth_context("Former Colleague")
+    assert "[WHERE YOU WORKED TOGETHER]" in result
+
+
+# ==============================================
+# _build_stage1_prompt
+# ==============================================
+
+CANDIDATE_FIXTURE = {
+    "clearance": {"status": "Current", "level": "TS/SCI"},
+    "military": {"service": [{"branch": "US Army", "dates": "2001-2009"}]},
+    "confirmed_skills": {"programming": "Python, MATLAB"},
+}
+
+
+def test_stage1_prompt_cold_contains_300_char_limit():
+    prompt = pn._build_stage1_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "300" in prompt
+
+
+def test_stage1_prompt_acquaintance_contains_180_char_target():
+    prompt = pn._build_stage1_prompt(ACQUAINTANCE, CANDIDATE_FIXTURE)
+    assert "180" in prompt
+
+
+def test_stage1_prompt_acquaintance_contains_how_you_know_placeholder():
+    prompt = pn._build_stage1_prompt(ACQUAINTANCE, CANDIDATE_FIXTURE)
+    assert "[HOW YOU KNOW THIS PERSON]" in prompt
+
+
+def test_stage1_prompt_former_colleague_contains_where_worked_placeholder():
+    prompt = pn._build_stage1_prompt(FORMER_COLLEAGUE, CANDIDATE_FIXTURE)
+    assert "[WHERE YOU WORKED TOGETHER]" in prompt
+
+
+def test_stage1_prompt_cold_no_placeholder():
+    prompt = pn._build_stage1_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "[HOW YOU KNOW THIS PERSON]" not in prompt
+    assert "[WHERE YOU WORKED TOGETHER]" not in prompt
+
+
+def test_stage1_prompt_requests_follow_up_section():
+    prompt = pn._build_stage1_prompt(COLD, CANDIDATE_FIXTURE)
+    assert "---FOLLOW-UP---" in prompt
