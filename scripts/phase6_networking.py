@@ -139,8 +139,8 @@ def _build_candidate_context(candidate: dict) -> str:
     ]
     cl = candidate.get("clearance", {})
     if cl:
-        lines.append(f"Clearance: {cl.get('status', '')} {cl.get('level', '')}")
-    for svc in candidate.get("military", {}).get("service", []):
+        lines.append(f"Clearance: {cl.get('status') or ''} {cl.get('level') or ''}".strip())
+    for svc in (candidate.get("military") or {}).get("service") or []:
         branch = svc.get("branch", "")
         dates = svc.get("dates", "")
         if branch:
@@ -193,9 +193,9 @@ def _build_stage1_prompt(contact: dict, candidate: dict) -> str:
         "",
         "Connection request requirements:",
         f"- HARD LIMIT: {char_limit}",
-        "- Specific and genuine — no 'I came across your profile' openers",
-        "- No role ask — relationship-building only",
-        "- Write the connection request text only — no labels, no preamble",
+        "- Specific and genuine – no 'I came across your profile' openers",
+        "- No role ask – relationship-building only",
+        "- Write the connection request text only – no labels, no preamble",
     ]
 
     if warmth_instruction:

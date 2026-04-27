@@ -224,3 +224,17 @@ def test_stage1_prompt_cold_no_placeholder():
 def test_stage1_prompt_requests_follow_up_section():
     prompt = pn._build_stage1_prompt(COLD, CANDIDATE_FIXTURE)
     assert "---FOLLOW-UP---" in prompt
+
+
+# ==============================================
+# _build_candidate_context
+# ==============================================
+
+def test_build_candidate_context_military_service_none():
+    candidate = {
+        "clearance": {"status": "Current", "level": "TS/SCI"},
+        "military": {"service": None},
+        "confirmed_skills": {"programming": "Python"},
+    }
+    result = pn._build_candidate_context(candidate)
+    assert "Python" in result  # does not crash on None service
