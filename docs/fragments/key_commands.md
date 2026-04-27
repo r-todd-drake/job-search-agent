@@ -31,6 +31,11 @@ python -m scripts.phase3_parse_employer "[employer name]"
 python -m scripts.phase3_build_candidate_profile
 python -m scripts.phase3_compile_library
 
+# Networking outreach
+python -m scripts.phase6_networking --list
+python -m scripts.phase6_networking --contact "[name]" --stage [1-4]
+python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
+
 # Document assembly (run after editing any fragment or template)
 python scripts/utils/build_docs.py                   # rebuild all
 python scripts/utils/build_docs.py --doc README.md   # rebuild one

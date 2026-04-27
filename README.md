@@ -26,7 +26,7 @@ Instead of manually searching, scoring, and tailoring applications one at a time
 | 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
 | 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
 | 5 | Interview preparation — stage-aware prep packages (recruiter / hiring manager / team panel) | ✅ Complete |
-| 6 | Networking and outreach support — LinkedIn search guidance and message templates | ⏳ Planned |
+| 6 | Networking and outreach support — warmth-calibrated LinkedIn and email outreach messages across four contact stages | ✅ Complete |
 | 7 | Search agent — automated role discovery | ⏳ Planned |
 
 
@@ -82,6 +82,12 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 10. Run phase5_thankyou.py to generate thank-you letters
    → One .txt and .docx per interviewer, drawn from the filed debrief
    → Use --panel_label for panel interviews with multiple interviewers
+11. Run phase6_networking.py to generate outreach messages
+   → --list to see all contacts and their current stage
+   → --contact "[name]" --stage 1 for connection request + follow-up (warmth-calibrated)
+   → --contact "[name]" --stage 2 --role [role] for referral ask (loads JD automatically)
+   → --contact "[name]" --stage 3/4 for follow-up / close the loop
+   → Responds y to confirm sends and advances contact stage in contact_pipeline.xlsx
 
 ```
 
@@ -253,6 +259,43 @@ it is lost.
 
 ---
 
+## Phase 6 — Networking and Outreach
+
+Generates warmth-calibrated outreach messages for contacts in `data/tracker/contact_pipeline.xlsx`.
+Four relationship stages, four warmth tiers (Cold / Acquaintance / Former Colleague / Strong).
+No automated sending — all output is terminal only. Contact stage advances on interactive confirm.
+
+```bash
+# List all contacts with current stage and status
+python -m scripts.phase6_networking --list
+
+# Stage 1 — connection request + follow-up (warmth-calibrated)
+python -m scripts.phase6_networking --contact "[name]" --stage 1
+
+# Stage 2 — referral ask (loads job description from data/job_packages/[role]/)
+python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
+
+# Stage 3 — follow-up nudge
+python -m scripts.phase6_networking --contact "[name]" --stage 3
+
+# Stage 4 — close the loop after role resolution
+python -m scripts.phase6_networking --contact "[name]" --stage 4
+```
+
+**Stage behavior:**
+
+| Stage | Message type | Warmth calibration | Write-back on y |
+|-------|-------------|-------------------|-----------------|
+| 1 | Connection request (300-char limit) + follow-up | Placeholder markers for Acquaintance / Former Colleague | stage → 2, first_contact = today |
+| 2 | Referral ask; conditional referral bonus mention | Tone scales from neutral → direct | stage → 3, role_activated = [role] |
+| 3 | Follow-up nudge — no repeat pitch | Low-pressure (Cold) or warm/direct (others) | stage → 4 |
+| 4 | Close the loop — outcome + keep warm | All tiers | status → Closed |
+
+Contact tracker: `data/tracker/contact_pipeline.xlsx` (gitignored — personal data).
+Example tracker with fictional data: `example_data/tracker/contact_pipeline_example.xlsx`.
+
+---
+
 ## Tech Stack
 
 - **Python 3.x** — core scripting and automation
@@ -415,7 +458,8 @@ Job_search_agent/
 |   ├── job_packages/[role]/              # Example JD, stage files
 |   ├── outputs/                          # Example generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 |   ├── tracker/job_pipeline_example.xlsx # Example job pipeline tracker
-|   │    └── README.txt                   # Tracker workbook README
+|   │    ├── README.txt                   # Tracker workbook README
+|   │    └── contact_pipeline_example.xlsx # Example contact tracker (fictional data)
 |   └── jobs.csv                          # Example Pipeline - status + req number tracking
 ├── outputs                               # Generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
 ├── resumes/                              # Generated resumes (local only)
@@ -440,6 +484,7 @@ Job_search_agent/
 │   ├── phase5_workshop_capture.py        # Parses workshopped prep .docx into interview_library.json
 │   ├── phase5_debrief_utils.py           # Shared utility — load filed debrief JSON
 │   ├── interview_library_parser.py       # Shared module — read/write interview_library.json
+│   ├── phase6_networking.py              # Warmth-calibrated outreach message generator; reads/writes contact_pipeline.xlsx
 │   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
 │   ├── check_cover_letter.py             # Two-layer cover letter quality check
 │   └── utils/
@@ -452,7 +497,7 @@ Job_search_agent/
 │   ├── conftest.py                       # Shared fixtures and fictional test identity
 │   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
 │   ├── utils/                            # pii_filter, library_parser, build_docs tests
-│   └── phase1/ … phase5/                 # Per-phase test files mirroring scripts/
+│   └── phase1/ … phase6/                 # Per-phase test files mirroring scripts/
 ├── CLAUDE.md                             # Claude Code conventions and safety rules
 ├── pytest.ini                            # Test config: pythonpath, live marker
 ├── requirements.txt                      # Runtime dependencies
@@ -470,7 +515,6 @@ Job_search_agent/
 
 | Item | Description |
 |------|-------------|
-| Phase 6 | Networking support — LinkedIn search guidance, connection request and follow-up message templates |
 | Phase 7 | Search agent — automated role discovery from Google, USAJobs, ClearanceJobs |
 | Pipeline report | Pull interview stage from job_pipeline.xlsx into pipeline_report.py output |
 
