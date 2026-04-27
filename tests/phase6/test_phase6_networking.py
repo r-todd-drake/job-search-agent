@@ -54,14 +54,14 @@ def test_load_contacts_all_columns_present(tmp_path):
 # ==============================================
 
 def test_find_contact_exact_match(tmp_path):
-    path = _make_xlsx(tmp_path)
+    path = _make_xlsx(tmp_path, rows=[COLD])
     contacts = pn.load_contacts(path)
     result = pn.find_contact(contacts, "Jane Q. Applicant")
     assert result["contact_name"] == "Jane Q. Applicant"
 
 
 def test_find_contact_case_insensitive(tmp_path):
-    path = _make_xlsx(tmp_path)
+    path = _make_xlsx(tmp_path, rows=[COLD])
     contacts = pn.load_contacts(path)
     result = pn.find_contact(contacts, "jane q. applicant")
     assert result["contact_name"] == "Jane Q. Applicant"

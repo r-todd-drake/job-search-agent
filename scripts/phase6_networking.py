@@ -77,13 +77,6 @@ def load_contacts(path: str) -> list:
 def find_contact(contacts: list, name: str) -> dict:
     """Case-insensitive partial match on contact_name. Raises ValueError if ambiguous or not found."""
     name_lower = name.lower()
-
-    # First try exact match (case-insensitive)
-    exact_matches = [c for c in contacts if (c.get("contact_name") or "").lower() == name_lower]
-    if len(exact_matches) > 0:
-        return exact_matches[0]
-
-    # Fall back to partial matches
     matches = [c for c in contacts if name_lower in (c.get("contact_name") or "").lower()]
     if len(matches) == 0:
         raise ValueError(f"Contact '{name}' not found in contact_pipeline.xlsx.")
