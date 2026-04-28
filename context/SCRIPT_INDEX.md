@@ -9,7 +9,7 @@ For full structure see README.md.
 
 | Script                | Purpose                                                                                                       | Key flags       |
 | --------------------- | ------------------------------------------------------------------------------------------------------------- | --------------- |
-| `init_job_package.py` | Create a new job package folder, empty `job_description.txt`, and `jobs.csv` row; opens file in editor | `--role` `--req` |
+| `init_job_package.py` | Create a new job package folder, empty `job_description.txt`, and a complete `jobs.csv` row; prompts for company, title, location, salary_range, url (Enter to skip); opens file in editor | `--role` `--req` |
 
 ## Pipeline scripts
 

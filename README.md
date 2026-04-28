@@ -52,7 +52,9 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 ## Daily Workflow
 
 ```
-01. Add new roles to jobs.csv (blank status, req number if available)
+01. Run init_job_package.py --role [role] --req [req#] for each new role
+   → Prompts for company, title, location, salary_range, url (Enter to skip)
+   → Creates job_description.txt and writes a complete jobs.csv row
 02. Run phase2_job_ranking.py
    → Scores all roles, reports only NEW/PURSUE/CONSIDER
    → Flags duplicate requisition numbers
