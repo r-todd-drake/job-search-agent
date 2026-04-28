@@ -127,6 +127,45 @@ def test_append_csv_row_sets_date_found(tmp_path):
     assert rows[0]["date_found"] == str(date.today())
 
 
+def test_append_csv_row_full_row_completeness(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "company,title,location,salary_range,url,req_number,date_found,status,package_folder\n"
+    )
+    extra_fields = {
+        "company": "Acme Corp",
+        "title": "Software Engineer",
+        "location": "Austin TX",
+        "salary_range": "$120k-$150k",
+        "url": "https://jobs.acme.com/123",
+    }
+    append_csv_row(str(csv_file), "Acme_SE", "REQ-1", extra_fields)
+    rows = list(csv.DictReader(open(str(csv_file))))
+    assert rows[0]["company"] == "Acme Corp"
+    assert rows[0]["title"] == "Software Engineer"
+    assert rows[0]["location"] == "Austin TX"
+    assert rows[0]["salary_range"] == "$120k-$150k"
+    assert rows[0]["url"] == "https://jobs.acme.com/123"
+    assert rows[0]["req_number"] == "REQ-1"
+    assert rows[0]["package_folder"] == "Acme_SE"
+    assert rows[0]["date_found"] == str(date.today())
+
+
+def test_append_csv_row_extra_fields_none_becomes_empty_string(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "company,title,location,salary_range,url,req_number,date_found,status,package_folder\n"
+    )
+    extra_fields = {"company": None, "title": "Engineer", "location": None, "salary_range": None, "url": None}
+    append_csv_row(str(csv_file), "Acme_SE", "REQ-1", extra_fields)
+    rows = list(csv.DictReader(open(str(csv_file))))
+    assert rows[0]["company"] == ""
+    assert rows[0]["title"] == "Engineer"
+    assert rows[0]["location"] == ""
+    assert rows[0]["salary_range"] == ""
+    assert rows[0]["url"] == ""
+
+
 def test_collect_optional_fields_all_provided():
     responses = iter(["Acme Corp", "Software Engineer", "Austin TX", "$120k-$150k", "https://jobs.acme.com/123"])
     result = collect_optional_fields(input_fn=lambda _: next(responses))
