@@ -163,6 +163,8 @@ def test_collect_optional_fields_mixed():
 def test_collect_optional_fields_strips_whitespace():
     result = collect_optional_fields(input_fn=lambda _: "  Acme Corp  ")
     assert result["company"] == "Acme Corp"
+    result2 = collect_optional_fields(input_fn=lambda _: "   ")
+    assert result2["company"] is None
 
 
 def test_collect_optional_fields_prompt_labels():
