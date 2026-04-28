@@ -79,13 +79,17 @@ def create_job_description(folder_path: str) -> str:
     return jd_path
 
 
-def append_csv_row(csv_path: str, role: str, req: str) -> None:
+def append_csv_row(csv_path: str, role: str, req: str, extra_fields: dict | None = None) -> None:
     with open(csv_path, newline="", encoding="utf-8") as f:
         fieldnames = csv.DictReader(f).fieldnames or []
     row = {field: "" for field in fieldnames}
     row["package_folder"] = role
     row["req_number"] = req
     row["date_found"] = str(date.today())
+    if extra_fields:
+        for key, value in extra_fields.items():
+            if key in row:
+                row[key] = value if value is not None else ""
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writerow(row)
