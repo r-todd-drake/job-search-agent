@@ -20,6 +20,22 @@ from scripts.config import JOBS_PACKAGES_DIR as PACKAGES_DIR
 JOBS_CSV = "data/jobs.csv"
 ACTIVE_STATUSES = {"", "PURSUE", "CONSIDER", "APPLIED"}
 
+OPTIONAL_FIELD_PROMPTS = [
+    ("company", "Company"),
+    ("title", "Title"),
+    ("location", "Location"),
+    ("salary_range", "Salary range"),
+    ("url", "URL"),
+]
+
+
+def collect_optional_fields(input_fn=input) -> dict:
+    fields = {}
+    for key, label in OPTIONAL_FIELD_PROMPTS:
+        raw = input_fn(f"{label} (Enter to skip): ").strip()
+        fields[key] = raw if raw else None
+    return fields
+
 
 def validate_role(role: str) -> None:
     if not role:
