@@ -12,6 +12,7 @@ from scripts.init_job_package import (
     create_job_description,
     append_csv_row,
     open_file_in_editor,
+    collect_optional_fields,
     main,
 )
 
@@ -124,6 +125,60 @@ def test_append_csv_row_sets_date_found(tmp_path):
     append_csv_row(str(csv_file), "Anduril_SE", "REQ-1")
     rows = list(csv.DictReader(open(str(csv_file))))
     assert rows[0]["date_found"] == str(date.today())
+
+
+def test_collect_optional_fields_all_provided():
+    responses = iter(["Acme Corp", "Software Engineer", "Austin TX", "$120k-$150k", "https://jobs.acme.com/123"])
+    result = collect_optional_fields(input_fn=lambda _: next(responses))
+    assert result == {
+        "company": "Acme Corp",
+        "title": "Software Engineer",
+        "location": "Austin TX",
+        "salary_range": "$120k-$150k",
+        "url": "https://jobs.acme.com/123",
+    }
+
+
+def test_collect_optional_fields_all_skipped():
+    result = collect_optional_fields(input_fn=lambda _: "")
+    assert result == {
+        "company": None,
+        "title": None,
+        "location": None,
+        "salary_range": None,
+        "url": None,
+    }
+
+
+def test_collect_optional_fields_mixed():
+    responses = iter(["Acme Corp", "", "Austin TX", "", ""])
+    result = collect_optional_fields(input_fn=lambda _: next(responses))
+    assert result["company"] == "Acme Corp"
+    assert result["title"] is None
+    assert result["location"] == "Austin TX"
+    assert result["salary_range"] is None
+    assert result["url"] is None
+
+
+def test_collect_optional_fields_strips_whitespace():
+    result = collect_optional_fields(input_fn=lambda _: "  Acme Corp  ")
+    assert result["company"] == "Acme Corp"
+
+
+def test_collect_optional_fields_prompt_labels():
+    prompts_seen = []
+
+    def capture_input(prompt):
+        prompts_seen.append(prompt)
+        return ""
+
+    collect_optional_fields(input_fn=capture_input)
+    assert len(prompts_seen) == 5
+    assert any("Company" in p for p in prompts_seen)
+    assert any("Title" in p for p in prompts_seen)
+    assert any("Location" in p for p in prompts_seen)
+    assert any("Salary" in p for p in prompts_seen)
+    assert any("URL" in p for p in prompts_seen)
 
 
 def test_open_file_in_editor_calls_code(tmp_path):
