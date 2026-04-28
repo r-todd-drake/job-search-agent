@@ -86,7 +86,7 @@ def append_csv_row(csv_path: str, role: str, req: str, extra_fields: dict | None
     row["package_folder"] = role
     row["req_number"] = req
     row["date_found"] = str(date.today())
-    if extra_fields:
+    if extra_fields is not None:
         for key, value in extra_fields.items():
             if key in row:
                 row[key] = value if value is not None else ""
@@ -155,9 +155,11 @@ def main(
             continue
         final_role = role + suffix
 
+    extra_fields = collect_optional_fields(input_fn)
+
     folder_path = folder_creator(packages_dir, final_role)
     jd_path = file_creator(folder_path)
-    csv_appender(jobs_csv, final_role, req)
+    csv_appender(jobs_csv, final_role, req, extra_fields)
 
     print(f"\nCreated: {jd_path}")
     print("Next steps:")

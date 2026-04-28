@@ -276,12 +276,18 @@ def test_main_happy_path_calls_all_side_effects(tmp_path, capsys):
         csv_appender=mock_csv_appender,
         file_opener=mock_file_opener,
         folder_exists=lambda p: False,
+        input_fn=lambda _: "",
     )
 
     assert exit_code == 0
     mock_folder_creator.assert_called_once_with(str(tmp_path), "Anduril_SE")
     mock_file_creator.assert_called_once_with(str(tmp_path / "Anduril_SE"))
-    mock_csv_appender.assert_called_once_with(str(csv_file), "Anduril_SE", "REQ-1")
+    mock_csv_appender.assert_called_once_with(
+        str(csv_file),
+        "Anduril_SE",
+        "REQ-1",
+        {"company": None, "title": None, "location": None, "salary_range": None, "url": None},
+    )
     mock_file_opener.assert_called_once()
     captured = capsys.readouterr()
     assert "job_description.txt" in captured.out
@@ -346,7 +352,7 @@ def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_
     csv_file.write_text(
         "package_folder,status,req_number,date_found,company,title,location,salary_range,url\n"
     )
-    # folder_exists returns True for "Anduril_SE", False for "Anduril_SE_2"
+
     def folder_exists(path):
         return os.path.basename(path) == "Anduril_SE"
 
@@ -355,6 +361,8 @@ def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_
         return_value=str(tmp_path / "Anduril_SE_2" / "job_description.txt")
     )
     mock_csv_appender = MagicMock()
+    # First call: suffix prompt returns "_2"; next 5 calls: field prompts return "" (skip all)
+    input_fn = MagicMock(side_effect=["_2", "", "", "", "", ""])
 
     exit_code = main(
         role="Anduril_SE",
@@ -366,9 +374,100 @@ def test_main_folder_collision_prompts_for_suffix_and_creates_with_new_name(tmp_
         csv_appender=mock_csv_appender,
         file_opener=MagicMock(),
         folder_exists=folder_exists,
-        input_fn=lambda _: "_2",
+        input_fn=input_fn,
     )
 
     assert exit_code == 0
     mock_folder_creator.assert_called_once_with(str(tmp_path), "Anduril_SE_2")
-    mock_csv_appender.assert_called_once_with(str(csv_file), "Anduril_SE_2", "REQ-99")
+    mock_csv_appender.assert_called_once_with(
+        str(csv_file),
+        "Anduril_SE_2",
+        "REQ-99",
+        {"company": None, "title": None, "location": None, "salary_range": None, "url": None},
+    )
+
+
+def test_main_optional_fields_passed_to_csv_appender(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found,company,title,location,salary_range,url\n"
+    )
+    mock_csv_appender = MagicMock()
+    responses = iter(["Acme Corp", "Software Engineer", "", "", ""])
+
+    main(
+        role="Acme_SE",
+        req="REQ-1",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=MagicMock(return_value=str(tmp_path / "Acme_SE")),
+        file_creator=MagicMock(return_value=str(tmp_path / "Acme_SE" / "job_description.txt")),
+        csv_appender=mock_csv_appender,
+        file_opener=MagicMock(),
+        folder_exists=lambda p: False,
+        input_fn=lambda _: next(responses),
+    )
+
+    mock_csv_appender.assert_called_once_with(
+        str(csv_file),
+        "Acme_SE",
+        "REQ-1",
+        {"company": "Acme Corp", "title": "Software Engineer", "location": None, "salary_range": None, "url": None},
+    )
+
+
+def test_main_date_found_auto_populated_not_prompted(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found,company,title,location,salary_range,url\n"
+    )
+    prompt_count = 0
+
+    def counting_input_fn(_):
+        nonlocal prompt_count
+        prompt_count += 1
+        return ""
+
+    main(
+        role="Acme_SE",
+        req="REQ-1",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=MagicMock(return_value=str(tmp_path / "Acme_SE")),
+        file_creator=MagicMock(return_value=str(tmp_path / "Acme_SE" / "job_description.txt")),
+        csv_appender=MagicMock(),
+        file_opener=MagicMock(),
+        folder_exists=lambda p: False,
+        input_fn=counting_input_fn,
+    )
+
+    assert prompt_count == 5  # company, title, location, salary_range, url -- not date_found
+
+
+def test_main_prompts_not_shown_on_true_duplicate(tmp_path):
+    csv_file = tmp_path / "jobs.csv"
+    csv_file.write_text(
+        "package_folder,status,req_number,date_found\nAcme_SE,PURSUE,REQ-1,2026-01-01\n"
+    )
+    prompt_count = 0
+
+    def counting_input_fn(_):
+        nonlocal prompt_count
+        prompt_count += 1
+        return ""
+
+    exit_code = main(
+        role="Acme_SE",
+        req="REQ-1",
+        packages_dir=str(tmp_path),
+        jobs_csv=str(csv_file),
+        folder_creator=MagicMock(),
+        file_creator=MagicMock(),
+        csv_appender=MagicMock(),
+        file_opener=MagicMock(),
+        folder_exists=lambda p: False,
+        input_fn=counting_input_fn,
+    )
+
+    assert exit_code == 1
+    assert prompt_count == 0
