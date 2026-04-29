@@ -804,6 +804,13 @@ def generate_prep_docx(output_path, role, resume_source, stage_profile,
             stripped = line.strip()
             if not stripped:
                 continue
+            # Strip markdown bold markers left by the model
+            stripped = re.sub(r'\*\*([^*]*)\*\*', r'\1', stripped)
+            stripped = stripped.replace('**', '')
+            # Strip markdown heading markers so they render as proper headings
+            stripped = re.sub(r'^#{1,6}\s+', '', stripped)
+            if not stripped:
+                continue
             # All-caps heading pattern (e.g. "COMPANY OVERVIEW:", "STORY 1 -")
             if (re.match(r'^[A-Z][A-Z\s\-\u2013&/]+[:\-\u2013]', stripped) and
                     len(stripped) < 80 and not stripped.startswith('-')):
@@ -872,6 +879,44 @@ def generate_prep_docx(output_path, role, resume_source, stage_profile,
         parse_and_add_section(continuity_section)
 
     doc.save(output_path)
+
+# ==============================================
+# WEB RESPONSE NORMALIZER
+# ==============================================
+
+def _normalize_web_response(text):
+    """
+    Clean up Section 1 text returned by the web_search tool.
+
+    The tool leaves newlines where citation markers were stripped, producing
+    sentences split across lines where the next fragment starts with punctuation
+    (', with' / '. ') or a lowercase continuation word.  Also strips markdown
+    heading markers (###) that the model sometimes emits despite plain-text
+    instructions.
+    """
+    lines = text.split('\n')
+    result = []
+    for line in lines:
+        clean = re.sub(r'^#{1,6}\s+', '', line)  # strip markdown heading markers
+        stripped_clean = clean.strip()
+        if not result:
+            result.append(clean)
+            continue
+        prev = result[-1]
+        # Join if this fragment starts with punctuation (citation-break artifact)
+        if stripped_clean and stripped_clean[0] in ',.;:)':
+            result[-1] = prev.rstrip() + stripped_clean
+        # Join if previous line has no sentence-terminal punctuation and this
+        # fragment continues mid-sentence (starts with a lowercase letter)
+        elif (stripped_clean
+              and prev.strip()
+              and not prev.rstrip().endswith(('.', '!', '?', '”', '"', ':', ';'))
+              and stripped_clean[0].islower()):
+            result[-1] = prev.rstrip() + ' ' + stripped_clean
+        else:
+            result.append(clean)
+    return '\n'.join(result)
+
 
 # ==============================================
 # CORE GENERATION FUNCTION
@@ -953,8 +998,10 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     for block in response1.content:
         if hasattr(block, 'text') and block.text:
             section1_parts.append(block.text)
-    section1 = "\n".join(section1_parts) if section1_parts else \
+    section1 = _normalize_web_response(
+        "\n".join(section1_parts) if section1_parts else
         "Web search unavailable -- review company website before interview."
+    )
 
     # --------------------------------------------------
     # SECTION 1.5 -- INTRODUCE YOURSELF
