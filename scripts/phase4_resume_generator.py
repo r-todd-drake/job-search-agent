@@ -439,6 +439,10 @@ def build_stage1_draft(jd, selection_text, candidates_by_employer,
 
     # Write employer sections in reverse chronological order
     chrono = _get_chronological_order()
+    for emp_name in candidates_by_employer:
+        if emp_name not in chrono:
+            print(f"  WARNING: employer '{emp_name}' not in CHRONOLOGICAL_ORDER — "
+                  f"check name in candidate_config.yaml matches JSON name field exactly")
     tier_order = sorted(
         candidates_by_employer.keys(),
         key=lambda x: chrono.index(x) if x in chrono else 99

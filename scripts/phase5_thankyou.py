@@ -60,6 +60,28 @@ You never:
 - Use filler phrases or generic "I am excited about this opportunity" language"""
 
 # ==============================================
+# SALUTATION AND CLOSING
+# ==============================================
+
+def _build_salutation(name):
+    """Return 'Dear [First Name],' from full name, or 'Dear Hiring Manager,' if null/empty."""
+    if name and name.strip():
+        first = name.strip().split()[0]
+        return f"Dear {first},"
+    return "Dear Hiring Manager,"
+
+
+def _build_closing(candidate_name):
+    """Return the standard closing block as a \\n\\n-joined string."""
+    sentence = (
+        "Thank you again for your time. I'm very excited about this role "
+        "and the potential to work with such a strong team – "
+        "I look forward to the next step."
+    )
+    return "\n\n".join([sentence, "Respectfully,", candidate_name])
+
+
+# ==============================================
 # TONE CALIBRATION
 # ==============================================
 
@@ -398,6 +420,7 @@ def generate_letters(client, role, stage, panel_label, inputs, run_date):
 
     interviewers = (debrief.get("metadata") or {}).get("interviewers") or []
     package_dir = os.path.join(JOBS_PACKAGES_DIR, role)
+    candidate_name = os.getenv("CANDIDATE_NAME", "[CANDIDATE]")
 
     generated = []
     skipped = []
@@ -441,16 +464,20 @@ def generate_letters(client, role, stage, panel_label, inputs, run_date):
         )
         letter_body = response.content[0].text
 
+        salutation = _build_salutation(interviewer.get("name"))
+        closing = _build_closing(candidate_name)
+        full_letter = f"{salutation}\n\n{letter_body}\n\n{closing}"
+
         # Write .txt
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(letter_body)
+            f.write(full_letter)
         print(f"  Written: {txt_path}")
 
         # Write .docx
         try:
             _write_docx(
                 docx_path,
-                letter_body,
+                full_letter,
                 name,
                 interviewer.get("title"),
                 role,

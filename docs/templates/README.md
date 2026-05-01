@@ -217,6 +217,8 @@ Outputs to `data/job_packages/[role]/`:
 - `thankyou_[stage]_[interviewer].docx`
 
 One API call per letter. Reads interviewer name and exchange details from the debrief JSON.
+Each letter is a complete document: salutation ("Dear [First Name],"), AI-generated body,
+and a standard closing block ("Respectfully," + candidate name from `CANDIDATE_NAME` env var).
 
 ---
 

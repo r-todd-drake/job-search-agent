@@ -52,9 +52,7 @@ Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
 ## Daily Workflow
 
 ```
-01. Run init_job_package.py --role [role] --req [req#] for each new role
-   → Prompts for company, title, location, salary_range, url (Enter to skip)
-   → Creates job_description.txt and writes a complete jobs.csv row
+01. Add new roles to jobs.csv (blank status, req number if available)
 02. Run phase2_job_ranking.py
    → Scores all roles, reports only NEW/PURSUE/CONSIDER
    → Flags duplicate requisition numbers
@@ -241,6 +239,8 @@ Outputs to `data/job_packages/[role]/`:
 - `thankyou_[stage]_[interviewer].docx`
 
 One API call per letter. Reads interviewer name and exchange details from the debrief JSON.
+Each letter is a complete document: salutation ("Dear [First Name],"), AI-generated body,
+and a standard closing block ("Respectfully," + candidate name from `CANDIDATE_NAME` env var).
 
 ---
 
