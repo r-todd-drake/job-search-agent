@@ -28,7 +28,9 @@ def test_compile_library_includes_all_employers():
             json.dumps({"total": 0, "summaries": []}, indent=2), encoding="utf-8"
         )
 
-        library = compile_library(str(employers_dir), str(summaries_path))
+        chrono_order = [e["name"] for e in fixture_data["employers"]]
+        library = compile_library(str(employers_dir), str(summaries_path),
+                                  chrono_order=chrono_order)
 
     assert "employers" in library
     assert len(library["employers"]) == len(fixture_data["employers"])
@@ -51,7 +53,9 @@ def test_compile_library_has_metadata():
             json.dumps({"total": 0, "summaries": []}), encoding="utf-8"
         )
 
-        library = compile_library(str(employers_dir), str(summaries_path))
+        chrono_order = [e["name"] for e in fixture_data["employers"]]
+        library = compile_library(str(employers_dir), str(summaries_path),
+                                  chrono_order=chrono_order)
 
     assert "metadata" in library
     assert "total_employers" in library["metadata"]

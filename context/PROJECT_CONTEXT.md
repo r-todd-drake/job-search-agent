@@ -1,6 +1,6 @@
 <!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
 # AI Job Search Agent — Project Context
-Last updated: 27 Apr 2026
+Last updated: 01 May 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -46,7 +46,7 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
 - **Tier 2 (live):** `pytest -m live -v` — run before promoting a phase or after API changes
 - **CI:** GitHub Actions at `.github/workflows/test.yml` — green badge on README
-- **444 mock tests** across utils, phases 1–6. All passing on master as of 27 Apr 2026.
+- **469 mock tests** across utils, phases 1–6. All passing on master as of 01 May 2026.
 - **Test dependencies:** `requirements-dev.txt` (pytest, pytest-mock)
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 
@@ -62,6 +62,22 @@ All 8 scripts below had module-level execution removed so they can be imported b
 - `phase5_interview_prep.py` — extracted `generate_prep()`
 
 Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `phase3_parse_library.py`, `phase3_parse_employer.py`, `check_resume.py`.
+
+### phase3_compile_library + phase5_thankyou improvements (01 May 2026)
+`scripts/phase3_compile_library.py` — employer ordering regression fix:
+- `compile_library()` now sorts the `employers[]` array by `CHRONOLOGICAL_ORDER` from `candidate_config.yaml` instead of alphabetically by filename
+- Accepts optional `chrono_order` parameter for testability (tests inject fixture names; production reads config)
+- Skips employer files whose `name` field is not in `CHRONOLOGICAL_ORDER` — prevents stray files from appearing in compiled output
+- Emits named warnings in both directions: file not in config, config entry not matched by any file
+
+`scripts/phase4_resume_generator.py`:
+- `build_stage1_draft()` now emits a named warning when an employer from the library is not in `CHRONOLOGICAL_ORDER` — surfaces name-mismatch issues at generation time
+
+`scripts/phase5_thankyou.py` — salutation and closing block added to all generated letters:
+- `_build_salutation(name)` — extracts first name; falls back to "Dear Hiring Manager," when name is null/empty
+- `_build_closing(candidate_name)` — standard closing sentence (en dash), "Respectfully,", candidate name from `CANDIDATE_NAME` env var
+- `generate_letters()` wraps Claude's body output: `salutation + body + closing` before writing `.txt` and `.docx`
+- 15 new mock tests (35 total for phase5_thankyou): salutation, first-name extraction, null-name fallback, closing block, candidate name, en-dash enforcement
 
 ### Phase 6 — Networking and outreach support (27 Apr 2026)
 `scripts/phase6_networking.py` — contact-centric outreach message generator:

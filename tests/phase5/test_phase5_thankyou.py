@@ -387,7 +387,159 @@ def test_overwrite_accepted(tmp_path, monkeypatch):
 
     assert len(generated) == 1
     assert len(skipped) == 0
-    assert existing_txt.read_text(encoding="utf-8") == "new letter content"
+    assert "new letter content" in existing_txt.read_text(encoding="utf-8")
+
+
+# ==============================================
+# _build_salutation -- unit tests
+# ==============================================
+
+def test_build_salutation_first_name_only():
+    assert pt._build_salutation("John Smith") == "Dear John,"
+
+
+def test_build_salutation_single_name():
+    assert pt._build_salutation("Alice") == "Dear Alice,"
+
+
+def test_build_salutation_null_name():
+    assert pt._build_salutation(None) == "Dear Hiring Manager,"
+
+
+def test_build_salutation_empty_string():
+    assert pt._build_salutation("") == "Dear Hiring Manager,"
+
+
+def test_build_salutation_whitespace_only():
+    assert pt._build_salutation("   ") == "Dear Hiring Manager,"
+
+
+# ==============================================
+# _build_closing -- unit tests
+# ==============================================
+
+def test_build_closing_contains_thank_you_sentence():
+    closing = pt._build_closing("Jane Doe")
+    assert "Thank you again for your time" in closing
+
+
+def test_build_closing_contains_respectfully():
+    closing = pt._build_closing("Jane Doe")
+    assert "Respectfully," in closing
+
+
+def test_build_closing_contains_candidate_name():
+    closing = pt._build_closing("Jane Doe")
+    assert "Jane Doe" in closing
+
+
+def test_build_closing_ndash_not_emdash():
+    closing = pt._build_closing("Jane Doe")
+    assert "–" in closing   # en dash present
+    assert "—" not in closing  # em dash absent
+
+
+# ==============================================
+# Full letter output -- salutation, closing, fallback
+# ==============================================
+
+def test_full_letter_salutation_present(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "Test Candidate")
+
+    debrief = _make_debrief([{"name": "John Smith", "title": "Engineer", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+    client = _mock_client("Body paragraph here.")
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert content.startswith("Dear John,")
+
+
+def test_full_letter_first_name_extracted(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "Test Candidate")
+
+    debrief = _make_debrief([{"name": "Margaret O'Brien", "title": "Director", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+    client = _mock_client("Body here.")
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert content.startswith("Dear Margaret,")
+    assert "O'Brien" not in content.split("\n")[0]
+
+
+def test_full_letter_null_name_fallback(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "Test Candidate")
+
+    debrief = _make_debrief([{"name": None, "title": "Engineer", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+    client = _mock_client("Body here.")
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert content.startswith("Dear Hiring Manager,")
+
+
+def test_full_letter_closing_block_present(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "Test Candidate")
+
+    debrief = _make_debrief([{"name": "Pat Kim", "title": "Recruiter", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+    client = _mock_client("Body here.")
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert "Thank you again for your time" in content
+    assert "Respectfully," in content
+
+
+def test_full_letter_candidate_name_in_closing(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "R. Todd Drake")
+
+    debrief = _make_debrief([{"name": "Sam Lee", "title": "Engineer", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+    client = _mock_client("Body here.")
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert "R. Todd Drake" in content
+
+
+def test_full_letter_ndash_in_closing(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "Test Candidate")
+
+    debrief = _make_debrief([{"name": "Dana Cruz", "title": "Engineer", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+    client = _mock_client("Body here.")
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert "–" in content    # en dash present
+    assert "—" not in content  # em dash absent
 
 
 # ==============================================
