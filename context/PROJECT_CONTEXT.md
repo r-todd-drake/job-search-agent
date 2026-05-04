@@ -1,6 +1,6 @@
 <!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
 # AI Job Search Agent — Project Context
-Last updated: 01 May 2026
+Last updated: 04 May 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -46,7 +46,7 @@ A two-tier pytest suite now covers the full pipeline. This is the baseline for a
 - **Tier 1 (mock):** `pytest tests/ -m "not live" -v` — runs in CI on every push, no API key needed
 - **Tier 2 (live):** `pytest -m live -v` — run before promoting a phase or after API changes
 - **CI:** GitHub Actions at `.github/workflows/test.yml` — green badge on README
-- **469 mock tests** across utils, phases 1–6. All passing on master as of 01 May 2026.
+- **483 mock tests** across utils, phases 1–6. All passing as of 04 May 2026.
 - **Test dependencies:** `requirements-dev.txt` (pytest, pytest-mock)
 - **Fixture identity:** Jane Q. Applicant / Acme Defense Systems / ADS-12345
 
@@ -89,6 +89,15 @@ Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `p
 - Interactive y/n confirm before writing stage advance back to xlsx
 - `generate_message()` is pure/importable — injectable client for testing
 - 52 Tier 1 mock tests; 6 Tier 2 live API tests
+
+### find_duplicate_bullets utility (04 May 2026)
+`scripts/utils/find_duplicate_bullets.py` — standalone utility for experience library quality maintenance:
+- Scans `experience_library.json` for same or near-duplicate bullets across all employers using rapidfuzz `token_sort_ratio`
+- Union-find clustering handles transitive matches (A ~ B ~ C → one cluster even if A and C don't directly match)
+- Default threshold: 85%. Override with `--threshold`. Custom library path via `--library`.
+- Writes grouped cluster report to `outputs/duplicate_bullet_report_YYYYMMDD_HHMM.txt`
+- Pure function `find_duplicate_clusters(bullets, threshold)` is fully injectable for testability
+- 14 Tier 1 mock tests covering edge cases, cross-employer matching, same-employer matching, transitive clustering, and report formatting
 
 ### Candidate data store — 17a (25 Apr 2026)
 All personal constants migrated from 6 formerly-gitignored scripts to `context/candidate/candidate_config.yaml`:
@@ -195,6 +204,7 @@ Job_search_agent/
 │   └── utils/
 │       ├── build_docs.py                 # Assemble README + PROJECT_CONTEXT from fragments
 │       ├── candidate_config.py           # Candidate career data loader (load, get_hardcoded_rules, build_known_facts)
+│       ├── find_duplicate_bullets.py     # Scan experience_library.json for duplicate bullets; writes cluster report to outputs/
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       ├── normalize_library.py          # One-time cleanup — merge tranche-suffixed employer sections
 │       └── pii_filter.py                 # PII stripping — safe for GitHub
@@ -252,6 +262,10 @@ python -m scripts.phase3_compile_library
 python -m scripts.phase6_networking --list
 python -m scripts.phase6_networking --contact "[name]" --stage [1-4]
 python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
+
+# Library maintenance — duplicate bullet detection
+python -m scripts.utils.find_duplicate_bullets                    # scan at default threshold (85%)
+python -m scripts.utils.find_duplicate_bullets --threshold 90     # stricter threshold
 
 # Document assembly (run after editing any fragment or template)
 python scripts/utils/build_docs.py                   # rebuild all
