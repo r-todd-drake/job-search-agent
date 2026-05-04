@@ -109,6 +109,39 @@ def find_duplicate_clusters(bullets: list, threshold: float = 85.0) -> list:
     return _build_clusters(bullets, pairs)
 
 
-def format_cluster_report(clusters: list) -> str:
-    """Format clusters for human-readable output. (Stub — implemented in later task.)"""
-    pass
+def format_cluster_report(clusters: list, threshold: float, total_bullets: int) -> str:
+    """Format duplicate clusters as a human-readable report string."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    lines = [
+        "=" * 60,
+        "DUPLICATE BULLET REPORT",
+        f"Generated: {now}",
+        f"Threshold: {threshold:.0f}%",
+        f"Total bullets scanned: {total_bullets}",
+        f"Duplicate clusters found: {len(clusters)}",
+        "=" * 60,
+        "",
+    ]
+
+    if not clusters:
+        lines.append("No duplicate clusters found at this threshold.")
+        return "\n".join(lines)
+
+    for i, cluster in enumerate(clusters, start=1):
+        lines += [
+            f"Cluster {i}  (max similarity: {cluster['max_score']:.0f}%)",
+            "-" * 40,
+        ]
+        for bullet in cluster["bullets"]:
+            lines += [
+                f"  [{bullet['id']}] {bullet['employer']} | Theme: {bullet['theme']}",
+                f"  {bullet['text']}",
+                "",
+            ]
+        if cluster["pairs"]:
+            lines.append("  Pairwise scores:")
+            for id_a, id_b, score in cluster["pairs"]:
+                lines.append(f"    {id_a} -- {id_b}: {score:.0f}%")
+        lines += ["", "---", ""]
+
+    return "\n".join(lines)
