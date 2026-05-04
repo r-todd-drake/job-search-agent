@@ -145,3 +145,58 @@ def format_cluster_report(clusters: list, threshold: float, total_bullets: int) 
         lines += ["", "---", ""]
 
     return "\n".join(lines)
+
+
+def main(library_path: str, output_dir: str, threshold: float) -> None:
+    print("=" * 60)
+    print("DUPLICATE BULLET FINDER")
+    print("=" * 60)
+
+    with open(library_path, encoding="utf-8") as f:
+        library = json.load(f)
+
+    bullets = _extract_bullets(library)
+    total = len(bullets)
+    print(f"  Bullets loaded: {total}")
+    print(f"  Threshold: {threshold:.0f}%")
+    print("  Scanning for duplicates...")
+
+    clusters = find_duplicate_clusters(bullets, threshold=threshold)
+    print(f"  Clusters found: {len(clusters)}")
+
+    report = format_cluster_report(clusters, threshold=threshold, total_bullets=total)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+    output_path = os.path.join(output_dir, f"duplicate_bullet_report_{timestamp}.txt")
+    os.makedirs(output_dir, exist_ok=True)
+
+    if os.path.exists(output_path):
+        answer = input(f"  Output file exists: {output_path}\n  Overwrite? [y/N] ").strip().lower()
+        if answer != "y":
+            print("  Aborted.")
+            return
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(report)
+    print(f"\n  Written: {output_path}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Find duplicate bullets in experience_library.json"
+    )
+    parser.add_argument(
+        "--threshold", type=float, default=85.0,
+        help="Minimum similarity score to flag as duplicate (default: 85)"
+    )
+    parser.add_argument(
+        "--library", default=LIBRARY_PATH,
+        help=f"Path to experience_library.json (default: {LIBRARY_PATH})"
+    )
+    args = parser.parse_args()
+
+    main(
+        library_path=args.library,
+        output_dir=OUTPUT_DIR,
+        threshold=args.threshold,
+    )
