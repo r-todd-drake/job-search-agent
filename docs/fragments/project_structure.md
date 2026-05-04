@@ -72,6 +72,7 @@ Job_search_agent/
 │   └── utils/
 │       ├── build_docs.py                 # Assemble README + PROJECT_CONTEXT from fragments
 │       ├── candidate_config.py           # Candidate career data loader (load, get_hardcoded_rules, build_known_facts)
+│       ├── find_duplicate_bullets.py     # Scan experience_library.json for duplicate bullets; writes cluster report to outputs/
 │       ├── library_parser.py             # Shared parsing logic (no side effects)
 │       ├── normalize_library.py          # One-time cleanup — merge tranche-suffixed employer sections
 │       └── pii_filter.py                 # PII stripping — safe for GitHub

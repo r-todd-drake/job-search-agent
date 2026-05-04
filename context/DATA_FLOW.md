@@ -65,3 +65,4 @@ Shared module imports are NOT listed as reads — see the Shared Modules section
 | `utils/pii_filter.py` | Reads `.env` (PII values to strip before API calls — not a data file) |
 | `interview_library_parser.py` | Reads and writes `data/interview_library.json`; reads `data/interview_library_tags.json` |
 | `phase5_debrief_utils.py` | Reads `data/debriefs/[role]/*.json` (all filed debriefs for a role) |
+| `utils/find_duplicate_bullets.py` | Reads `data/experience_library/experience_library.json`; writes `outputs/duplicate_bullet_report_YYYYMMDD_HHMM.txt` |
