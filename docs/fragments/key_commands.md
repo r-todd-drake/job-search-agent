@@ -36,6 +36,10 @@ python -m scripts.phase6_networking --list
 python -m scripts.phase6_networking --contact "[name]" --stage [1-4]
 python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
 
+# Library maintenance — duplicate bullet detection
+python -m scripts.utils.find_duplicate_bullets                    # scan at default threshold (85%)
+python -m scripts.utils.find_duplicate_bullets --threshold 90     # stricter threshold
+
 # Document assembly (run after editing any fragment or template)
 python scripts/utils/build_docs.py                   # rebuild all
 python scripts/utils/build_docs.py --doc README.md   # rebuild one
