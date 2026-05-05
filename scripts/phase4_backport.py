@@ -121,11 +121,12 @@ def extract_library_bullets(library_md_path: str) -> list:
                 current_bullet = None
             break
 
-        if stripped.startswith("## ") and not stripped.startswith("## PROFESSIONAL"):
+        if stripped.startswith("## "):
             if current_bullet:
                 bullets.append(current_bullet)
                 current_bullet = None
-            current_employer = stripped[3:].strip()
+            # Section containers (e.g. "## Employers") — reset state, not an employer name
+            current_employer = None
             current_theme = None
             continue
 
@@ -133,7 +134,15 @@ def extract_library_bullets(library_md_path: str) -> list:
             if current_bullet:
                 bullets.append(current_bullet)
                 current_bullet = None
-            raw_theme = stripped[4:].strip()
+            current_employer = stripped[4:].strip()
+            current_theme = None
+            continue
+
+        if stripped.startswith("#### "):
+            if current_bullet:
+                bullets.append(current_bullet)
+                current_bullet = None
+            raw_theme = stripped[5:].strip()
             if raw_theme.startswith("Theme:"):
                 raw_theme = raw_theme[6:].strip()
             current_theme = raw_theme
