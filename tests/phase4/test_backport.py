@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path as _Path
 
 FIXTURE_STAGE4 = _Path(__file__).parent.parent / "fixtures" / "stage_files" / "stage4_final_backport.txt"
-FIXTURE_LIBRARY_MD = _Path(__file__).parent.parent / "fixtures" / "library" / "experience_library.md"
+FIXTURE_LIBRARY_MD = _Path(__file__).parent.parent / "fixtures" / "library" / "experience_library_backport.md"
 
 
 def test_parse_stage_file_employer_count():
@@ -87,11 +87,12 @@ def test_extract_library_bullets_sources_survive_note_lines():
     from scripts.phase4_backport import extract_library_bullets
     content = (
         "# Experience Library\n\n"
-        "## Acme Corp\n\n"
+        "## Employers\n\n"
+        "### Acme Corp\n\n"
         "**Title:** Engineer\n"
         "**Dates:** 2020-2025\n"
         "**Domain:** Defense\n\n"
-        "### Theme: Leadership\n\n"
+        "#### Theme: Leadership\n\n"
         "- Led a team of engineers to deliver key milestones.\n"
         "*NOTE: [CANONICAL -- use this version]*\n"
         "*PRIORITY: true*\n"
@@ -306,12 +307,14 @@ def test_update_registry_appends():
 MINI_LIBRARY = """\
 # Experience Library
 
-## Acme Defense Systems
+## Employers
+
+### Acme Defense Systems
 **Title:** Senior Systems Engineer
 **Dates:** 2020 - Present
 **Domain:** Defense
 
-### Theme: Systems Architecture
+#### Theme: Systems Architecture
 
 - Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.
 *Used in: acme_sse*
@@ -319,7 +322,7 @@ MINI_LIBRARY = """\
 - Developed system-of-systems architecture models supporting multi-domain C2 integration.
 *Used in: acme_sse*
 
-### Theme: Stakeholder Engagement
+#### Theme: Stakeholder Engagement
 
 - Facilitated IPT working groups with government stakeholders to define operational requirements and ConOps.
 *Used in: acme_sse*
