@@ -5,6 +5,7 @@ import sys
 from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import scripts.phase5_workshop_capture as wc
+import scripts.interview_library_parser as ilp
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -475,7 +476,7 @@ def test_skip_updates_roles_used(tmp_path, monkeypatch):
     }
     lib_path = _seed_library(tmp_path, library, monkeypatch)
     wc._skip_update_roles(library["stories"][0], "NewRole", library, "stories")
-    wc._write_library(library)
+    ilp.write_library(library)
     saved = json.loads(lib_path.read_text())
     assert "NewRole" in saved["stories"][0]["roles_used"]
     assert "OldRole" in saved["stories"][0]["roles_used"]
@@ -493,7 +494,7 @@ def test_overwrite_merges_roles_used(tmp_path, monkeypatch):
     new_entry = {"id": "g2-ops-mbse", "employer": "G2 OPS", "tags": ["mbse"],
                  "roles_used": ["NewRole"]}
     wc._overwrite_entry(library["stories"][0], new_entry, library, "stories")
-    wc._write_library(library)
+    ilp.write_library(library)
     saved = json.loads(lib_path.read_text())
     assert "OldRole" in saved["stories"][0]["roles_used"]
     assert "NewRole" in saved["stories"][0]["roles_used"]

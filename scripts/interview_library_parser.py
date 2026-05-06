@@ -27,6 +27,12 @@ def _load_library():
             raise ValueError(f"Library file at {LIBRARY_PATH} is not valid JSON: {e}") from e
 
 
+def write_library(library):
+    """Write library dict to LIBRARY_PATH with indent=2 and non-ASCII preserved."""
+    with open(LIBRARY_PATH, "w", encoding="utf-8") as f:
+        json.dump(library, f, indent=2, ensure_ascii=False)
+
+
 def load_tags():
     """Load controlled tag vocabulary. Returns empty list if file absent."""
     if not os.path.exists(TAGS_PATH):
