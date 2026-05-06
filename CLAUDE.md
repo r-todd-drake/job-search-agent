@@ -53,6 +53,7 @@ See context/SCRIPT_INDEX.md for a quick-reference table of every script — purp
 See context/SCHEMA_REFERENCE.md for the JSON schemas of the three key data files: debrief JSON, interview_library.json, and experience_library.json. Read this before modifying any Phase 4 or Phase 5 script that reads or writes these files.
 See context/DATA_FLOW.md for a script-by-script table of what each production script reads and writes at runtime. Read this before tracing data through the pipeline.
 See context/STAGE_FILES.md for the full file lifecycle inside data/job_packages/[role]/ and data/debriefs/[role]/. Read this before working with staged resume, cover letter, interview prep, or debrief files.
+
 ### Key scripts:
 - scripts/pipeline_report.py
 - scripts/phase2_job_ranking.py
