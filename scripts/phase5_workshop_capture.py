@@ -20,7 +20,7 @@ from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.interview_library_parser import (
-    LIBRARY_PATH, TAGS_PATH, init_library, load_tags, _load_library
+    LIBRARY_PATH, TAGS_PATH, init_library, load_tags, _load_library, write_library
 )
 from scripts.config import JOBS_PACKAGES_DIR
 
@@ -382,13 +382,6 @@ def _find_duplicate_question(library, text):
 # LIBRARY WRITE HELPERS
 # ==============================================
 
-def _write_library(library):
-    """Write library dict to LIBRARY_PATH."""
-    import scripts.interview_library_parser as ilp
-    with open(ilp.LIBRARY_PATH, "w", encoding="utf-8") as f:
-        json.dump(library, f, indent=2, ensure_ascii=False)
-
-
 def _skip_update_roles(existing_entry, role, library, section_key):
     """On skip: add role to roles_used if not already present. Mutates library in place."""
     if role not in existing_entry.get("roles_used", []):
@@ -623,7 +616,7 @@ def main():
             library["questions"].append(entry)
             written += 1
 
-    _write_library(library)
+    write_library(library)
 
     print(f"\n{'=' * 60}")
     print(f"Written: {written} entries")
