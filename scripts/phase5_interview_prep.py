@@ -154,6 +154,55 @@ Constraints:
 """
 
 
+_QUESTIONS_BEHAVIORAL = """
+Generate exactly 4 questions for a candidate to ask at the end of a behavioral interview
+for a defense systems engineering role. The questions should signal self-awareness,
+collaborative maturity, and genuine interest in how the team operates at a human level.
+
+Question categories to cover:
+1. How success is defined and measured in this role beyond task completion -- what does
+   excellent performance look like at 6 months?
+2. How the team handles disagreement or conflict in decision-making -- signals collaborative
+   maturity and interest in team dynamics
+3. What the interviewer would describe as the hardest cultural adjustment for someone
+   new to this team -- invites an honest, specific answer
+4. How the interviewer sees the role evolving over the next year -- signals investment in growth
+
+Constraints:
+- Questions must be appropriate for a peer or hiring manager level interviewer -- not purely HR
+- Do not ask about program architecture, tooling, or technical environment
+- Do not ask questions already answered in the job description or earlier interviews
+- Tone: reflective, engaged, sincere -- not transactional
+- Format: numbered list, each question followed by one sentence explaining what it
+  signals to the interviewer
+"""
+
+
+_QUESTIONS_TECHNICAL_PANEL = """
+Generate exactly 4 questions for a candidate to ask at the end of a technical panel interview
+for a defense systems engineering role. The questions should signal architectural depth,
+systems thinking, and peer-level engagement with the technical evaluators.
+
+Question categories to cover:
+1. The most significant architectural tradeoff the team has faced recently -- what was
+   the decision space and what drove the final call?
+2. Where the current system design has the most unresolved complexity or technical debt --
+   only someone doing this work would know to ask this
+3. How the team approaches model verification and validation for novel or emergent system
+   behaviors -- signals MBSE and V&V fluency
+4. What technical capability or background the panel wishes they had more of on the team
+   right now -- signals interest in contributing to gaps, not just filling a slot
+
+Constraints:
+- Questions must require deep technical knowledge to answer -- not addressable from the JD alone
+- Do not ask about company direction, culture, salary, career growth, or interview process
+- Do not ask questions that make the candidate sound uncertain about technical fit
+- Tone: architect to architect -- technical peers, not candidate to evaluator
+- Format: numbered list, each question followed by one sentence explaining what it signals
+  to the evaluators
+"""
+
+
 _PEER_FRAME_INSTRUCTIONS = """
 For the gap identified above, generate a Peer Frame response suitable for delivery
 to a working-level engineer in a team panel interview.
@@ -206,6 +255,27 @@ STAGE_PROFILES = {
         "salary_in_section1": False,
         "section1_focus": "team_panel",
         "questions_prompt": _QUESTIONS_TEAM_PANEL,
+        "peer_frame_prompt": _PEER_FRAME_INSTRUCTIONS,
+    },
+    "behavioral": {
+        "label": "Behavioral Interview",
+        "description": "45-60 min interview -- focus on STAR stories about competencies, not technical depth.",
+        "story_count": "3-4",
+        "story_depth": "full",
+        "gap_behavior": "full",
+        "salary_in_section1": False,
+        "section1_focus": "behavioral",
+        "questions_prompt": _QUESTIONS_BEHAVIORAL,
+    },
+    "technical_panel": {
+        "label": "Technical Panel Interview",
+        "description": "90+ min structured technical evaluation -- demonstrate architecture depth and engineering rigor.",
+        "story_count": "4-6",
+        "story_depth": "full_technical",
+        "gap_behavior": "full_peer",
+        "salary_in_section1": False,
+        "section1_focus": "technical_panel",
+        "questions_prompt": _QUESTIONS_TECHNICAL_PANEL,
         "peer_frame_prompt": _PEER_FRAME_INSTRUCTIONS,
     },
 }
@@ -262,6 +332,23 @@ def _build_section1_prompt(jd, salary_data, profile, salary_actuals=None):
             "- Company overview: CONDENSED to 2-3 sentences only -- panel members know the company\n"
             "- Program-specific context: mission area, technical environment, active programs from JD\n"
             "- Technical environment: tools, methodologies, and stack signals in JD language\n"
+            "Omit salary guidance. Omit general culture content."
+        ),
+        "behavioral": (
+            "Focus on:\n"
+            "- Company overview (3-4 sentences): what they do, defense/government focus, scale\n"
+            "- Culture signals: team environment, leadership style, what employees say about working there\n"
+            "- Recent news: contracts, programs, or announcements relevant to this role\n"
+            "Omit salary guidance. Omit technical program details -- behavioral interviews "
+            "are not the venue for program or architecture context."
+        ),
+        "technical_panel": (
+            "Focus on:\n"
+            "- Company overview: CONDENSED to 2 sentences only -- panel members know the company\n"
+            "- Technical environment: tools, methodologies, frameworks, and stack signals in JD language\n"
+            "- Program-specific technical context: active programs, architecture initiatives, known "
+            "  technical challenges from JD language\n"
+            "- Open technical problems: what hard engineering problems is this role solving?\n"
             "Omit salary guidance. Omit general culture content."
         ),
     }
@@ -324,6 +411,14 @@ def _build_intro_prompt(intro_monologue, profile):
         "team_panel": (
             "4-5 sentences, technically grounded",
             "specific tools, methodologies, and day-to-day peer-relevant experience",
+        ),
+        "behavioral": (
+            "3-4 sentences, competency-pattern focused",
+            "collaboration, leadership behaviors, and adaptability drawn from career history",
+        ),
+        "technical_panel": (
+            "4-5 sentences, technically grounded",
+            "specific tools, architectural decisions, and engineering rigor credible to a senior technical panel",
         ),
     }
     length_guidance, emphasis = _tailoring[profile["section1_focus"]]
@@ -927,7 +1022,7 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     """
     Generate interview prep package from role data.
     role_data keys: jd_text, stage_text, library, candidate_profile, role_name.
-    interview_stage: one of VALID_STAGES ('recruiter', 'hiring_manager', 'team_panel').
+    interview_stage: one of VALID_STAGES (see STAGE_PROFILES for current list).
     dry_run: if True, print stage profile and return without API calls or file writes.
     Writes both .txt and .docx output files.
     All PII stripped from API payloads.
@@ -1294,13 +1389,14 @@ def main():
         for i, s in enumerate(VALID_STAGES, 1):
             p = STAGE_PROFILES[s]
             print(f"  {i}. {s} – {p['label']}: {p['description']}")
-        choice = input("Enter stage name or number (1-3): ").strip().lower()
-        if choice in ("1", "recruiter"):
-            interview_stage = "recruiter"
-        elif choice in ("2", "hiring_manager"):
-            interview_stage = "hiring_manager"
-        elif choice in ("3", "team_panel"):
-            interview_stage = "team_panel"
+        n = len(VALID_STAGES)
+        choice = input(f"Enter stage name or number (1-{n}): ").strip().lower()
+        # Numeric choices follow STAGE_PROFILES insertion order.
+        # Always append new stages at the end of STAGE_PROFILES -- do not insert mid-dict.
+        stage_map = {str(i): s for i, s in enumerate(VALID_STAGES, 1)}
+        stage_map.update({s: s for s in VALID_STAGES})
+        if choice in stage_map:
+            interview_stage = stage_map[choice]
         else:
             print(f"Invalid selection '{choice}'. Valid stages: {', '.join(VALID_STAGES)}")
             sys.exit(1)
