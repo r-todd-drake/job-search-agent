@@ -190,7 +190,9 @@ def test_stage_profile_has_required_keys():
         "label", "description", "story_count", "story_depth",
         "gap_behavior", "salary_in_section1", "section1_focus", "questions_prompt",
     }
-    assert set(VALID_STAGES) == {"recruiter", "hiring_manager", "team_panel"}
+    assert set(VALID_STAGES) == {
+        "recruiter", "hiring_manager", "team_panel", "behavioral", "technical_panel"
+    }
     for stage, profile in STAGE_PROFILES.items():
         missing = required_keys - profile.keys()
         assert not missing, f"Stage '{stage}' missing keys: {missing}"
@@ -198,6 +200,12 @@ def test_stage_profile_has_required_keys():
     assert STAGE_PROFILES["recruiter"]["gap_behavior"] == "omit"
     assert STAGE_PROFILES["hiring_manager"]["salary_in_section1"] is True
     assert STAGE_PROFILES["team_panel"]["story_depth"] == "full_technical"
+    assert "peer_frame_prompt" in STAGE_PROFILES["technical_panel"]
+    assert "peer_frame_prompt" not in STAGE_PROFILES["behavioral"]
+    assert STAGE_PROFILES["behavioral"]["gap_behavior"] == "full"
+    assert STAGE_PROFILES["behavioral"]["salary_in_section1"] is False
+    assert STAGE_PROFILES["technical_panel"]["story_depth"] == "full_technical"
+    assert STAGE_PROFILES["technical_panel"]["salary_in_section1"] is False
 
 
 def test_invalid_stage_raises_system_exit(monkeypatch):
@@ -210,7 +218,7 @@ def test_invalid_stage_raises_system_exit(monkeypatch):
 
 def test_stage_specific_filenames():
     from scripts.phase5_interview_prep import _output_paths
-    for stage in ("recruiter", "hiring_manager", "team_panel"):
+    for stage in ("recruiter", "hiring_manager", "team_panel", "behavioral", "technical_panel"):
         txt, docx = _output_paths("/some/dir", stage)
         assert txt.endswith(f"interview_prep_{stage}.txt"), \
             f"Expected interview_prep_{stage}.txt, got {txt}"
@@ -888,3 +896,88 @@ def test_gap_prompt_contains_redirect_honesty_rule():
     assert "Never suggest the candidate claim experience they do not hold" in prompt, (
         "Redirect rule must prevent fabricating experience not in the candidate profile"
     )
+
+
+def test_dry_run_behavioral_no_api_calls(capsys):
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_behavioral.txt"
+        docx_path = Path(tmpdir) / "interview_prep_behavioral.docx"
+        generate_prep(client, role_data, "behavioral",
+                      str(txt_path), str(docx_path), dry_run=True)
+        assert not txt_path.exists(), "dry_run must not write output files"
+
+    assert client.messages.create.call_count == 0
+    captured = capsys.readouterr()
+    assert "Behavioral Interview" in captured.out, \
+        "dry_run stdout must include stage label"
+
+
+def test_dry_run_technical_panel_no_api_calls(capsys):
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_technical_panel.txt"
+        docx_path = Path(tmpdir) / "interview_prep_technical_panel.docx"
+        generate_prep(client, role_data, "technical_panel",
+                      str(txt_path), str(docx_path), dry_run=True)
+        assert not txt_path.exists(), "dry_run must not write output files"
+
+    assert client.messages.create.call_count == 0
+    captured = capsys.readouterr()
+    assert "Technical Panel Interview" in captured.out, \
+        "dry_run stdout must include stage label"
+
+
+def test_generate_prep_behavioral_creates_output_files():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_behavioral.txt"
+        docx_path = Path(tmpdir) / "interview_prep_behavioral.docx"
+        generate_prep(client, role_data, "behavioral", str(txt_path), str(docx_path))
+        assert txt_path.exists()
+        assert docx_path.exists()
+        content = txt_path.read_text(encoding="utf-8")
+
+    assert "Stage: Behavioral Interview" in content
+    # 5 calls: S1 + S1.5 (fixture has INTRO MONOLOGUE) + S2 + S3 (gap_behavior="full") + S4
+    assert client.messages.create.call_count == 5, (
+        f"Expected 5 API calls for behavioral, got {client.messages.create.call_count}. "
+        f"If 4: check fixture for ## INTRO MONOLOGUE section."
+    )
+
+
+def test_generate_prep_technical_panel_creates_output_files():
+    from scripts.phase5_interview_prep import generate_prep
+
+    client = make_mock_client(MOCK_PREP_RESPONSE)
+    role_data = make_role_data()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        txt_path = Path(tmpdir) / "interview_prep_technical_panel.txt"
+        docx_path = Path(tmpdir) / "interview_prep_technical_panel.docx"
+        generate_prep(client, role_data, "technical_panel", str(txt_path), str(docx_path))
+        assert txt_path.exists()
+        assert docx_path.exists()
+        content = txt_path.read_text(encoding="utf-8")
+
+    assert "Stage: Technical Panel Interview" in content
+    # 5 calls: S1 + S1.5 (fixture has INTRO MONOLOGUE) + S2 + S3 (gap_behavior="full_peer") + S4
+    assert client.messages.create.call_count == 5, (
+        f"Expected 5 API calls for technical_panel, got {client.messages.create.call_count}. "
+        f"If 4: check fixture for ## INTRO MONOLOGUE section."
+    )
+    # Peer Frame prompt must be in Section 3 call payload (call index 3)
+    section3_call = str(client.messages.create.call_args_list[3])
+    assert "Peer Frame" in section3_call
