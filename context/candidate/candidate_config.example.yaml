@@ -1,0 +1,85 @@
+# context/candidate/candidate_config.example.yaml
+# Blank template — copy to candidate_config.yaml and fill in your data.
+# candidate_config.yaml is gitignored and will never be committed.
+
+education:
+  degrees:
+    - institution: "[University Name]"
+      degree: "[Degree Name]"
+      notes: "[e.g., Army ROTC — commission pathway to Infantry Officer]"
+  continuing_education:
+    - institution: "[Institution Name]"
+      program: "[Program Name]"
+      status: "enrolled"  # enrolled / completed
+  not_held_labels:
+    - "[e.g., Systems Engineering degree]"
+    - "[e.g., Computer Science degree]"
+
+certifications:
+  active:
+    - "[e.g., ICAgile Certified Professional]"
+  lapsed:
+    - "[e.g., CompTIA Security+]"
+  not_held:
+    - "[e.g., INCOSE certified]"
+    - "[e.g., PMP certified]"
+
+military:
+  service:
+    - branch: "[e.g., U.S. Army]"
+      mos: "[e.g., 11M (Infantryman)]"
+      dates: "[e.g., 1991–1994]"
+      notes: "[optional additional detail]"
+
+clearance:
+  level: "[e.g., TS/SCI]"
+  status: "Current"  # Current (between employers) or Active (on a program)
+  granted: "[year]"
+
+confirmed_skills:
+  programming: "[prose description of programming background]"
+  tools:
+    - "[e.g., Git/GitHub (version control for personal projects)]"
+  not_held:
+    - "[e.g., GitLab]"
+    - "[e.g., MATLAB]"
+
+confirmed_gaps:
+  - "[Full sentence describing gap — e.g., No Terraform or infrastructure-as-code experience]"
+
+employers:
+  # List in reverse chronological order — order determines CHRONOLOGICAL_ORDER in phase4
+  - name: "[EXACT EMPLOYER NAME AS IT APPEARS IN experience_library.json]"
+    tier: 1  # 1 = most recent / highest priority, 2 = secondary, 3 = oldest / brief
+  - name: "[EMPLOYER 2]"
+    tier: 1
+
+resume_defaults:
+  role_title: "[e.g., Senior Systems Engineer]"
+  education_line: "[e.g., University Name — Degree | Army ROTC]"
+  certifications_line: "[e.g., ICAgile Certified Professional | Current TS/SCI]"
+
+style_rules:
+  dash_style: "en dash only — never em dash"
+  metric_rule: "no unverifiable metrics"
+  lapsed_certs_to_exclude:
+    - name: "[e.g., CompTIA Security+]"
+      fix: "Remove — certification is lapsed and must not appear"
+  clearance_language:
+    pattern_to_flag: "[e.g., Active TS/SCI]"
+    fix: "Use 'Current TS/SCI' between employers — 'Active' only when employed on a program"
+    between_employers: "[e.g., Current TS/SCI]"
+    on_program: "[e.g., Active TS/SCI]"
+  terminology:
+    - rule_name: "[short label for violation report]"
+      pattern: "[exact string to flag]"
+      replacement: "[correct replacement]"
+      case_sensitive: false
+
+intro_monologue: |
+  [Multi-line base introduction for Phase 5 to tailor per interview stage.
+  Verbatim — never paraphrase or compress this text.]
+
+short_tenure_explanation: |
+  [Short-tenure framing — final approved wording.
+  Verbatim — never paraphrase or compress this text.]

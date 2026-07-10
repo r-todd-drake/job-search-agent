@@ -1,0 +1,21 @@
+Dear Dana,
+
+Thank you for the conversation yesterday about the Senior Systems
+Engineer role on the Autonomous Maritime Systems program. I appreciated
+the candor about where the program stands - particularly the challenge
+you described of holding the architecture baseline steady while the
+prototype design is still moving.
+
+That problem is familiar ground for me. The incremental approach I
+described from my Navy C4ISR work - migrating to a model-based baseline
+one subsystem at a time while keeping the existing baseline
+authoritative - is the same discipline I would bring to your transition
+from prototype to program of record.
+
+I left the conversation more interested in the role than when I walked
+in. If it would be useful, I am glad to talk through the architecture
+governance question you raised in more depth with the team panel.
+
+Respectfully,
+
+Jane Q. Applicant

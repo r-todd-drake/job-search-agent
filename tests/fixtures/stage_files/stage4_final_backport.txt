@@ -1,0 +1,28 @@
+============================================================
+STAGE 4 FINAL — TestRole
+============================================================
+
+## PROFESSIONAL SUMMARY
+
+Senior systems engineer with 20+ years of experience in defense MBSE, autonomous systems, and multi-domain C2 integration. TS/SCI cleared.
+
+## CORE COMPETENCIES
+
+- MBSE | Cameo Systems Modeler | DoDAF | Autonomous Systems
+
+## Acme Defense Systems
+Title: Senior Systems Engineer
+Dates: 2020 - Present
+
+- Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.
+  [Theme: Systems Architecture]
+
+- Architected system interface definitions for all GNC subsystems across the autonomous vehicle program.
+  [Theme: Leadership]
+
+- Developed system-of-sys architecture models for multi-domain C2 integration with minor rewording.
+  [Theme: Systems Architecture]
+
+============================================================
+END OF STAGE 4 FINAL
+============================================================

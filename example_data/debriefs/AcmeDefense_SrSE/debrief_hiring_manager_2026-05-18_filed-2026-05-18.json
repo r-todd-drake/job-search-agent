@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "role": "AcmeDefense_SrSE",
+    "stage": "hiring_manager",
+    "panel_label": null,
+    "company": "Acme Defense Systems",
+    "interviewers": [
+      {
+        "name": "Dana Whitfield",
+        "title": "Director of Systems Engineering",
+        "notes": "Direct, technically engaged. Came up through Navy programs. Asked follow-ups on architecture governance."
+      }
+    ],
+    "interview_date": "2026-05-18",
+    "format": "video",
+    "produced_date": "2026-05-18"
+  },
+  "advancement_read": {
+    "assessment": "maybe",
+    "notes": "Engaged throughout, took notes during the baseline migration story. Said 'we will be in touch about a panel' unprompted, but no date given."
+  },
+  "stories_used": [
+    {
+      "tags": ["mbse", "architecture_baseline"],
+      "framing": "Architecture baseline adoption on the uncrewed surface vessel prototype, framed around getting subsystem leads to buy in.",
+      "landed": "yes",
+      "library_id": null
+    },
+    {
+      "tags": ["requirements", "migration"],
+      "framing": "Incremental migration to a model-based requirements baseline, framed as risk management.",
+      "landed": "yes",
+      "library_id": null
+    },
+    {
+      "tags": ["conops", "stakeholder_engagement"],
+      "framing": "ConOps facilitation with government stakeholders - ran short on time, only gave the headline version.",
+      "landed": "partially",
+      "library_id": null
+    }
+  ],
+  "gaps_surfaced": [
+    {
+      "gap_label": "JADC2",
+      "response_given": "Honest answer that I have not worked a JADC2 program, bridged to multi-domain C4ISR integration covering the same technical problem.",
+      "response_felt": "adequate"
+    }
+  ],
+  "salary_exchange": {
+    "range_given_min": 155000,
+    "range_given_max": 175000,
+    "candidate_anchor": 175000,
+    "candidate_floor": 160000,
+    "notes": "Whitfield volunteered the working range without being asked. Sign-on component mentioned again as flexible."
+  },
+  "what_i_said": "Committed to the framing that my current prototype is pre-Milestone B and that I have not done flight or weapons systems. Said I could start four weeks after offer. Described the baseline migration as taking 'about a year' - stay consistent on that.",
+  "open_notes": "Panel would likely include the chief architect and two subsystem leads. Whitfield raised architecture governance twice - prepare a stronger position on model change control before the panel."
+}

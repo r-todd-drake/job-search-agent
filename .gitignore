@@ -1,0 +1,62 @@
+# ==============================================
+# .gitignore — AI Job Search Agent
+# ==============================================
+
+# Job search data — personal, never commit
+data/
+resumes/
+outputs/
+templates_local/
+
+# Personal configuration and context files
+.env
+project_career_resume.md
+RESUME_TAILORING_CONTEXT.md
+context/candidate/*
+!context/candidate/candidate_config.example.yaml
+context/domain/*
+!context/domain/domain_config.example.yaml
+context/PIPELINE_STATUS.md
+docs/superpowers
+
+
+# Utility scripts containing personal data or local file paths
+scripts/utils/diagnose_library.py
+scripts/utils/diagnose_library2.py
+scripts/utils/diagnose_library3.py
+scripts/utils/diagnose_encoding.py
+scripts/utils/diagnose_keywords.py
+scripts/utils/normalize_library.py
+scripts/utils/diagnose_experience.py
+
+# Note: scripts/utils/pii_filter.py is intentionally NOT excluded
+# It contains no personal data — PII values are loaded from .env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# VS Code
+.vscode/
+
+# Claude Code local settings
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git worktrees
+.worktrees/
+
+# Archived files
+.archive/
+docs/features/retired
+docs/web-skills
+
+# mempalace files
+entities.json
+mempalace.yaml

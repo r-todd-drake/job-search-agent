@@ -1,0 +1,17 @@
+Senior Systems Engineer - Autonomous Maritime Systems
+Acme Defense Systems | San Diego, CA | Req: ADS-12345
+
+We seek a Senior Systems Engineer to support autonomous surface vessel systems for maritime defense.
+Requires MBSE expertise using Cameo Systems Modeler and DoDAF architectural framework.
+
+REQUIRED:
+- Active TS/SCI clearance
+- MBSE proficiency (Cameo, MagicDraw, or equivalent)
+- Defense acquisition experience (JCIDS, ACAT)
+- Autonomous Systems or Uncrewed platform experience
+
+PREFERRED:
+- JADC2 or multi-domain operations experience
+- ConOps development experience
+- Maritime or naval domain experience
+- C4ISR integration background

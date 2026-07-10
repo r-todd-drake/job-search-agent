@@ -1,0 +1,44 @@
+## COVER LETTER
+
+April 21, 2026
+
+Hiring Team
+Acme Defense Systems
+San Diego, CA
+
+Dear Hiring Manager,
+
+With more than 20 years of defense systems engineering experience and an
+active TS/SCI clearance, I am writing to apply for the Senior Systems
+Engineer - Autonomous Maritime Systems role (Req: ADS-12345). My current
+work centers on exactly the problem this role describes: taking uncrewed
+maritime platforms from operational concept to integrated system using
+model-based methods.
+
+At AeroDefense Corp, I lead MBSE development for an uncrewed surface
+vessel prototype, building the Cameo Systems Modeler architecture that
+became the program baseline and facilitating IPT working groups with
+government stakeholders to define ConOps for autonomous maritime
+missions. Earlier, at Naval Tech Solutions, I built SysML architecture
+models for Navy C4ISR modernization programs and supported ACAT II
+milestone reviews - experience directly relevant to your acquisition
+environment.
+
+I welcome the opportunity to discuss how this background in autonomous
+maritime systems and defense acquisition can contribute to your program.
+
+Sincerely,
+
+Jane Q. Applicant
+
+## APPLICATION PARAGRAPH
+
+I am a senior systems engineer with 20+ years in defense MBSE and an
+active TS/SCI clearance, currently leading model-based development of an
+uncrewed surface vessel prototype at AeroDefense Corp. My experience
+spans the full arc this role requires: DoDAF architecture development in
+Cameo Systems Modeler, JCIDS requirements derivation with bidirectional
+traceability, ConOps facilitation with government stakeholders, and
+C4ISR integration across platform and autonomy subsystems. I would bring
+to Acme Defense Systems a working command of both the technical and
+acquisition sides of autonomous maritime programs.

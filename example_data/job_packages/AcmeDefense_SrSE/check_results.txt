@@ -1,0 +1,26 @@
+============================================================
+RESUME QUALITY CHECK v2
+============================================================
+Role:   AcmeDefense_SrSE
+Source: example_data/job_packages/AcmeDefense_SrSE/stage2_approved.txt
+
+--- LAYER 1: Pre-flight checks ---
+Loading CANDIDATE_BACKGROUND.md...
+  Gap terms extracted: 6 terms
+Running string checks...
+  LAYER 1: No violations found.
+
+--- LAYER 2: API assessment ---
+Stripping PII...
+Calling API...
+  LAYER 2: No violations found.
+
+============================================================
+SUMMARY
+============================================================
+Layer 1: 0 violation(s)
+Layer 2: 0 finding(s)
+Total:   0
+
+Status: PASS
+============================================================

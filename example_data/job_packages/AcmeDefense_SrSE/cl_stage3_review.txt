@@ -1,0 +1,27 @@
+============================================================
+COVER LETTER QUALITY CHECK
+============================================================
+Role:   AcmeDefense_SrSE
+Source: example_data/job_packages/AcmeDefense_SrSE/cl_stage2_approved.txt
+
+--- LAYER 1: String checks ---
+Checking em dash usage...
+Checking lapsed certifications...
+Checking gap terms...
+  LAYER 1: No violations found.
+
+--- LAYER 2: API assessment ---
+Stripping PII...
+Calling API...
+  LAYER 2: No violations found.
+  Checked: implied gap fulfillment, banned language, generic openers.
+
+============================================================
+SUMMARY
+============================================================
+Layer 1: 0 violation(s)
+Layer 2: 0 finding(s)
+Total:   0
+
+Status: PASS
+============================================================

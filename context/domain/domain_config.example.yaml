@@ -1,0 +1,17 @@
+# context/domain/domain_config.example.yaml
+# Blank template -- copy to domain_config.yaml and fill in your data.
+# domain_config.yaml is gitignored and will never be committed.
+
+# The domain_label is interpolated into system prompts across all phases.
+# Write it as a noun phrase that completes:
+#   "You are a recruiter specializing in [domain_label] talent."
+#   "You are reviewing a [domain_label] candidate."
+#   "You are writing messages for [domain_label] professionals."
+#
+# Examples:
+#   "defense and aerospace systems engineering"
+#   "software engineering"
+#   "financial services operations"
+#   "clinical healthcare management"
+
+domain_label: "[e.g., defense and aerospace systems engineering]"

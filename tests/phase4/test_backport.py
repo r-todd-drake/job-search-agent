@@ -1,0 +1,451 @@
+# tests/phase4/test_backport.py
+
+import json
+import pytest
+import tempfile
+from pathlib import Path as _Path
+
+FIXTURE_STAGE4 = _Path(__file__).parent.parent / "fixtures" / "stage_files" / "stage4_final_backport.txt"
+FIXTURE_LIBRARY_MD = _Path(__file__).parent.parent / "fixtures" / "library" / "experience_library_backport.md"
+
+
+def test_parse_stage_file_employer_count():
+    from scripts.phase4_backport import parse_stage_file
+    content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    sections = parse_stage_file(content)
+    assert len(sections) == 1
+    assert sections[0]["employer"] == "Acme Defense Systems"
+
+
+def test_parse_stage_file_bullet_count():
+    from scripts.phase4_backport import parse_stage_file
+    content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    sections = parse_stage_file(content)
+    bullets = sections[0]["bullets"]
+    assert len(bullets) == 3
+
+
+def test_parse_stage_file_theme_extracted():
+    from scripts.phase4_backport import parse_stage_file
+    content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    sections = parse_stage_file(content)
+    bullets = sections[0]["bullets"]
+    assert bullets[0]["theme"] == "Systems Architecture"
+    assert bullets[1]["theme"] == "Leadership"
+
+
+def test_parse_stage_file_missing_theme_uses_unknown():
+    from scripts.phase4_backport import parse_stage_file
+    content = "## Employer A\n- A bullet with no theme annotation\n"
+    sections = parse_stage_file(content)
+    assert sections[0]["bullets"][0]["theme"] == "UNKNOWN -- assign before committing"
+
+
+def test_parse_stage_file_skips_summary_and_competencies():
+    from scripts.phase4_backport import parse_stage_file
+    content = (
+        "## PROFESSIONAL SUMMARY\n\nSome summary text.\n\n"
+        "## CORE COMPETENCIES\n\n- MBSE | DoDAF\n\n"
+        "## Real Employer\n- Real bullet\n  [Theme: Engineering]\n"
+    )
+    sections = parse_stage_file(content)
+    assert len(sections) == 1
+    assert sections[0]["employer"] == "Real Employer"
+
+
+def test_extract_library_bullets_count():
+    from scripts.phase4_backport import extract_library_bullets
+    bullets = extract_library_bullets(str(FIXTURE_LIBRARY_MD))
+    # Fixture has 2 employers (Acme Defense Systems: 3 bullets, Beta Robotics: 2 bullets)
+    assert len(bullets) >= 3
+
+
+def test_extract_library_bullets_fields():
+    from scripts.phase4_backport import extract_library_bullets
+    bullets = extract_library_bullets(str(FIXTURE_LIBRARY_MD))
+    b = bullets[0]
+    # First bullet parsed should be Acme Defense Systems / Systems Architecture -
+    # pinning exact values (not just "non-empty string") catches heading-hierarchy
+    # mismatches between this fixture and parse_library()'s 2-level format.
+    assert b["employer"] == "Acme Defense Systems"
+    assert b["theme"] == "Systems Architecture"
+    assert isinstance(b["text"], str) and b["text"]
+    assert isinstance(b["line_number"], int) and b["line_number"] > 0
+    assert isinstance(b["sources"], list)
+    # Generated fixture has real *Used in: tags — at least one bullet has sources
+    assert any(bullet["sources"] for bullet in bullets)
+
+
+def test_extract_library_bullets_excludes_summaries():
+    from scripts.phase4_backport import extract_library_bullets
+    bullets = extract_library_bullets(str(FIXTURE_LIBRARY_MD))
+    # Summaries section should not produce bullet entries
+    texts = [b["text"] for b in bullets]
+    assert not any(t.startswith('"') for t in texts)  # summary text is quoted
+
+
+def test_extract_library_bullets_sources_survive_note_lines():
+    """*Used in:* must attach even when *NOTE:* or [CANONICAL] lines intervene."""
+    import tempfile, os
+    from scripts.phase4_backport import extract_library_bullets
+    content = (
+        "# Experience Library\n\n"
+        "## Employers\n\n"
+        "### Acme Corp\n\n"
+        "**Title:** Engineer\n"
+        "**Dates:** 2020-2025\n"
+        "**Domain:** Defense\n\n"
+        "#### Theme: Leadership\n\n"
+        "- Led a team of engineers to deliver key milestones.\n"
+        "*NOTE: [CANONICAL -- use this version]*\n"
+        "*PRIORITY: true*\n"
+        "*Used in: Acme_Resume*\n"
+    )
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as f:
+        f.write(content)
+        tmp = f.name
+    try:
+        bullets = extract_library_bullets(tmp)
+        assert len(bullets) == 1
+        assert "Acme_Resume" in bullets[0]["sources"]
+    finally:
+        os.unlink(tmp)
+
+
+LIBRARY_BULLETS_SAMPLE = [
+    {
+        "text": "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.",
+        "theme": "Systems Architecture",
+        "employer": "Acme Defense Systems",
+        "line_number": 13,
+        "sources": ["acme_sse"],
+    },
+    {
+        "text": "Developed system-of-systems architecture models supporting multi-domain C2 integration.",
+        "theme": "Systems Architecture",
+        "employer": "Acme Defense Systems",
+        "line_number": 17,
+        "sources": ["acme_sse"],
+    },
+]
+
+
+def test_classify_bullet_present():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.",
+        LIBRARY_BULLETS_SAMPLE,
+    )
+    assert result["classification"] == "present"
+    assert result["score"] >= 85
+
+
+def test_classify_bullet_net_new():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Architected system interface definitions for all GNC subsystems across the autonomous vehicle program.",
+        LIBRARY_BULLETS_SAMPLE,
+    )
+    assert result["classification"] == "net_new"
+    assert result["match"] is None
+
+
+def test_classify_bullet_variant():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Developed system-of-sys architecture models for multi-domain C2 integration with minor rewording.",
+        LIBRARY_BULLETS_SAMPLE,
+    )
+    assert result["classification"] == "variant"
+    assert result["score"] >= 60
+    assert result["score"] < 85
+
+
+def test_classify_bullet_custom_thresholds():
+    from scripts.phase4_backport import classify_bullet
+    result = classify_bullet(
+        "Developed system-of-sys architecture models for multi-domain C2 integration with minor rewording.",
+        LIBRARY_BULLETS_SAMPLE,
+        net_new_threshold=70,
+        variant_floor=50,
+    )
+    assert result["classification"] == "present"
+
+
+def test_match_employer_found():
+    from scripts.phase4_backport import match_employer
+    result = match_employer("Acme Defense Systems", LIBRARY_BULLETS_SAMPLE)
+    assert result == "Acme Defense Systems"
+
+
+def test_match_employer_not_found():
+    from scripts.phase4_backport import match_employer
+    result = match_employer("Unknown Corp", LIBRARY_BULLETS_SAMPLE)
+    assert result is None
+
+
+def test_classify_bullet_cross_employer_isolation():
+    """A bullet from Employer A must not be suppressed by a high-scoring match from Employer B.
+
+    main() filters library_bullets to the matched employer before calling classify_bullet.
+    This test verifies that employer-filtered classify_bullet correctly returns net_new
+    even when the same bullet text would score >=85 against a different employer's bullets.
+    """
+    from scripts.phase4_backport import classify_bullet
+    # Same bullet text as in LIBRARY_BULLETS_SAMPLE (Acme Defense Systems)
+    bullet_text = "Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views."
+    # But we only pass Apex Maritime bullets -- the Acme match is excluded by employer filtering
+    apex_maritime_bullets = [
+        {
+            "text": "Developed software-defined radio integration architecture for multi-domain mesh networks.",
+            "theme": "Communications",
+            "employer": "Apex Maritime Systems",
+            "line_number": 55,
+            "sources": ["apex_maritime_se"],
+        }
+    ]
+    result = classify_bullet(bullet_text, apex_maritime_bullets)
+    # Should be net_new against Apex Maritime's library -- the Acme match is not present
+    assert result["classification"] == "net_new"
+
+
+def test_check_source_attribution_present():
+    from scripts.phase4_backport import check_source_attribution
+    lib_bullet = {"sources": ["acme_sse", "Orbital_SE_IS_Resume"]}
+    assert check_source_attribution(lib_bullet, "Orbital_SE_IS_Resume") is True
+
+
+def test_check_source_attribution_absent():
+    from scripts.phase4_backport import check_source_attribution
+    lib_bullet = {"sources": ["acme_sse"]}
+    assert check_source_attribution(lib_bullet, "Orbital_SE_IS_Resume") is False
+
+
+def test_check_source_attribution_case_insensitive():
+    from scripts.phase4_backport import check_source_attribution
+    lib_bullet = {"sources": ["orbital_se_is_resume"]}
+    assert check_source_attribution(lib_bullet, "Orbital_SE_IS_Resume") is True
+
+
+def test_generate_staged_output_contains_net_new():
+    from scripts.phase4_backport import generate_staged_output
+    net_new = [{"employer": "Acme Defense Systems", "text": "Brand new bullet.", "theme": "Leadership"}]
+    output = generate_staged_output(net_new, [], [], "TestRole_Resume")
+    assert "Brand new bullet." in output
+    assert "*Used in: TestRole_Resume*" in output
+    assert "BACKPORT -- review before reuse" in output
+    assert "## Net-New Bullets" in output
+
+
+def test_generate_staged_output_contains_variant():
+    from scripts.phase4_backport import generate_staged_output
+    variants = [{"employer": "Acme", "text": "Variant text.", "theme": "Engineering", "matched_text": "Original text.", "score": 72.0}]
+    output = generate_staged_output([], variants, [], "TestRole_Resume")
+    assert "## Variant Bullets" in output
+    assert "Variant text." in output
+    assert "72%" in output
+
+
+def test_generate_staged_output_contains_source_gap():
+    from scripts.phase4_backport import generate_staged_output
+    gaps = [{"text": "Some bullet.", "employer": "Acme", "theme": "Systems", "line_number": 42, "matched_sources": ["other_resume"]}]
+    output = generate_staged_output([], [], gaps, "TestRole_Resume")
+    assert "## Source Gaps" in output
+    assert "line 42" in output
+    assert "TestRole_Resume" in output
+
+
+def test_generate_staged_output_empty():
+    from scripts.phase4_backport import generate_staged_output
+    output = generate_staged_output([], [], [], "TestRole_Resume")
+    assert "Net-New Bullets" in output
+    assert "No net-new bullets found" in output
+
+
+def test_load_registry_missing_file():
+    from scripts.phase4_backport import load_registry
+    registry = load_registry("/nonexistent/path/registry.json")
+    assert registry == {"processed": []}
+
+
+def test_save_and_load_registry():
+    from scripts.phase4_backport import load_registry, save_registry
+    data = {"processed": [{"role": "TestRole", "date_processed": "2026-01-01", "net_new_count": 3, "source_gap_count": 1, "outcome": "pending"}]}
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
+        tmp_path = f.name
+    save_registry(tmp_path, data)
+    loaded = load_registry(tmp_path)
+    assert loaded["processed"][0]["role"] == "TestRole"
+
+
+def test_check_registry_found():
+    from scripts.phase4_backport import check_registry
+    registry = {"processed": [{"role": "Orbital_SE_IS", "date_processed": "2026-04-01", "net_new_count": 2, "source_gap_count": 0, "outcome": "pending"}]}
+    entry = check_registry(registry, "Orbital_SE_IS")
+    assert entry is not None
+    assert entry["role"] == "Orbital_SE_IS"
+
+
+def test_check_registry_not_found():
+    from scripts.phase4_backport import check_registry
+    registry = {"processed": []}
+    assert check_registry(registry, "NewRole") is None
+
+
+def test_update_registry_appends():
+    from scripts.phase4_backport import update_registry
+    registry = {"processed": []}
+    updated = update_registry(registry, "NewRole", net_new_count=4, source_gap_count=2)
+    assert len(updated["processed"]) == 1
+    entry = updated["processed"][0]
+    assert entry["role"] == "NewRole"
+    assert entry["net_new_count"] == 4
+    assert entry["source_gap_count"] == 2
+    assert entry["outcome"] == "pending"
+
+
+# Mini library for integration tests — uses "Acme Defense Systems" to match the
+# stage file fixture employer. Does NOT use FIXTURE_LIBRARY_MD because the generated
+# fixture has real employers (Apex Maritime etc.) that don't match the stage fixture.
+# Heading hierarchy is 2-level (## Employer / ### Theme:), matching parse_library()
+# and context/SCHEMA_REFERENCE.md — NOT the 3-level nesting used by
+# experience_library_backport.md, which parse_library() does not support.
+MINI_LIBRARY = """\
+# Experience Library
+
+## Acme Defense Systems
+**Title:** Senior Systems Engineer
+**Dates:** 2020 - Present
+**Domain:** Defense
+
+### Theme: Systems Architecture
+
+- Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.
+*Used in: acme_sse*
+
+- Developed system-of-systems architecture models supporting multi-domain C2 integration.
+*Used in: acme_sse*
+
+### Theme: Stakeholder Engagement
+
+- Facilitated IPT working groups with government stakeholders to define operational requirements and ConOps.
+*Used in: acme_sse*
+
+## PROFESSIONAL SUMMARIES
+
+"""
+
+
+def _write_mini_library(tmp_path):
+    lib = tmp_path / "mini_library.md"
+    lib.write_text(MINI_LIBRARY, encoding="utf-8")
+    return str(lib)
+
+
+def test_normalize_role_source_name_adds_suffix():
+    from scripts.phase4_backport import normalize_role_source_name
+    assert normalize_role_source_name("Orbital_SE_IS") == "Orbital_SE_IS_Resume"
+
+
+def test_normalize_role_source_name_no_double_suffix():
+    from scripts.phase4_backport import normalize_role_source_name
+    assert normalize_role_source_name("Orbital_SE_IS_Resume") == "Orbital_SE_IS_Resume"
+
+
+def test_resolve_input_file_prefers_stage4(tmp_path):
+    from scripts.phase4_backport import resolve_input_file
+    (tmp_path / "stage4_final.txt").write_text("content", encoding="utf-8")
+    (tmp_path / "stage2_approved.txt").write_text("content", encoding="utf-8")
+    path, name = resolve_input_file(str(tmp_path))
+    assert name == "stage4_final.txt"
+
+
+def test_resolve_input_file_falls_back_to_stage2(tmp_path):
+    from scripts.phase4_backport import resolve_input_file
+    (tmp_path / "stage2_approved.txt").write_text("content", encoding="utf-8")
+    path, name = resolve_input_file(str(tmp_path))
+    assert name == "stage2_approved.txt"
+
+
+def test_resolve_input_file_raises_if_neither(tmp_path):
+    from scripts.phase4_backport import resolve_input_file
+    with pytest.raises(FileNotFoundError, match="stage4_final.txt"):
+        resolve_input_file(str(tmp_path))
+
+
+def test_main_dry_run(tmp_path, capsys):
+    from scripts.phase4_backport import main
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    main(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=str(tmp_path / "registry.json"),
+        dry_run=True,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    captured = capsys.readouterr()
+    assert "net-new" in captured.out.lower()
+    assert not (tmp_path / "backport_staged.md").exists()
+
+
+def test_main_writes_staged_file(tmp_path):
+    from scripts.phase4_backport import main
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    main(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=str(tmp_path / "registry.json"),
+        dry_run=False,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    assert (tmp_path / "backport_staged.md").exists()
+    content = (tmp_path / "backport_staged.md").read_text(encoding="utf-8")
+    assert "Architected system interface definitions" in content
+
+
+def test_main_writes_registry(tmp_path):
+    from scripts.phase4_backport import main, load_registry
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    registry_path = str(tmp_path / "registry.json")
+    main(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=registry_path,
+        dry_run=False,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    registry = load_registry(registry_path)
+    assert any(e["role"] == "TestRole" for e in registry["processed"])
+
+
+def test_main_warns_on_duplicate_role(tmp_path, capsys):
+    from scripts.phase4_backport import main
+    stage_content = FIXTURE_STAGE4.read_text(encoding="utf-8")
+    (tmp_path / "stage4_final.txt").write_text(stage_content, encoding="utf-8")
+    lib_path = _write_mini_library(tmp_path)
+    registry_path = str(tmp_path / "registry.json")
+    kwargs = dict(
+        role="TestRole",
+        package_dir=str(tmp_path),
+        library_md_path=lib_path,
+        registry_path=registry_path,
+        dry_run=False,
+        net_new_threshold=85,
+        variant_floor=60,
+    )
+    main(**kwargs)
+    main(**kwargs)
+    captured = capsys.readouterr()
+    assert "already been processed" in captured.out.lower() or "WARNING" in captured.out

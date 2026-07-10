@@ -1,0 +1,40 @@
+SUMMARY
+Senior systems engineer with 20+ years of experience in defense MBSE,
+autonomous systems, and multi-domain C4ISR integration. Led architecture
+development for uncrewed maritime platforms from concept through
+integration. TS/SCI cleared.
+
+CORE COMPETENCIES
+MBSE | Cameo Systems Modeler | DoDAF | Autonomous Systems |
+System-of-Systems Architecture | Stakeholder Engagement |
+Defense Acquisition (JCIDS) | ConOps Development
+
+EXPERIENCE
+
+AeroDefense Corp | Senior Systems Engineer | 2019 - Present
+- Facilitated IPT working groups with government stakeholders to define
+  operational requirements and ConOps for autonomous maritime missions.
+- Led MBSE development for an uncrewed surface vessel prototype using
+  Cameo Systems Modeler, producing DoDAF OV and SV views adopted as the
+  program architecture baseline.
+- Developed system-of-systems architecture models supporting multi-domain
+  C4ISR integration across platform, autonomy, and communications subsystems.
+- Translated JCIDS capability documents into performance-based system
+  requirements with full bidirectional traceability.
+
+Naval Tech Solutions | Systems Engineer / MBSE Architect | 2012 - 2019
+- Built SysML architecture models for Navy C4ISR modernization programs,
+  establishing the team's first model-based requirements baseline.
+- Authored interface control documents for shipboard combat system
+  integration across five subsystem vendors.
+- Supported ACAT II milestone reviews with architecture products and
+  requirements verification matrices.
+
+Harborview Engineering Group | Systems Engineer | 2005 - 2012
+- Performed requirements derivation, decomposition, and verification
+  planning for maritime sensor integration programs.
+- Developed test procedures and supported system-level verification
+  events for shipboard electronics.
+
+EDUCATION
+Jane Q. Applicant University | B.S. Systems Engineering | 2005

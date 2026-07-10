@@ -1,0 +1,32 @@
+Senior Systems Engineer
+AeroDefense Corp — San Diego, CA
+Salary: $140,000 - $210,000
+
+About the Role:
+AeroDefense Corp is seeking a Senior Systems Engineer to support the
+development and integration of complex defense systems for Navy and
+joint service customers. The ideal candidate brings deep experience
+in systems architecture, requirements management, and cross-functional
+team leadership in a DoD acquisition environment.
+
+Required Qualifications:
+- 10+ years of systems engineering experience on defense programs
+- Experience with requirements derivation, decomposition, and traceability
+- Familiarity with DoDAF architecture frameworks
+- Experience leading Integrated Product Teams (IPTs)
+- Active TS/SCI clearance required
+- Strong stakeholder engagement and communication skills
+
+Preferred Qualifications:
+- MBSE experience using SysML-based tools
+- Experience with C4ISR or maritime systems
+- Familiarity with Navy acquisition processes
+- ConOps development experience
+
+Responsibilities:
+- Lead system-level requirements definition and architecture development
+- Serve as chief integrator across subsystem engineering teams
+- Develop and maintain ICDs and interface definitions
+- Support design reviews and technical interchange meetings
+- Translate operational needs into performance-based requirements
+- Coordinate with government customers and program stakeholders

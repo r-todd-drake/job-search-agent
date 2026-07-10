@@ -1,0 +1,126 @@
+============================================================
+INTERVIEW PREP PACKAGE v3
+============================================================
+Role: AcmeDefense_SrSE
+Generated: 12 May 2026 08:30
+Resume source: stage4_final.txt
+Stage: Hiring Manager Interview
+Stage note: 60+ min interview - lead with program context awareness and collaborative framing.
+Note: PII stripped from all API calls.
+============================================================
+
+SECTION 1 - COMPANY & ROLE BRIEF
+(Web-informed -- verify currency before interview)
+------------------------------------------------------------
+Acme Defense Systems is a mid-size defense contractor headquartered in
+San Diego, CA, focused on autonomous maritime platforms for Navy and
+joint customers. The Autonomous Maritime Systems division is reportedly
+scaling after a recent prototype award, which explains the hiring push
+behind Req ADS-12345.
+
+Role context: this position appears to anchor the systems engineering
+function on an uncrewed surface vessel program moving from prototype
+toward a program of record. Expect the hiring manager to probe for
+acquisition fluency (JCIDS, ACAT milestones) alongside MBSE depth.
+
+Salary guidance: posted range is $150,000 - $180,000. Recruiter screen
+on 05 May confirmed the range is firm at the top but flexible on a
+sign-on component. Anchor at the top of range given clearance and
+direct domain match.
+
+SECTION 1.5 - INTRODUCE YOURSELF
+(Hiring Manager Interview register)
+------------------------------------------------------------
+"I am a senior systems engineer with just over 20 years in defense,
+most of it on Navy and maritime programs. Right now I lead MBSE
+development for an uncrewed surface vessel prototype - I built the
+architecture baseline in Cameo and I run the IPT working groups where
+we hash out ConOps with the government customer. Before that I spent
+seven years doing C4ISR architecture for Navy modernization programs,
+so I have lived on both the platform side and the integration side.
+This role looks like the same problem I am solving now, at a program
+that is further along - which is exactly where I want to be."
+
+SECTION 2 - STORY BANK
+(Grounded in submitted resume with employer attribution)
+REMINDER: Workshop stories in chat before interview.
+Correct any overreach -- every detail must be accurate.
+------------------------------------------------------------
+
+STORY 1: Architecture baseline adoption (AeroDefense Corp)
+Situation: Uncrewed surface vessel prototype program had no unified
+  architecture; subsystem teams worked from inconsistent documents.
+Task: Establish a single model-based architecture the program could
+  baseline.
+Action: Built the system model in Cameo Systems Modeler, generated
+  DoDAF OV and SV views, and walked each subsystem lead through their
+  interfaces in working sessions.
+Result: The model was adopted as the program architecture baseline and
+  became the reference for all subsequent design reviews.
+If probed: Be specific that the model covered platform, autonomy, and
+  communications subsystems; do not claim flight or weapons systems.
+
+STORY 2: ConOps facilitation with government stakeholders (AeroDefense Corp)
+Situation: Government customer had operational goals for autonomous
+  maritime missions but no documented ConOps.
+Task: Facilitate IPT working groups to converge on operational
+  requirements.
+Action: Ran structured working group sessions, captured operational
+  threads, and traced them into performance-based system requirements.
+Result: Delivered a ConOps the customer signed off on, with full
+  bidirectional traceability into the requirements baseline.
+If probed: The traceability tooling was the model itself plus a
+  requirements management tool; do not name a specific government office.
+
+STORY 3: First model-based requirements baseline (Naval Tech Solutions)
+Situation: Navy C4ISR modernization program managed requirements in
+  documents; change impact analysis took weeks.
+Task: Move the team to a model-based requirements baseline.
+Action: Built SysML models incrementally, migrating one subsystem at a
+  time while keeping the document baseline authoritative until parity.
+Result: The team's first model-based baseline, with change impact
+  analysis reduced from weeks to days.
+If probed: This was an incremental migration, not a big-bang cutover -
+  lead with the risk management framing.
+
+STORY 4: ACAT II milestone support (Naval Tech Solutions)
+Situation: Program approaching an ACAT II milestone review with
+  incomplete verification evidence.
+Task: Assemble architecture products and verification matrices for the
+  review.
+Action: Built the requirements verification matrix, reconciled it
+  against test evidence, and prepared the architecture view package.
+Result: Program passed the milestone review without architecture or
+  verification action items.
+
+SECTION 3 - GAP PREPARATION
+------------------------------------------------------------
+
+GAP: JADC2 / multi-domain operations (preferred qualification)
+Honest answer: "I have not worked on a JADC2 program directly."
+Bridge: "My multi-domain C4ISR integration work covers the same
+  technical problem - getting platform, autonomy, and communications
+  systems to share a common operational picture."
+Redirect: "I would expect the architecture discipline to transfer
+  directly; the JADC2-specific doctrine I can pick up quickly."
+Note: Do not imply JADC2 experience. The check scripts flag this as a
+  confirmed gap.
+
+SECTION 4 - QUESTIONS TO ASK
+------------------------------------------------------------
+1. What is the biggest systems engineering pain point on the program
+   right now - is it requirements churn, interface stability, or
+   something else?
+2. How does the program define success for this role in the first six
+   months?
+3. Where is the program in the acquisition cycle, and what is the next
+   milestone the SE team is driving toward?
+4. How much of the architecture is modeled today versus living in
+   documents?
+5. How does the team split time between the prototype effort and
+   program-of-record preparation?
+
+============================================================
+END OF INTERVIEW PREP PACKAGE
+Generated: 12 May 2026 08:30
+============================================================

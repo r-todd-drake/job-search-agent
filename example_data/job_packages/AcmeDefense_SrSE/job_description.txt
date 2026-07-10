@@ -1,0 +1,34 @@
+Senior Systems Engineer - Autonomous Maritime Systems
+Acme Defense Systems | San Diego, CA | Req: ADS-12345
+Salary: $150,000 - $180,000
+
+About the Role:
+Acme Defense Systems is seeking a Senior Systems Engineer to support
+autonomous surface vessel systems for maritime defense. You will lead
+model-based systems engineering development across the program lifecycle,
+working with government customers and cross-functional engineering teams
+to take uncrewed maritime platforms from concept through integration.
+
+Required Qualifications:
+- Active TS/SCI clearance
+- 10+ years of systems engineering experience on defense programs
+- MBSE proficiency (Cameo Systems Modeler, MagicDraw, or equivalent)
+- DoDAF architectural framework experience
+- Defense acquisition experience (JCIDS, ACAT processes)
+- Autonomous systems or uncrewed platform experience
+- Strong stakeholder engagement and communication skills
+
+Preferred Qualifications:
+- JADC2 or multi-domain operations experience
+- ConOps development experience
+- Maritime or naval domain experience
+- C4ISR integration background
+- Experience leading Integrated Product Teams (IPTs)
+
+Responsibilities:
+- Lead MBSE model development for autonomous surface vessel programs
+- Develop and maintain DoDAF architectural views and SysML models
+- Translate operational needs into performance-based requirements
+- Coordinate ConOps development with government stakeholders
+- Support design reviews, working groups, and technical interchange meetings
+- Integrate autonomy, C4ISR, and platform subsystems at the system level

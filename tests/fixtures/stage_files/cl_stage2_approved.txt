@@ -1,0 +1,28 @@
+April 8, 2026
+
+Hiring Team
+Acme Defense Systems
+San Diego, CA
+
+Dear Hiring Manager,
+
+With 20 years of defense systems engineering experience and a Current TS/SCI clearance,
+I offer a strong match for the Systems Engineer, Open Architecture role. As the functional
+MBSE lead at AeroDefense Corp, I translated operational vision into an implemented enterprise
+MBSE architecture for an uncrewed surface vessel prototype from program inception.
+
+In that role I serve as Lead Systems Engineer across hardware and software teams, maintaining
+system architecture integrity through rapid development cycles on a flagship naval autonomy
+program.
+
+Earlier, at Naval Tech Solutions, my work centered on requirements harmonization, V/V matrix
+development, and user story decomposition for a mission-critical Navy communications program.
+I identified suspected duplicate requirements, confirmed findings through independent
+research, and presented results to the Chief Engineer at periodic review boards.
+
+I welcome the opportunity to discuss how my background in mission-critical systems and
+open architecture aligns with Acme Defense Systems' goals.
+
+Sincerely,
+
+[Candidate Name]

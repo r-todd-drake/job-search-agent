@@ -1,0 +1,586 @@
+<!-- assembled by build_docs.py -- edit docs/templates/ and docs/fragments/ not this file -->
+# AI Job Search Agent — Usage Guide
+
+Operator manual for the pipeline: setup, daily workflow, and per-phase CLI reference.
+For what this project is and why it is built the way it is, see the [README](README.md).
+
+---
+
+## Setup
+
+### 1. Install Python
+Version 3.10 or higher from [python.org](https://python.org/downloads/)
+
+### 2. Install dependencies
+```bash
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # test dependencies (pytest, pytest-mock)
+```
+
+### 3. Configure environment
+Copy `.env.example` to `.env`:
+```
+ANTHROPIC_API_KEY=your_key_here
+CANDIDATE_NAME=Your Full Name
+CANDIDATE_PHONE=(xxx) xxx-xxxx
+CANDIDATE_EMAIL=your@email.com
+CANDIDATE_LINKEDIN=linkedin.com/in/yourprofile
+CANDIDATE_GITHUB=github.com/yourusername
+CANDIDATE_LOCATION=City, ST
+```
+
+### 4. Add your data
+- Experience library: `data/experience_library/experience_library.md`
+- Resume template: `templates_local/resume_template.docx`
+- Tracker: `data/tracker/job_pipeline.xlsx`
+- Career data: copy `context/candidate/candidate_config.example.yaml` → `context/candidate/candidate_config.yaml` and fill in your data
+
+### 5. Build the experience library
+```bash
+# Full parse — all employers:
+python -m scripts.phase3_parse_library
+
+# Re-parse a single employer (faster for targeted edits):
+python -m scripts.phase3_parse_employer "employer name"
+
+python -m scripts.phase3_build_candidate_profile
+python -m scripts.phase3_compile_library
+```
+
+### 6. Run tests
+```bash
+# Tier 1 — mock suite (same as CI, no API key required):
+pytest tests/ -m "not live" -v
+
+# Tier 2 — live API tests (requires ANTHROPIC_API_KEY):
+pytest -m live -v
+```
+
+### 7. Run scripts
+```bash
+python -m scripts.pipeline_report
+python -m scripts.phase2_job_ranking
+python -m scripts.phase2_semantic_analyzer
+python -m scripts.phase4_resume_generator --stage 1 --role [role]
+python -m scripts.phase4_resume_generator --stage 3 --role [role]
+python -m scripts.phase4_resume_generator --stage 4 --role [role]
+python -m scripts.check_resume --role [role]
+python -m scripts.phase4_cover_letter --stage 1 --role [role]
+python -m scripts.check_cover_letter --role [role]
+python -m scripts.phase4_cover_letter --stage 4 --role [role]
+python -m scripts.phase5_interview_prep --role [role] --interview_stage [recruiter|hiring_manager|team_panel]
+python -m scripts.phase5_debrief --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --interactive
+python -m scripts.phase5_debrief --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --init
+python -m scripts.phase5_debrief --role [role] --stage [recruiter_screen|hiring_manager|panel|final] --convert
+python -m scripts.phase5_workshop_capture --role [role] --stage [recruiter|hiring_manager|team_panel]
+python -m scripts.phase5_thankyou --role [role] --stage [recruiter_screen|hiring_manager|panel|final]
+```
+
+---
+
+## Development vs Implementation
+
+<!-- fragment: project_split -->
+This project is split into two distinct workflows:
+
+**Development** — building and improving the pipeline tools.
+Performed using Claude Code in VS Code, working directly against local files.
+Reference: `context/DECISIONS_LOG.md` for coding conventions and architecture.
+
+**Implementation** — applying the tools to an active job search.
+Performed using Claude web chat for resume tailoring, interview prep,
+story workshopping, and pipeline management.
+Reference: `context/PIPELINE_STATUS.md` and `context/CANDIDATE_BACKGROUND.md`.
+
+
+---
+
+## Project Phases
+
+<!-- fragment: current_phase_status -->
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Pipeline report script and tracker schema | ✅ Complete |
+| 2 | Job ranking and semantic fit analysis | ✅ Complete |
+| 3 | Experience knowledge base — structured JSON library with shared parsing module | ✅ Complete |
+| 4 | Automated resume + cover letter generation — tailored .docx per application | ✅ Complete |
+| 5 | Interview preparation — stage-aware prep packages (recruiter / hiring manager / team panel) | ✅ Complete |
+| 6 | Networking and outreach support — warmth-calibrated LinkedIn and email outreach messages across four contact stages | ✅ Complete |
+| 7 | Search agent — automated role discovery | ⏸ Deferred (optional — sanctioned APIs only) |
+
+
+---
+
+## Daily Workflow
+
+```
+01. Add new roles to jobs.csv (blank status, req number if available)
+02. Run phase2_job_ranking.py
+   → Scores all roles, reports only NEW/PURSUE/CONSIDER
+   → Flags duplicate requisition numbers
+   → Assign PURSUE / CONSIDER / SKIP to each new role
+03. Run phase2_semantic_analyzer.py
+   → Claude API analysis on PURSUE and CONSIDER roles only
+04. Run phase4_resume_generator.py for top PURSUE roles
+   → Four-stage async workflow with human review at each stage
+   → Stage files are source of truth — never edit .docx directly
+   → Run check_resume.py --role [role] after Stage 2 to catch violations
+05. Run phase4_cover_letter.py --stage 1 --role [role]
+   → Generates cover letter draft aligned with resume content
+   → Run check_cover_letter.py --role [role] after editing Stage 2
+   → Stage through to docx via --stage 4
+06. Submit, update status to APPLIED, move to job_pipeline.xlsx
+07. Run phase5_interview_prep.py when interview is scheduled
+   → Specify --interview_stage (recruiter, hiring_manager, team_panel)
+   → Generates stage-specific .txt and .docx prep package
+   → Workshop stories in Claude web chat before interview
+   → Run phase5_workshop_capture.py after workshopping to persist stories to interview_library.json
+08. Run phase5_debrief.py after each interview
+   → --interactive for guided capture with optional AI follow-up questions
+   → --init / --convert for YAML-based offline workflow
+   → Saves structured JSON to data/debriefs/[role]/
+09. Run phase4_backport.py to improve experience library
+   → Identifies net-new and variant resume bullets from submitted resumes to update the experience library
+10. Run phase5_thankyou.py to generate thank-you letters
+   → One .txt and .docx per interviewer, drawn from the filed debrief
+   → Use --panel_label for panel interviews with multiple interviewers
+11. Run phase6_networking.py to generate outreach messages
+   → --list to see all contacts and their current stage
+   → --contact "[name]" --stage 1 for connection request + follow-up (warmth-calibrated)
+   → --contact "[name]" --stage 2 --role [role] for referral ask (loads JD automatically)
+   → --contact "[name]" --stage 3/4 for follow-up / close the loop
+   → Responds y to confirm sends and advances contact stage in contact_pipeline.xlsx
+
+```
+
+---
+
+## Job Status Values
+
+| Status | Meaning |
+|--------|---------|
+| *(blank)* | New — not yet reviewed |
+| PURSUE | Apply next |
+| CONSIDER | On deck |
+| SKIP | Decided against |
+| APPLIED | Submitted — move to tracker |
+
+---
+
+## Phase 4 — Resume Generation
+
+```
+Stage 1 (automated)  →  stage1_draft.txt
+                         Keyword + semantic bullet selection
+                         Priority bullets always included (priority: true in library)
+                         Core competencies generated from JD
+                         Summary selected from library
+
+Stage 2 (manual)     →  stage2_approved.txt
+                         Review draft, swap bullets, adjust wording
+
+Stage 3 (automated)  →  stage3_review.txt
+                         Semantic coherence check
+                         Wording suggestions grounded in confirmed background
+                         ATS keyword gap analysis
+
+Stage 4 (automated)  →  [Company]_[Role]_Resume.docx
+                         Template-based .docx generation
+                         Auto quality check via check_resume.py
+```
+
+## Phase 4 — Cover Letter Generation
+
+```
+Stage 1 (automated)  →  cl_stage1_draft.txt
+                         Traditional cover letter (3–4 paragraphs)
+                         Application paragraph (150–250 words, plain-text field)
+                         Hiring manager name extracted from JD if present
+                         Gap filtering from resume stage3_review.txt if available
+
+Stage 2 (manual)     →  cl_stage2_approved.txt
+                         Review draft, verify all claims against confirmed experience
+
+Stage 3 (automated)  →  cl_stage3_review.txt
+                         Two-layer quality check via check_cover_letter.py
+                         Layer 1: string matching (em dash, lapsed cert, gap terms)
+                         Layer 2: API assessment for implied gap fulfillment,
+                                  banned language, generic opener phrases
+
+Stage 4 (automated)  →  [Role]_CoverLetter.docx
+                         Template-based .docx — page 1 letter, page 2 application paragraph
+```
+
+---
+
+## Phase 5 — Interview Prep
+
+Single command generates a stage-appropriate prep package:
+
+```bash
+python -m scripts.phase5_interview_prep --role [role_folder] --interview_stage [recruiter|hiring_manager|team_panel]
+```
+
+Valid stages: `recruiter`, `hiring_manager`, `team_panel`
+
+If `--interview_stage` is omitted the script prompts interactively. Use `--dry_run` to
+validate stage config without making API calls.
+
+Outputs to `data/job_packages/[role]/`:
+- `interview_prep_[stage].txt` — for VS Code review and story workshopping
+- `interview_prep_[stage].docx` — formatted Word document for reading and printing
+
+Running multiple stages for the same role produces separate files without collision.
+
+**Package sections by stage:**
+
+| Section | Recruiter | Hiring Manager | Team Panel |
+|---------|-----------|----------------|------------|
+| 1 — Company & Role Brief | Culture, process, recent news | Full brief + salary guidance | Condensed + technical environment |
+| 1.5 — Introduce Yourself | Concise fit signal (2–3 sentences) | Program-context aware (3–4 sentences) | Technically grounded, peer register |
+| 2 — Story Bank | 1–2 stories, headline only | 3–4 stories, full STAR + probe branch | 4–6 stories, full STAR + technical specificity |
+| 3 — Gap Preparation | Omitted (short tenure block only) | Full four-element format | Full five-element format + Peer Frame |
+| 4 — Questions to Ask | Process, culture, logistics | Program pain points, success criteria | Day-to-day tools, integration problems |
+
+Stage label and description are written to the output file header so the register is
+immediately clear when opening the package.
+
+---
+
+## Post-Interview Debrief
+
+Captures structured debrief data immediately after each interview — advancement read,
+stories used, gaps surfaced, salary exchange, and continuity notes.
+
+```bash
+# Guided questionnaire (recommended — AI follow-up questions per section)
+python -m scripts.phase5_debrief --role [role] --stage [stage] --interactive
+
+# YAML-based workflow (fill the draft, then convert)
+python -m scripts.phase5_debrief --role [role] --stage [stage] --init
+python -m scripts.phase5_debrief --role [role] --stage [stage] --convert
+```
+
+Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
+
+Output: `data/debriefs/[role]/debrief_[stage]_[interview-date]_filed-[produced-date].json`
+
+**Captured fields:**
+
+| Section | Fields |
+|---------|--------|
+| Metadata | company, interviewer name/title, date, format, stage |
+| Advancement read | assessment (for_sure / maybe / doubt_it / definitely_not), notes |
+| Stories used | tags, framing, landed (yes / partially / no), library_id (for future linking) |
+| Gaps surfaced | gap label, response given, response felt (strong / adequate / weak) |
+| Salary exchange | range given, candidate anchor/floor, notes |
+| Continuity | what I said — claims and framings to stay consistent on |
+| Open notes | anything else worth capturing |
+
+`--interactive` mode calls the Claude API to generate one optional follow-up question
+per section. All responses are PII-stripped before the API call.
+
+---
+
+## Post-Interview Thank-You Letters
+
+Generates a personalized thank-you letter for each interviewer from a filed debrief JSON.
+
+```bash
+# Standard (single interviewer or named panel label)
+python -m scripts.phase5_thankyou --role [role] --stage [stage]
+
+# Panel with a specific label
+python -m scripts.phase5_thankyou --role [role] --stage panel --panel_label [label]
+```
+
+Valid stages: `recruiter_screen`, `hiring_manager`, `panel`, `final`
+
+Outputs to `data/job_packages/[role]/`:
+- `thankyou_[stage]_[interviewer].txt`
+- `thankyou_[stage]_[interviewer].docx`
+
+One API call per letter. Reads interviewer name and exchange details from the debrief JSON.
+Each letter is a complete document: salutation ("Dear [First Name],"), AI-generated body,
+and a standard closing block ("Respectfully," + candidate name from `CANDIDATE_NAME` env var).
+
+---
+
+## Interview Workshop Capture
+
+Parses a workshopped interview prep `.docx` and writes durable story, gap, and question
+content into a persistent interview library for reuse across roles.
+
+```bash
+python -m scripts.phase5_workshop_capture --role [role] --stage [stage]
+```
+
+Reads: `data/job_packages/[role]/interview_prep_[stage].docx`
+Writes: `data/interview_library.json` (appends or updates existing entries)
+
+Run this after story workshopping in Claude web chat to capture refined content before
+it is lost.
+
+---
+
+## Phase 6 — Networking and Outreach
+
+Generates warmth-calibrated outreach messages for contacts in `data/tracker/contact_pipeline.xlsx`.
+Four relationship stages, four warmth tiers (Cold / Acquaintance / Former Colleague / Strong).
+No automated sending — all output is terminal only. Contact stage advances on interactive confirm.
+
+```bash
+# List all contacts with current stage and status
+python -m scripts.phase6_networking --list
+
+# Stage 1 — connection request + follow-up (warmth-calibrated)
+python -m scripts.phase6_networking --contact "[name]" --stage 1
+
+# Stage 2 — referral ask (loads job description from data/job_packages/[role]/)
+python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
+
+# Stage 3 — follow-up nudge
+python -m scripts.phase6_networking --contact "[name]" --stage 3
+
+# Stage 4 — close the loop after role resolution
+python -m scripts.phase6_networking --contact "[name]" --stage 4
+```
+
+**Stage behavior:**
+
+| Stage | Message type | Warmth calibration | Write-back on y |
+|-------|-------------|-------------------|-----------------|
+| 1 | Connection request (300-char limit) + follow-up | Placeholder markers for Acquaintance / Former Colleague | stage → 2, first_contact = today |
+| 2 | Referral ask; conditional referral bonus mention | Tone scales from neutral → direct | stage → 3, role_activated = [role], status → Activated |
+| 3 | Follow-up nudge — no repeat pitch | Low-pressure (Cold) or warm/direct (others) | stage → 4 |
+| 4 | Close the loop — outcome + keep warm | All tiers | status → Closed |
+
+Contact tracker: `data/tracker/contact_pipeline.xlsx` (gitignored — personal data).
+Example tracker with fictional data: `example_data/tracker/contact_pipeline_example.xlsx`.
+
+---
+
+## Quick Reference — Key Commands
+
+<!-- fragment: key_commands -->
+```
+# Tests (run after any script change)
+pytest tests/ -m "not live" -v          # Tier 1 mock suite — all must pass
+pytest -m live -v                        # Tier 2 live API (before promoting a phase)
+
+# Candidate setup (first time only)
+python -m scripts.init_candidate                 # guided wizard — populate candidate_config.yaml
+
+# Job package initialization
+python -m scripts.init_job_package --role [role] --req [req#]
+
+# Pipeline
+python -m scripts.pipeline_report
+python -m scripts.phase2_job_ranking
+python -m scripts.phase2_semantic_analyzer
+
+# Resume generation
+python -m scripts.phase4_resume_generator --stage 1 --role [role]
+python -m scripts.phase4_resume_generator --stage 3 --role [role]
+python -m scripts.phase4_resume_generator --stage 4 --role [role]
+python -m scripts.check_resume --role [role]
+
+# Cover letter
+python -m scripts.phase4_cover_letter --stage 1 --role [role]
+python -m scripts.phase4_cover_letter --stage 4 --role [role]
+
+# Interview prep
+python -m scripts.phase5_interview_prep --role [role]
+
+# Library maintenance
+python -m scripts.phase3_parse_library
+python -m scripts.phase3_parse_employer "[employer name]"
+python -m scripts.phase3_build_candidate_profile
+python -m scripts.phase3_compile_library
+
+# Networking outreach
+python -m scripts.phase6_networking --list
+python -m scripts.phase6_networking --contact "[name]" --stage [1-4]
+python -m scripts.phase6_networking --contact "[name]" --stage 2 --role [role]
+
+# Library maintenance — duplicate bullet detection
+python -m scripts.utils.find_duplicate_bullets                    # scan at default threshold (85%)
+python -m scripts.utils.find_duplicate_bullets --threshold 90     # stricter threshold
+
+# Document assembly (run after editing any fragment or template)
+python scripts/utils/build_docs.py                   # rebuild all
+python scripts/utils/build_docs.py --doc README.md   # rebuild one
+```
+
+
+---
+
+## Recommended Tools
+
+Two free tools make this pipeline significantly easier to use. Neither is required, but both will reduce friction at the steps that need them most.
+
+---
+
+### VS Code (for editing text files)
+
+**Download:** [code.visualstudio.com](https://code.visualstudio.com) — free, available for Windows, Mac, and Linux.
+
+**Why:** The pipeline produces text files you need to review and edit during resume generation — Stage 1 drafts, Stage 3 suggestions, and stage 2 approved content. VS Code opens these clearly, lets you word-wrap long lines, and highlights the formatting markers the tool uses.
+
+**Where it helps:** Phase 4 resume generation (editing stage files), Phase 5 interview prep review.
+
+**One setting to enable:** After opening a text file, go to View > Word Wrap. This makes long lines readable without horizontal scrolling.
+
+---
+
+### LibreOffice (for reviewing and exporting documents)
+
+**Download:** [libreoffice.org](https://www.libreoffice.org) — free, available for Windows, Mac, and Linux.
+
+**Why:** The pipeline generates `.docx` resume and interview prep documents. LibreOffice opens and displays these correctly, lets you make final formatting adjustments, and exports directly to PDF — which is what most employers accept.
+
+**Where it helps:** Phase 4 (reviewing and exporting your generated resume and cover letter), Phase 5 (reading your formatted interview prep package).
+
+**To export to PDF:** File > Export as PDF > Export.
+
+**Note on Microsoft Word:** If you already have Word, it will also open these files. LibreOffice is listed here because it is free and cross-platform.
+
+---
+
+## Claude Code (Optional)
+
+This project includes a `CLAUDE.md` configuration file for use with
+[Claude Code](https://claude.ai/code) in VS Code. It defines project
+conventions and file access boundaries for AI-assisted script development.
+
+Install the Claude Code extension from the VS Code marketplace to use it.
+Claude Code is useful for making targeted script changes, debugging, and
+refactoring — working directly against local files without manual uploads.
+All personal data folders are excluded from Claude Code access via
+instructions in `CLAUDE.md`.
+
+Note: `.gitignore` controls what is committed to git but does NOT restrict
+Claude Code's file system access. `CLAUDE.md` is the correct control for
+that boundary.
+
+---
+
+## Tech Stack
+
+- **Python 3.x** — core scripting and automation
+- **Anthropic Claude API** — LLM backbone including web search tool
+- **openpyxl** — application tracker (.xlsx)
+- **python-docx** — resume and interview prep document generation
+- **pytest / pytest-mock** — two-tier test suite (mock + live API)
+- **GitHub Actions** — CI pipeline running mock suite on every push
+- **VS Code** — development environment (View > Word Wrap for .txt files)
+- **Git / GitHub** — version control and portfolio publishing
+- **Claude Code** — AI-assisted development via CLI and VS Code extension
+
+---
+
+## Project Structure
+
+<!-- fragment: project_structure -->
+```
+Job_search_agent/
+├── .github/workflows/test.yml            # GitHub Actions CI — mock suite on every push
+├── context/                              # Context data store
+│   ├── PROJECT_CONTEXT.md                # Lean index — load this first
+│   ├── DECISIONS_LOG.md                  # Coding conventions + architecture decisions
+│   ├── PARKING_LOT.md                    # Outstanding work items and priorities
+│   ├── candidate/                        # Personal data — gitignored
+│   │   ├── candidate_config.yaml         # Structured career data (local only)
+│   │   ├── candidate_config.example.yaml # Blank template (tracked)
+│   │   ├── CANDIDATE_BACKGROUND.md       # Career background (local only)
+│   │   └── PIPELINE_STATUS.md            # Active applications (local only)
+│   └── domain/                           # Domain generalization config
+│       └── domain_config.example.yaml    # Blank template for domain labels (tracked)
+├── data/
+│   ├── jobs.csv                          # Pipeline — status + req number tracking
+│   ├── job_packages/[role]/              # JD, stage files, interview prep (active)
+│   │   └── inactive/[role]/              # Rejected / ghosted / withdrawn roles
+│   ├── debriefs/[role]/                  # Post-interview debrief JSON (local only)
+│   ├── interview_library.json           # Persistent story/gap/question library (local only)
+│   └── experience_library/              # Library source, JSON, candidate profile
+├── docs/
+│   ├── features/                         # Requirements artifacts per capability
+│   │   ├── README.md                     # Feature folder process and conventions
+│   │   ├── user_story_template.md        # Template for new proposals
+│   │   └── completed/                    # Built and tested features
+│   ├── fragments/                        # Canonical shared content — edit these, not assembled docs
+│   │   ├── audit_report.md               # Document audit findings (AC-1)
+│   │   ├── current_phase_status.md       # Canonical phase table
+│   │   ├── key_commands.md               # Canonical quick reference commands
+│   │   ├── project_split.md              # Canonical dev vs implementation description
+│   │   └── project_structure.md          # Canonical directory tree (this file)
+│   ├── superpowers/
+│   │   ├── specs/                        # Design specs (how to build it)
+│   │   └── plans/                        # Implementation plans (how to execute)
+│   ├── templates/                        # Document assembly templates ({{include:}} markers)
+│   │   ├── README.md                     # Template for README.md
+│   │   ├── USAGE.md                      # Template for USAGE.md
+│   │   └── PROJECT_CONTEXT.md            # Template for context/PROJECT_CONTEXT.md
+│   └── capabilities.md                   # Script-to-phase traceability (in progress)
+├── example_data/
+|   ├── job_packages/[role]/              # Example JD, stage files
+|   ├── outputs/                          # Example generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
+|   ├── tracker/job_pipeline_example.xlsx # Example job pipeline tracker
+|   │    ├── README.txt                   # Tracker workbook README
+|   │    └── contact_pipeline_example.xlsx # Example contact tracker (fictional data)
+|   └── jobs.csv                          # Example Pipeline - status + req number tracking
+├── outputs                               # Generated reports, pipeline_reports, ranking_reports, semantic_analysis_reports
+├── resumes/                              # Generated resumes (local only)
+├── templates/                            # Script input templates (tracked — YAML, plain-text)
+│   ├── interview_debrief_template.yaml   # Debrief YAML template for --init mode
+│   └── interview_library_tags.json       # Controlled tag vocabulary for interview library
+├── templates_local/                      # Binary/personal templates (local only)
+│   └── resume_template.docx              # Resume template (local only)
+├── project_setup.md                      # Guided Claude.ai onboarding prompt for new sessions
+├── scripts/
+│   ├── config.py                         # Shared path and model constants for all production scripts
+│   ├── init_candidate.py                 # Guided terminal wizard — populate candidate_config.yaml (10 sections)
+│   ├── init_job_package.py               # Initialize new job package folder, job_description.txt, and jobs.csv row
+│   ├── pipeline_report.py                # Pipeline metrics + duplicate req detection
+│   ├── phase2_job_ranking.py             # Keyword scoring + req number tracking
+│   ├── phase2_semantic_analyzer.py       # Claude API semantic fit analysis
+│   ├── phase3_parse_library.py           # Full library parse (thin wrapper)
+│   ├── phase3_parse_employer.py          # Single-employer re-parse
+│   ├── phase3_build_candidate_profile.py
+│   ├── phase3_compile_library.py
+│   ├── phase4_resume_generator.py        # Four-stage resume generation
+│   ├── phase4_interactive.py             # Interactive resume stage runner (in progress)
+│   ├── phase4_cover_letter.py            # Staged cover letter generator
+│   ├── phase5_interview_prep.py          # Stage-aware interview prep (recruiter/HM/team panel)
+│   ├── phase5_debrief.py                  # Post-interview debrief capture (--init/--convert/--interactive)
+│   ├── phase5_thankyou.py                # Post-interview thank-you letter generation (one per interviewer)
+│   ├── phase5_workshop_capture.py        # Parses workshopped prep .docx into interview_library.json
+│   ├── phase5_debrief_utils.py           # Shared utility — load filed debrief JSON
+│   ├── interview_library_parser.py       # Shared module — read/write interview_library.json
+│   ├── phase6_networking.py              # Warmth-calibrated outreach message generator; reads/writes contact_pipeline.xlsx
+│   ├── check_resume.py                   # Two-layer resume quality check (string matching + API)
+│   ├── check_cover_letter.py             # Two-layer cover letter quality check
+│   └── utils/
+│       ├── build_docs.py                 # Assemble README, USAGE, PROJECT_CONTEXT from fragments
+│       ├── candidate_config.py           # Candidate career data loader (load, get_hardcoded_rules, build_known_facts)
+│       ├── domain_config.py              # Domain generalization loader — get_label() maps config keys to display strings
+│       ├── find_duplicate_bullets.py     # Scan experience_library.json for duplicate bullets; writes cluster report to outputs/
+│       ├── library_parser.py             # Shared parsing logic (no side effects)
+│       ├── normalize_library.py          # One-time cleanup — merge tranche-suffixed employer sections
+│       └── pii_filter.py                 # PII stripping — safe for GitHub
+├── tests/                                # Two-tier pytest suite (mock + live)
+│   ├── conftest.py                       # Shared fixtures and fictional test identity
+│   ├── fixtures/                         # Fictional test data (Jane Q. Applicant / Acme)
+│   ├── utils/                            # pii_filter, library_parser, build_docs tests
+│   └── phase1/ … phase6/                 # Per-phase test files mirroring scripts/
+├── CLAUDE.md                             # Claude Code conventions and safety rules
+├── pytest.ini                            # Test config: pythonpath, live marker
+├── requirements.txt                      # Runtime dependencies
+├── requirements-dev.txt                  # Test dependencies (pytest, pytest-mock)
+├── .env                                  # API keys and PII — never committed
+├── .env.example                          # Environment variable template
+├── .gitignore
+├── USAGE.md                              # Operator manual — setup, workflow, CLI reference (assembled)
+└── README.md
+```
+

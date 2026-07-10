@@ -1,0 +1,4 @@
+company,title,location,salary_range,url,date_found,package_folder
+AeroDefense Corp,Senior Systems Engineer,"San Diego, CA | Hybrid",$140k - $210k,https://example.com/jobs/001,2026-03-01,AeroDefense_SrSE
+TechSystems Inc,Principal MBSE Engineer,"San Diego, CA | On-site",$155k - $225k,https://example.com/jobs/002,2026-03-03,TechSystems_PrinSE
+Naval Tech Solutions,Senior MBSE / Systems Architect,"San Diego, CA | On-site",$160k - $240k,https://example.com/jobs/003,2026-03-05,NavalTech_MBSE

@@ -1,0 +1,15 @@
+SUMMARY
+Senior systems engineer with 20+ years of experience in defense MBSE, autonomous systems, and multi-domain C2 integration. TS/SCI cleared.
+
+CORE COMPETENCIES
+MBSE | Cameo Systems Modeler | DoDAF | Autonomous Systems | System-of-Systems Architecture | Stakeholder Engagement | Defense Acquisition | ConOps
+
+EXPERIENCE
+
+Acme Defense Systems | Senior Systems Engineer | 2020 - Present
+- Led MBSE development for autonomous surface vessel program using Cameo Systems Modeler and DoDAF architectural views.
+- Developed system-of-systems architecture models supporting multi-domain C2 integration.
+- Facilitated IPT working groups with government stakeholders to define operational requirements and ConOps.
+
+EDUCATION
+Jane Q. Applicant University | B.S. Systems Engineering | 2005
