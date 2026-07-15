@@ -56,6 +56,12 @@ GAP_STOP_WORDS = {
 
 GAP_TERM_MIN_LENGTH = 3  # filters out "AI" and other 2-char noise
 
+# Section headers for non-employment (personal project) entries. Gap terms describe
+# missing PROFESSIONAL experience, so personal-use mentions inside these sections
+# (e.g. "published on GitHub" when the gap is "GitHub personal use only") are not
+# violations. Hardcoded rules (em dash, banned language) still apply to these lines.
+PROJECT_SECTION_HEADERS = {'## INDEPENDENT PROJECT'}
+
 
 # ==============================================
 # SECTION EXTRACTION
@@ -130,12 +136,27 @@ def extract_gap_terms(background_text):
 # LAYER 1 – STRING MATCHING
 # ==============================================
 
+def _project_section_line_numbers(resume_lines):
+    """Return 1-based line numbers inside PROJECT_SECTION_HEADERS sections."""
+    exempt = set()
+    in_project = False
+    for i, line in enumerate(resume_lines, start=1):
+        stripped = line.strip()
+        if stripped.startswith('## '):
+            in_project = stripped in PROJECT_SECTION_HEADERS
+            continue
+        if in_project:
+            exempt.add(i)
+    return exempt
+
+
 def run_layer1(resume_lines, gap_terms):
     """
     Run pre-flight string checks against resume lines.
     Returns list of finding dicts.
     """
     findings = []
+    gap_exempt_lines = _project_section_line_numbers(resume_lines)
 
     # Hardcoded rules
     for rule_name, pattern, fix, case_sensitive in candidate_config.get_hardcoded_rules("resume"):
@@ -161,6 +182,8 @@ def run_layer1(resume_lines, gap_terms):
             if not line.strip():
                 continue
             if line.strip().startswith('##'):
+                continue
+            if i in gap_exempt_lines:
                 continue
             # Word-boundary match, case-insensitive
             # Escape special regex chars in term
@@ -217,6 +240,14 @@ IMPORTANT – EM DASH CLARIFICATION:
 The em dash is the specific character \u2014 (–). Only flag this character as a violation.
 Hyphens (-) in compound words such as "end-to-end", "system-of-systems", "mission-critical",
 "real-time" are correct usage and must NOT be flagged as em dash violations.
+
+IMPORTANT – PERSONAL PROJECT SECTIONS:
+Sections headed "## INDEPENDENT PROJECT" describe a personal project, NOT employment.
+Confirmed gaps refer to missing PROFESSIONAL experience. Personal-project use of tools
+or skills inside these sections (e.g. GitHub, Python, test automation, AI/LLM tooling)
+is not a violation and must NOT be flagged. Only flag project-section text if it presents
+the project as employment, freelance, or consulting work, or claims clients, a team,
+revenue, or production deployment.
 
 IMPORTANT – ONLY FLAG ACTUAL VIOLATIONS:
 Only flag language that is actually wrong in the resume text. Do NOT flag language that already

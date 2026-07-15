@@ -403,7 +403,7 @@ def has_debrief_for_stage(debriefs: list, stage: str, panel_label=None) -> bool
 | `data/job_packages/[role]/stage2_approved.txt` | `data/job_packages/[role]/check_results.txt` |
 | `context/candidate/CANDIDATE_BACKGROUND.md` | |
 
-**Notes:** Two-layer checker. Layer 1: fast string matching against hardcoded rules (from `candidate_config.get_hardcoded_rules`) and dynamic gap terms extracted from `CANDIDATE_BACKGROUND.md`. Layer 2: single API call for nuanced claims assessment. All output is captured to `check_results.txt`; exit code is 1 if `Status: FAIL` appears in output, 0 otherwise. Also invoked automatically by `phase4_resume_generator.py --stage 4` as a subprocess.
+**Notes:** Two-layer checker. Layer 1: fast string matching against hardcoded rules (from `candidate_config.get_hardcoded_rules`) and dynamic gap terms extracted from `CANDIDATE_BACKGROUND.md`. Layer 2: single API call for nuanced claims assessment. Lines inside sections listed in `PROJECT_SECTION_HEADERS` (currently `## INDEPENDENT PROJECT`) are exempt from Layer 1 gap-term matching and excluded from Layer 2 gap flagging via a prompt clarification — these are personal-project entries, not employment; hardcoded rules (em dash, banned language) still apply to them. All output is captured to `check_results.txt`; exit code is 1 if `Status: FAIL` appears in output, 0 otherwise. Also invoked automatically by `phase4_resume_generator.py --stage 4` as a subprocess.
 
 ---
 
