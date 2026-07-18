@@ -320,6 +320,32 @@ def extract_profile_section(profile_text, header):
     return profile_text[start:end].strip()
 
 
+def _extract_gaps_section(profile_text):
+    """
+    Extract the optional '## Confirmed Gaps' section (any header case) from
+    candidate_profile.md text.
+
+    candidate_profile.md currently has no gaps-equivalent section -- the
+    'CONFIRMED GAPS' / '## STYLE RULES' headers this code previously searched
+    for belong to the candidate_config.yaml / build_known_facts (phase3)
+    vocabulary, not the profile. The extraction is therefore optional, but
+    absence is announced with a named WARNING: a silent empty string is the
+    defect class that let the gap prompt run without grounding.
+
+    Returns the section body (stripped), or "" after warning when absent.
+    """
+    match = re.search(r"^##\s+confirmed\s+gaps\s*$", profile_text,
+                      re.IGNORECASE | re.MULTILINE)
+    if match:
+        start = match.end()
+        next_header = profile_text.find("\n## ", start)
+        end = next_header if next_header > 0 else len(profile_text)
+        return profile_text[start:end].strip()
+    print("  WARNING: No CONFIRMED GAPS section found in candidate_profile.md -- "
+          "gap analysis will rely on JD cross-reference against the full profile only.")
+    return ""
+
+
 def _build_section1_prompt(jd, salary_data, profile, salary_actuals=None):
     """Build the Section 1 company brief prompt, parameterized by stage profile."""
     _stage_instructions = {
@@ -512,6 +538,9 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile, librar
             seed_lines.append("")
         seed_lines.append(
             "For each seeded story: tailor to this role/stage. "
+            "When tailoring, do not alter quantities, numbers, scope qualifiers "
+            "(some / several / all / most / a few), job titles, tool names, or "
+            "metrics from the seeded text -- reproduce those exactly. "
             "After 'STORY N --' heading, append '(library-seeded)'. "
             "If a Performance line is shown above, reproduce it verbatim on the next line.\n"
         )
@@ -578,11 +607,17 @@ def _build_gap_prompt(jd, gaps_section, candidate_profile, profile, library_seed
             seed_lines.append("")
         seed_lines.append(
             "For each seeded gap: tailor to this role/stage. "
+            "When tailoring, do not alter quantities, numbers, scope qualifiers "
+            "(some / several / all / most / a few), job titles, tool names, or "
+            "metrics from the seeded text -- reproduce those exactly. "
             "After 'GAP N --' heading, append '(library-seeded)'. "
             "If a Performance line is shown, reproduce it verbatim on the next line.\n"
         )
         gap_seed_block = "\n".join(seed_lines)
 
+    # gaps_section and candidate_profile are passed unsliced: the confirmed-skills
+    # guardrail below references sections that sit deep in candidate_profile.md,
+    # and any character-budget slice silently removes them (Jul 2026 defect).
     return (
         f"You are doing a two-step gap analysis grounded strictly in the JD text and "
         f"candidate profile. Follow these steps exactly.\n\n"
@@ -608,8 +643,8 @@ def _build_gap_prompt(jd, gaps_section, candidate_profile, profile, library_seed
         f"If the candidate has adjacent domain exposure (e.g., a short-term engagement in a related domain), "
         f"frame the redirect around that specific domain context – not around methodology depth they may not have.\n\n"
         f"Expect to find 3-5 gaps. If you find zero, re-examine preferred qualifications.\n\n"
-        f"CANDIDATE CONFIRMED GAPS:\n{gaps_section[:1500]}\n\n"
-        f"CANDIDATE FULL PROFILE:\n{candidate_profile[:2000]}\n"
+        f"CANDIDATE CONFIRMED GAPS:\n{gaps_section}\n\n"
+        f"CANDIDATE FULL PROFILE:\n{candidate_profile}\n"
         f"{gap_depth_note}\n\n"
         f"{gap_seed_block}"
         f"For each gap provide a direct, confident talking point -- not apologetic.\n\n"
@@ -1078,12 +1113,8 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     _clearance = candidate_config.load().get("clearance", {}).get("level", "")
     salary_data = extract_salary(jd, clearance_level=_clearance)
 
-    # Extract confirmed gaps section from profile
-    gaps_section = ""
-    if 'CONFIRMED GAPS' in raw_profile:
-        start = raw_profile.find('CONFIRMED GAPS')
-        end = raw_profile.find('## STYLE RULES', start)
-        gaps_section = strip_pii(raw_profile[start:end if end > 0 else start + 2000])
+    # Extract confirmed gaps section from profile (optional -- warns when absent)
+    gaps_section = strip_pii(_extract_gaps_section(raw_profile))
 
     # --------------------------------------------------
     # SECTION 1 -- COMPANY & ROLE BRIEF (WEB-INFORMED)
