@@ -3,7 +3,7 @@
 
 __Load for: planning next development session, prioritizing work items__  
 *When an Item is complete summarize in context/PARKING_LOT_DONE.md*  
-Last updated: 18 Jul 2026 (items 21 and 22 added from the gap-prompt truncation fix session)
+Last updated: 18 Jul 2026 (item 21 completed to PARKING_LOT_DONE.md; item 22 extended with Confirmed Gaps emission scope and the DRM completeness case)
 
 ## Active Items
 
@@ -48,19 +48,24 @@ Last updated: 18 Jul 2026 (items 21 and 22 added from the gap-prompt truncation 
 11. Phase 0 — Candidate Onboarding Process documentation
     - Document the structured prompts and instructions to capture existing experinect in the form of resumes into the working experience library.
 
-21. __Audit all character-offset truncations in prompt assembly__
-    - phase5 [:2500] [:3000] [:800], and any others found by grep across scripts/
-    - Replace with full content or priority-based sectioning with loud warnings;
-      justify any that remain
-    - Origin: gap-prompt [:2000] truncation defect, Jul 2026 – Section 2 only got
-      Cameo right because the library path routed around the profile cut
-
 22. __Shared profile-section schema between phase3 and phase5__
     - phase3 (producer of candidate_profile.md) and phase5 (consumer) currently
       agree on section headers only by string coincidence
     - Promote header names to shared constants in scripts/config.py written by
       phase3_build_candidate_profile and read by phase5 extraction
     - Origin: dead CONFIRMED GAPS / ## STYLE RULES lookup, Jul 2026
+    - phase3 currently emits no Confirmed Gaps section in candidate_profile.md at
+      all (verified Jul 2026 – gap knowledge lives only in candidate_config.yaml);
+      when 22 lands, phase3 should emit the section from config, the extraction
+      warning becomes a genuine anomaly signal, and the warning may then be scoped
+      to non-omit stages if it survives at all
+    - NOTE: confirmed gaps flowing into the gap prompt for the first time is a
+      behavior change to gap prep – review the first packages after it lands
+      rather than trusting the diff
+    - Profile must also reflect library-confirmed skills/methods – DRM case,
+      Jul 2026: the library holds an explicit DRM story (Saronic) but
+      candidate_profile.md contains no mention of DRM or Design Reference Mission
+      in any casing, so the gap prompt flagged DRMs as a HARD GAP
 
 ### Housekeeping
 
