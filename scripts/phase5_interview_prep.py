@@ -320,6 +320,63 @@ def extract_profile_section(profile_text, header):
     return profile_text[start:end].strip()
 
 
+def _extract_gaps_section(profile_text):
+    """
+    Extract the optional '## Confirmed Gaps' section (any header case) from
+    candidate_profile.md text.
+
+    candidate_profile.md currently has no gaps-equivalent section -- the
+    'CONFIRMED GAPS' / '## STYLE RULES' headers this code previously searched
+    for belong to the candidate_config.yaml / build_known_facts (phase3)
+    vocabulary, not the profile. The extraction is therefore optional, but
+    absence is announced with a named WARNING: a silent empty string is the
+    defect class that let the gap prompt run without grounding.
+
+    Returns the section body (stripped), or "" after warning when absent.
+    """
+    match = re.search(r"^##\s+confirmed\s+gaps\s*$", profile_text,
+                      re.IGNORECASE | re.MULTILINE)
+    if match:
+        start = match.end()
+        next_header = profile_text.find("\n## ", start)
+        end = next_header if next_header > 0 else len(profile_text)
+        return profile_text[start:end].strip()
+    print("  WARNING: No CONFIRMED GAPS section found in candidate_profile.md -- "
+          "gap analysis will rely on JD cross-reference against the full profile only.")
+    return ""
+
+
+def _warn_if_incomplete(response, section_label):
+    """Warn when an API response stopped at the max_tokens ceiling.
+
+    Silent output truncation is this project's highest-risk defect class -- a
+    live package rendered 1 of 5 declared gaps and cut a salary block
+    mid-sentence with no signal (Jul 2026).
+    """
+    if getattr(response, "stop_reason", None) == "max_tokens":
+        print(f"  WARNING: {section_label} response stopped at the max_tokens "
+              f"ceiling -- output is incomplete; re-run this stage.")
+
+
+def _check_gap_completeness(section_text):
+    """Warn when the gap analysis declares more gaps than it rendered.
+
+    The gap output typically announces its findings (e.g. 'identified 5 gaps')
+    before rendering 'GAP N --' blocks; an output cutoff leaves rendered blocks
+    short of the declared count. Only warns when a declared count is found.
+    """
+    rendered = len(re.findall(r"^GAP\s+\d+\s*--", section_text, re.MULTILINE))
+    declared_match = re.search(
+        r"\b(\d+)\s+(?:hard\s+|required\s+|preferred\s+)?gaps?\b",
+        section_text, re.IGNORECASE,
+    )
+    if declared_match:
+        declared = int(declared_match.group(1))
+        if rendered < declared:
+            print(f"  WARNING: Gap analysis declares {declared} gaps but rendered "
+                  f"only {rendered} -- Section 3 is incomplete; re-run this stage.")
+
+
 def _build_section1_prompt(jd, salary_data, profile, salary_actuals=None):
     """Build the Section 1 company brief prompt, parameterized by stage profile."""
     _stage_instructions = {
@@ -400,7 +457,7 @@ def _build_section1_prompt(jd, salary_data, profile, salary_actuals=None):
     return (
         f"Research this company and role, then generate an interview prep brief "
         f"for a {profile['label']}.\n\n"
-        f"JOB DESCRIPTION:\n{jd[:2500]}\n\n"
+        f"JOB DESCRIPTION:\n{jd}\n\n"
         f"Use the web_search tool to find current information about this company.\n\n"
         f"Stage-specific instructions:\n{_stage_instructions[profile['section1_focus']]}\n"
         f"{salary_block}\n"
@@ -512,6 +569,9 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile, librar
             seed_lines.append("")
         seed_lines.append(
             "For each seeded story: tailor to this role/stage. "
+            "When tailoring, do not alter quantities, numbers, scope qualifiers "
+            "(some / several / all / most / a few), job titles, tool names, or "
+            "metrics from the seeded text -- reproduce those exactly. "
             "After 'STORY N --' heading, append '(library-seeded)'. "
             "If a Performance line is shown above, reproduce it verbatim on the next line.\n"
         )
@@ -519,9 +579,13 @@ def _build_section2_prompt(jd, story_context, candidate_profile, profile, librar
 
     return (
         f"Generate employer-attributed interview stories for a {profile['label']}.\n\n"
-        f"CANDIDATE PROFILE (PII removed):\n{candidate_profile[:2500]}\n\n"
-        f"RESUME SUBMITTED FOR THIS ROLE -- with employer context:\n{story_context[:3000]}\n\n"
-        f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
+        # Profile, story context, and JD are passed unsliced: the Role Fit
+        # Assessment asserts facts against the profile, and stories must ground
+        # in the full story_context -- character-budget slices silently removed
+        # both (Jul 2026 defect).
+        f"CANDIDATE PROFILE (PII removed):\n{candidate_profile}\n\n"
+        f"RESUME SUBMITTED FOR THIS ROLE -- with employer context:\n{story_context}\n\n"
+        f"JOB DESCRIPTION:\n{jd}\n\n"
         f"CRITICAL INSTRUCTIONS:\n"
         f"- Every story MUST be grounded in the bullets shown above\n"
         f"- Every story MUST include employer attribution "
@@ -578,11 +642,17 @@ def _build_gap_prompt(jd, gaps_section, candidate_profile, profile, library_seed
             seed_lines.append("")
         seed_lines.append(
             "For each seeded gap: tailor to this role/stage. "
+            "When tailoring, do not alter quantities, numbers, scope qualifiers "
+            "(some / several / all / most / a few), job titles, tool names, or "
+            "metrics from the seeded text -- reproduce those exactly. "
             "After 'GAP N --' heading, append '(library-seeded)'. "
             "If a Performance line is shown, reproduce it verbatim on the next line.\n"
         )
         gap_seed_block = "\n".join(seed_lines)
 
+    # gaps_section and candidate_profile are passed unsliced: the confirmed-skills
+    # guardrail below references sections that sit deep in candidate_profile.md,
+    # and any character-budget slice silently removes them (Jul 2026 defect).
     return (
         f"You are doing a two-step gap analysis grounded strictly in the JD text and "
         f"candidate profile. Follow these steps exactly.\n\n"
@@ -608,8 +678,8 @@ def _build_gap_prompt(jd, gaps_section, candidate_profile, profile, library_seed
         f"If the candidate has adjacent domain exposure (e.g., a short-term engagement in a related domain), "
         f"frame the redirect around that specific domain context – not around methodology depth they may not have.\n\n"
         f"Expect to find 3-5 gaps. If you find zero, re-examine preferred qualifications.\n\n"
-        f"CANDIDATE CONFIRMED GAPS:\n{gaps_section[:1500]}\n\n"
-        f"CANDIDATE FULL PROFILE:\n{candidate_profile[:2000]}\n"
+        f"CANDIDATE CONFIRMED GAPS:\n{gaps_section}\n\n"
+        f"CANDIDATE FULL PROFILE:\n{candidate_profile}\n"
         f"{gap_depth_note}\n\n"
         f"{gap_seed_block}"
         f"For each gap provide a direct, confident talking point -- not apologetic.\n\n"
@@ -853,14 +923,19 @@ def build_story_context(library, resume_data, jd_lower):
                     continue
                 kws = lb.get('keywords', [])
                 if any(k.lower() in jd_lower for k in kws):
+                    # [:60] is a dedupe matching key only -- the bullet text
+                    # itself is emitted in full below
                     if not any(lb['text'][:60] in rb for rb in resume_bullets):
                         additional.append(
-                            f"  - [{lb['theme']}] {lb['text'][:150]}"
+                            f"  - [{lb['theme']}] {lb['text']}"
                         )
             if additional:
                 context_lines.append(
                     "Additional library context for story depth (not on resume):"
                 )
+                # [:4] caps how many supplementary bullets are offered -- a
+                # whole-item selection cap, never a mid-content cut, and the
+                # prompt labels this list as supplemental, not exhaustive
                 context_lines.extend(additional[:4])
 
     return "\n".join(context_lines)
@@ -1078,12 +1153,8 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
     _clearance = candidate_config.load().get("clearance", {}).get("level", "")
     salary_data = extract_salary(jd, clearance_level=_clearance)
 
-    # Extract confirmed gaps section from profile
-    gaps_section = ""
-    if 'CONFIRMED GAPS' in raw_profile:
-        start = raw_profile.find('CONFIRMED GAPS')
-        end = raw_profile.find('## STYLE RULES', start)
-        gaps_section = strip_pii(raw_profile[start:end if end > 0 else start + 2000])
+    # Extract confirmed gaps section from profile (optional -- warns when absent)
+    gaps_section = strip_pii(_extract_gaps_section(raw_profile))
 
     # --------------------------------------------------
     # SECTION 1 -- COMPANY & ROLE BRIEF (WEB-INFORMED)
@@ -1095,11 +1166,12 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
 
     response1 = client.messages.create(
         model=MODEL,
-        max_tokens=1500,
+        max_tokens=3000,
         system=_build_system_prompt(),
         tools=[{"type": "web_search_20250305", "name": "web_search"}],
         messages=[{"role": "user", "content": company_prompt}]
     )
+    _warn_if_incomplete(response1, "Section 1 (company brief)")
 
     # Extract text blocks from response -- web search returns mixed content types
     section1_parts = []
@@ -1121,10 +1193,11 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
         intro_prompt = _build_intro_prompt(strip_pii(raw_intro), profile)
         response_intro = client.messages.create(
             model=MODEL,
-            max_tokens=500,
+            max_tokens=1000,
             system=_build_system_prompt(),
             messages=[{"role": "user", "content": intro_prompt}]
         )
+        _warn_if_incomplete(response_intro, "Section 1.5 (introduce yourself)")
         section_intro = response_intro.content[0].text
     else:
         section_intro = (
@@ -1157,10 +1230,11 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
 
     response2 = client.messages.create(
         model=MODEL,
-        max_tokens=3000,
+        max_tokens=6000,
         system=_build_system_prompt(),
         messages=[{"role": "user", "content": story_prompt}]
     )
+    _warn_if_incomplete(response2, "Section 2 (story bank)")
     section2 = response2.content[0].text
 
     # --------------------------------------------------
@@ -1201,10 +1275,12 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
         )
         response3 = client.messages.create(
             model=MODEL,
-            max_tokens=1200,
+            max_tokens=4000,
             system=_build_system_prompt(),
             messages=[{"role": "user", "content": gap_prompt}]
         )
+        _warn_if_incomplete(response3, "Section 3 (gap preparation)")
+        _check_gap_completeness(response3.content[0].text)
         section3 = short_tenure_block + response3.content[0].text
 
     # --------------------------------------------------
@@ -1225,8 +1301,9 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
         question_seed_block = "\n".join(qlines)
 
     context_block = (
-        f"JOB DESCRIPTION:\n{jd[:2000]}\n\n"
-        f"CANDIDATE BACKGROUND (PII removed):\n{strip_pii(candidate_profile[:800])}\n\n"
+        # JD and profile passed unsliced -- see the Jul 2026 truncation defect
+        f"JOB DESCRIPTION:\n{jd}\n\n"
+        f"CANDIDATE BACKGROUND (PII removed):\n{candidate_profile}\n\n"
         f"{question_seed_block}"
     )
     _qp = profile["questions_prompt"]
@@ -1234,10 +1311,11 @@ def generate_prep(client, role_data, interview_stage, output_txt_path, output_do
 
     response4 = client.messages.create(
         model=MODEL,
-        max_tokens=1200,
+        max_tokens=2500,
         system=_build_system_prompt(),
         messages=[{"role": "user", "content": questions_prompt}]
     )
+    _warn_if_incomplete(response4, "Section 4 (questions)")
     section4 = response4.content[0].text
 
     # Build continuity section from role debriefs

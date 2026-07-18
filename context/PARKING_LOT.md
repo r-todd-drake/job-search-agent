@@ -3,7 +3,7 @@
 
 __Load for: planning next development session, prioritizing work items__  
 *When an Item is complete summarize in context/PARKING_LOT_DONE.md*  
-Last updated: 10 Jun 2026 (backlog re-prioritized per rework brief: distribution promoted, instrumentation added, Phase 7 deferred, provider abstraction noted low)
+Last updated: 18 Jul 2026 (item 21 completed to PARKING_LOT_DONE.md; item 22 extended with Confirmed Gaps emission scope and the DRM completeness case; item 23 added for phase5_thankyou.py truncations)
 
 ## Active Items
 
@@ -47,6 +47,39 @@ Last updated: 10 Jun 2026 (backlog re-prioritized per rework brief: distribution
 
 11. Phase 0 — Candidate Onboarding Process documentation
     - Document the structured prompts and instructions to capture existing experinect in the form of resumes into the working experience library.
+
+22. __Shared profile-section schema between phase3 and phase5__
+    - phase3 (producer of candidate_profile.md) and phase5 (consumer) currently
+      agree on section headers only by string coincidence
+    - Promote header names to shared constants in scripts/config.py written by
+      phase3_build_candidate_profile and read by phase5 extraction
+    - Origin: dead CONFIRMED GAPS / ## STYLE RULES lookup, Jul 2026
+    - phase3 currently emits no Confirmed Gaps section in candidate_profile.md at
+      all (verified Jul 2026 – gap knowledge lives only in candidate_config.yaml);
+      when 22 lands, phase3 should emit the section from config, the extraction
+      warning becomes a genuine anomaly signal, and the warning may then be scoped
+      to non-omit stages if it survives at all
+    - NOTE: confirmed gaps flowing into the gap prompt for the first time is a
+      behavior change to gap prep – review the first packages after it lands
+      rather than trusting the diff
+    - Profile must also reflect library-confirmed skills/methods – DRM case,
+      Jul 2026: the library holds an explicit DRM story (Saronic) but
+      candidate_profile.md contains no mention of DRM or Design Reference Mission
+      in any casing, so the gap prompt flagged DRMs as a HARD GAP
+
+23. __phase5_thankyou.py prompt truncations – same defect class as item 21__
+    - Found by the item 21 audit (Jul 2026) but scope-fenced out of that session:
+      jd_text[:1500] (line 281), candidate_profile[:1000] (line 284),
+      resume_text[:800] (line 288) – all prompt-bound character slices
+    - Apply the item 21 decision rule: remove slices of ground-truth content the
+      prompt asserts facts against; any retained slice needs a justification
+      comment and a named WARNING when truncation actually occurs
+    - Add the same assembled-payload regression tests and stop_reason check on
+      the API call (see tests/phase5/test_gap_prompt_ground_truth.py for the
+      pattern)
+    - Lower urgency than the interview-prep fixes: thank-you notes are
+      human-reviewed short-form output, but the profile slice can still ground a
+      factual claim on truncated content
 
 ### Housekeeping
 

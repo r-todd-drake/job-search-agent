@@ -108,6 +108,43 @@ def test_run_layer1_detects_gap_term():
     assert any("MATLAB" in r for r in rules)
 
 
+def test_run_layer1_gap_term_exempt_in_project_section():
+    from scripts.check_resume import run_layer1
+    resume_lines = [
+        "## INDEPENDENT PROJECT",
+        "Title: AI-Assisted Job Search Pipeline",
+        "- Published on GitHub with automated test coverage.",
+    ]
+    findings = run_layer1(resume_lines, gap_terms={"GitHub"})
+    rules = [f["rule"] for f in findings]
+    assert not any("GitHub" in r for r in rules)
+
+
+def test_run_layer1_gap_term_still_flagged_outside_project_section():
+    from scripts.check_resume import run_layer1
+    resume_lines = [
+        "## INDEPENDENT PROJECT",
+        "- Published on GitHub with automated test coverage.",
+        "## CORE COMPETENCIES",
+        "- GitHub version control",
+    ]
+    findings = run_layer1(resume_lines, gap_terms={"GitHub"})
+    gap_findings = [f for f in findings if "GitHub" in f["rule"]]
+    assert len(gap_findings) == 1
+    assert gap_findings[0]["line"] == 4
+
+
+def test_run_layer1_hardcoded_rules_still_apply_in_project_section():
+    from scripts.check_resume import run_layer1
+    resume_lines = [
+        "## INDEPENDENT PROJECT",
+        "- Built a pipeline \u2014 with an em dash.",
+    ]
+    findings = run_layer1(resume_lines, gap_terms=set())
+    rules = [f["rule"] for f in findings]
+    assert "Em dash" in rules
+
+
 def test_run_layer1_no_false_positives_on_clean_resume():
     from scripts.check_resume import run_layer1
     resume_lines = FIXTURE_STAGE2.read_text(encoding="utf-8").splitlines()

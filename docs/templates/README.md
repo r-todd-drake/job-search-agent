@@ -32,6 +32,10 @@ designed around that failure mode.
 **Engineering rigor**
 - **Two-tier test suite** – 560+ mock tests run in CI on every push; a separate live-API
   tier gates phase promotion
+- **Prompt-content regression tests** – every prompt guardrail has a test asserting the
+  content it references is actually present in the assembled payload, not just that the
+  instruction wording exists; added after a live defect where a confirmed-skills guardrail
+  shipped against content a hardcoded truncation had already removed
 - **Modular shared libraries** – parsing, PII filtering, candidate config, and domain
   config are importable modules with injectable dependencies for testability
 - **PII firewall** – `pii_filter.py` strips personal identifiers from every API call;
@@ -109,6 +113,8 @@ Anthropic API: inputs are not used for model training under commercial terms.
 - Asynchronous human-in-the-loop workflow design
 - PII protection with environment-variable based filtering
 - Two-tier pytest suite (mock + live API) with CI on every push
+- Prompt-content regression testing – guardrails verified against the assembled payload,
+  not just the instruction wording
 - Modular shared-library design with injectable dependencies
 - Prompt engineering for structured LLM outputs
 - Multi-step agent workflow orchestration and document generation

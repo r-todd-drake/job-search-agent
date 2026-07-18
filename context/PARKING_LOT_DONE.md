@@ -2,9 +2,12 @@
 # Parking Lot Done
 
 __Load for: planning next development session, understancing completed items__  
-Last updated: 05 Jun 2026
+Last updated: 18 Jul 2026
 
 ## Completed (recent)
+
+- Prompt-assembly truncation audit – item #21 – COMPLETE (18 Jul 2026)
+  Audited every [:N] character slice in phase5_interview_prep.py prompt assembly. Removed seven prompt-bound slices: jd[:2500] (Section 1), candidate_profile[:2500] + story_context[:3000] + jd[:2000] (Section 2 – source of the live Role Fit self-contradiction on leadership), jd[:2000] + candidate_profile[:800] (Section 4 – also removed a redundant double strip_pii), and lb['text'][:150] (library bullet text feeding story_context). Retained two non-content slices with justification comments: lb['text'][:60] (dedupe matching key, not prompt content) and additional[:4] (whole-item selection cap on supplemental bullets, never a mid-content cut). Companion output-side fix: max_tokens raised per section (S1 1500 to 3000, S1.5 500 to 1000, S2 3000 to 6000, S3 1200 to 4000, S4 1200 to 2500) after a live package rendered 1 of 5 declared gap blocks and cut the salary block mid-sentence; every API call now checks stop_reason for max_tokens and Section 3 cross-checks declared-vs-rendered gap count, both emitting named WARNINGs. Report-only findings deferred for triage: phase5_thankyou.py jd_text[:1500] / candidate_profile[:1000] / resume_text[:800] (same defect class, prompt-bound); phase5_workshop_capture.py [:60] slices are slug and dedupe keys (benign). 600 mock tests pass (+6 this session).
 
 - Script identifier audit — item #8 — COMPLETE (05 Jun 2026)
   Full audit of all tracked/committed files for real employer names, program names, and role slugs that could enable de-anonymization of the public GitHub repo. 19 files remediated with fictional replacement names. The real-to-fictional replacement dictionary is deliberately NOT recorded in this or any tracked file – recording the mapping would defeat the audit (lesson applied 10 Jul 2026; keep the dictionary in gitignored personal notes only). Audit grep confirms zero real identifiers remain in any tracked file. 567 mock tests pass (baseline unchanged).
