@@ -185,6 +185,88 @@ def test_section2_seed_instructions_protect_seeded_wording():
     assert "reproduce it verbatim on the next line" in prompt
 
 
+def test_section2_prompt_contains_profile_content_past_2500_chars():
+    """Section 2's Role Fit Assessment asserts facts about the candidate, so the
+    full profile must reach the assembled prompt -- the [:2500] slice produced a
+    live self-contradiction (Role Fit denied leadership the gap analysis
+    confirmed from the same profile)."""
+    from scripts.phase5_interview_prep import _build_section2_prompt, STAGE_PROFILES
+
+    profile_text = make_fixture_profile()
+    assert profile_text.index("CONFIRMED SKILLS BY CATEGORY") > 2500
+    assert profile_text.index("Leadership & Stakeholder Management") > 2500
+
+    prompt = _build_section2_prompt("JD text", "story context", profile_text,
+                                    STAGE_PROFILES["hiring_manager"],
+                                    library_seeds=None)
+    assert "Cameo Systems Modeler (MagicDraw)" in prompt, (
+        "Confirmed-skills row past char 2,500 missing from section-2 prompt -- "
+        "profile truncation has been reintroduced"
+    )
+    assert "Leadership & Stakeholder Management" in prompt, (
+        "Leadership section past char 2,500 missing from section-2 prompt -- "
+        "profile truncation has been reintroduced"
+    )
+
+
+# ---- output-side truncation: stop_reason and gap-count completeness ----
+
+class _FakeResponse:
+    def __init__(self, stop_reason):
+        self.stop_reason = stop_reason
+
+
+def test_max_tokens_stop_reason_fires_warning(capsys):
+    from scripts.phase5_interview_prep import _warn_if_incomplete
+
+    _warn_if_incomplete(_FakeResponse("max_tokens"), "Section 3 (gap preparation)")
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.out
+    assert "max_tokens" in captured.out
+    assert "Section 3 (gap preparation)" in captured.out
+
+
+def test_normal_stop_reason_no_warning(capsys):
+    from scripts.phase5_interview_prep import _warn_if_incomplete
+
+    _warn_if_incomplete(_FakeResponse("end_turn"), "Section 2 (story bank)")
+    assert "WARNING" not in capsys.readouterr().out
+
+
+def test_gap_completeness_warning_when_rendered_below_declared(capsys):
+    from scripts.phase5_interview_prep import _check_gap_completeness
+
+    text = (
+        "I identified 5 gaps between the JD and the candidate profile.\n\n"
+        "GAP 1 -- DRM Development [REQUIRED]:\n"
+        "Gap: JD requires DRM development and the profile does not name"
+    )
+    _check_gap_completeness(text)
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.out
+    assert "5" in captured.out and "1" in captured.out
+    assert "incomplete" in captured.out
+
+
+def test_gap_completeness_no_warning_when_counts_match(capsys):
+    from scripts.phase5_interview_prep import _check_gap_completeness
+
+    text = (
+        "I identified 2 gaps.\n\n"
+        "GAP 1 -- Topic A [REQUIRED]:\nGap: a\n\n"
+        "GAP 2 -- Topic B [PREFERRED]:\nGap: b\n"
+    )
+    _check_gap_completeness(text)
+    assert "WARNING" not in capsys.readouterr().out
+
+
+def test_gap_completeness_no_warning_without_declared_count(capsys):
+    from scripts.phase5_interview_prep import _check_gap_completeness
+
+    _check_gap_completeness("GAP 1 -- Topic [REQUIRED]:\nGap: a\n")
+    assert "WARNING" not in capsys.readouterr().out
+
+
 def test_gap_seed_instructions_protect_seeded_wording():
     from scripts.phase5_interview_prep import _build_gap_prompt, STAGE_PROFILES
 
