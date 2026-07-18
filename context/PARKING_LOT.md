@@ -3,7 +3,7 @@
 
 __Load for: planning next development session, prioritizing work items__  
 *When an Item is complete summarize in context/PARKING_LOT_DONE.md*  
-Last updated: 18 Jul 2026 (item 21 completed to PARKING_LOT_DONE.md; item 22 extended with Confirmed Gaps emission scope and the DRM completeness case)
+Last updated: 18 Jul 2026 (item 21 completed to PARKING_LOT_DONE.md; item 22 extended with Confirmed Gaps emission scope and the DRM completeness case; item 23 added for phase5_thankyou.py truncations)
 
 ## Active Items
 
@@ -66,6 +66,20 @@ Last updated: 18 Jul 2026 (item 21 completed to PARKING_LOT_DONE.md; item 22 ext
       Jul 2026: the library holds an explicit DRM story (Saronic) but
       candidate_profile.md contains no mention of DRM or Design Reference Mission
       in any casing, so the gap prompt flagged DRMs as a HARD GAP
+
+23. __phase5_thankyou.py prompt truncations – same defect class as item 21__
+    - Found by the item 21 audit (Jul 2026) but scope-fenced out of that session:
+      jd_text[:1500] (line 281), candidate_profile[:1000] (line 284),
+      resume_text[:800] (line 288) – all prompt-bound character slices
+    - Apply the item 21 decision rule: remove slices of ground-truth content the
+      prompt asserts facts against; any retained slice needs a justification
+      comment and a named WARNING when truncation actually occurs
+    - Add the same assembled-payload regression tests and stop_reason check on
+      the API call (see tests/phase5/test_gap_prompt_ground_truth.py for the
+      pattern)
+    - Lower urgency than the interview-prep fixes: thank-you notes are
+      human-reviewed short-form output, but the profile slice can still ground a
+      factual claim on truncated content
 
 ### Housekeeping
 
