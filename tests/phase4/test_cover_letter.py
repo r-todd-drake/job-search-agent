@@ -92,8 +92,7 @@ def test_run_cl_stage1_no_pii_in_payload(pii_values, monkeypatch):
         output_path = Path(tmpdir) / "cl_stage1_draft.txt"
         run_cl_stage1(client, jd_text, resume_text, background_text, str(output_path))
 
-    call_args = client.messages.create.call_args
-    full_payload = str(call_args)
+    full_payload = str(client.messages.create.call_args_list)
     for pii_value in pii_values.values():
         assert pii_value not in full_payload, f"PII found in payload: {pii_value}"
 
