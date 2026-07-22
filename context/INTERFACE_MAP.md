@@ -396,7 +396,7 @@ def has_debrief_for_stage(debriefs: list, stage: str, panel_label=None) -> bool
 | 1 | `data/job_packages/[role]/job_description.txt`, `context/candidate/CANDIDATE_BACKGROUND.md`, `data/job_packages/[role]/stage4_final.txt` or `stage2_approved.txt` (optional resume bullets), `data/job_packages/[role]/stage3_review.txt` (optional coverage gaps) | `data/job_packages/[role]/cl_stage1_draft.txt` |
 | 4 | `data/job_packages/[role]/cl_stage4_final.txt`, `templates_local/resume_template.docx` | `resumes/[role]/[role]_CoverLetter.docx` |
 
-**Notes:** Stage 1 makes three API calls: hiring manager extraction, traditional letter generation, and application paragraph generation. Resume bullet source (`stage4_final.txt` preferred, `stage2_approved.txt` fallback) is optional — if neither exists, generation proceeds using background only. Coverage gaps from `stage3_review.txt` (resume review file) are passed as negative constraints to both generation calls.
+**Notes:** Stage 1 makes four API calls: hiring manager extraction, traditional letter generation, application paragraph generation, and a combined revision pass (both sections revised together in one call, per `context/writing_rules.md`) applied before either section is written to `cl_stage1_draft.txt`. Resume bullet source (`stage4_final.txt` preferred, `stage2_approved.txt` fallback) is optional — if neither exists, generation proceeds using background only. Coverage gaps from `stage3_review.txt` (resume review file) are passed as negative constraints to both generation calls (not to the revision call, which only reworks wording).
 
 ---
 

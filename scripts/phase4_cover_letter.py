@@ -31,6 +31,7 @@ from docx.shared import Pt, Inches
 
 from scripts.utils.pii_filter import strip_pii
 from scripts.config import JOBS_PACKAGES_DIR, RESUMES_DIR, RESUME_TEMPLATE, MODEL_SONNET as MODEL
+from scripts.utils import writing_rules
 
 load_dotenv()
 
@@ -283,6 +284,48 @@ Write the paragraph now."""
     )
     return response.content[0].text
 
+
+def revise_cover_letter(client, section1, section2):
+    """Call 3 \u2013 revise both drafted sections together against writing_rules.md."""
+    rules_text = writing_rules.load()
+    prompt = f"""Revise the two drafted sections below by applying the writing rules.
+
+WRITING RULES:
+{rules_text}
+
+Preserve every fact, name, number, and structural element exactly as drafted
+(salutation, date line, paragraph breaks). Only change wording for concision,
+directness, and plain language per the rules above. Do not shorten or remove
+content beyond what the rules require.
+
+## SECTION 1
+{section1}
+
+## SECTION 2
+{section2}
+
+Return both revised sections, each under its original "## SECTION 1" / "## SECTION 2"
+marker, and nothing else."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=2200,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    revised = response.content[0].text
+
+    if '## SECTION 1' not in revised or '## SECTION 2' not in revised:
+        raise ValueError(
+            "Cover letter revision response is missing the '## SECTION 1' / "
+            "'## SECTION 2' markers it was asked to return."
+        )
+
+    after_marker1 = revised.split('## SECTION 1', 1)[1]
+    revised_section1, revised_section2 = after_marker1.split('## SECTION 2', 1)
+
+    return revised_section1.strip(), revised_section2.strip()
+
 # ==============================================
 # OUTPUT ASSEMBLY \u2013 STAGE 1
 # ==============================================
@@ -437,6 +480,8 @@ def run_cl_stage1(client, jd_text, resume_text, background_text, output_path):
         client, jd_clean, bullets_clean, background_clean, []
     )
 
+    section1, section2 = revise_cover_letter(client, section1, section2)
+
     section1 = fix_dashes(section1)
     section2 = fix_dashes(section2)
 
@@ -573,6 +618,9 @@ def main():
         section2 = generate_application_paragraph(
             client, jd, bullets_for_api, background, gaps
         )
+
+        print("  [Revision] Applying writing rules...")
+        section1, section2 = revise_cover_letter(client, section1, section2)
 
         # Enforce en dashes
         section1 = fix_dashes(section1)
