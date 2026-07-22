@@ -598,6 +598,48 @@ def test_generate_letters_uses_revised_body_not_draft(tmp_path, monkeypatch):
     assert client.messages.create.call_count == 2
 
 
+def test_generate_letters_no_pii_in_payload(tmp_path, monkeypatch, pii_values):
+    import importlib
+    import scripts.utils.pii_filter as pii_module
+
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    for key, val in [
+        ("CANDIDATE_NAME", pii_values["name"]),
+        ("CANDIDATE_PHONE", pii_values["phone"]),
+        ("CANDIDATE_EMAIL", pii_values["email"]),
+        ("CANDIDATE_LINKEDIN", pii_values["linkedin"]),
+        ("CANDIDATE_GITHUB", pii_values["github"]),
+    ]:
+        monkeypatch.setenv(key, val)
+    importlib.reload(pii_module)
+
+    notes = (
+        f"Discussed background. Contact: {pii_values['phone']} / {pii_values['email']}"
+    )
+    debrief = _make_debrief([{"name": "John Smith", "title": "Engineer", "notes": notes}])
+    inputs = _make_inputs(
+        debrief,
+        jd_text=f"JD mentioning {pii_values['linkedin']} and {pii_values['github']}",
+        resume_text=f"Resume for {pii_values['name']}",
+        candidate_profile=f"Profile referencing {pii_values['name']}",
+    )
+
+    client = MagicMock()
+    client.messages.create.side_effect = [
+        MagicMock(content=[MagicMock(text="Draft letter body.")]),
+        MagicMock(content=[MagicMock(text="Revised letter body.")]),
+    ]
+
+    run_date = "2026-04-15"
+    pt.generate_letters(client, role, "hiring_manager", None, inputs, run_date)
+
+    full_payload = str(client.messages.create.call_args_list)
+    for pii_value in pii_values.values():
+        assert pii_value not in full_payload, f"PII found in payload: {pii_value}"
+
+
 # ==============================================
 # Summary block output
 # ==============================================
