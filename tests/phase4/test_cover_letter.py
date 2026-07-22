@@ -162,6 +162,28 @@ def test_run_cl_stage1_writes_revised_not_draft_text():
     assert "Draft application paragraph text." not in content
 
 
+def test_run_cl_stage1_falls_back_when_revision_markers_missing():
+    from scripts.phase4_cover_letter import run_cl_stage1
+    client = make_sequential_mock_client([
+        "Hiring Manager",
+        "Draft traditional letter text.",
+        "Draft application paragraph text.",
+        "Some unmarked response text.",
+    ])
+    jd_text = FIXTURE_JD.read_text(encoding="utf-8")
+    resume_text = FIXTURE_STAGE2.read_text(encoding="utf-8")
+    background_text = FIXTURE_BACKGROUND.read_text(encoding="utf-8")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_path = Path(tmpdir) / "cl_stage1_draft.txt"
+        # Must not raise despite the revision response missing section markers.
+        run_cl_stage1(client, jd_text, resume_text, background_text, str(output_path))
+        content = output_path.read_text(encoding="utf-8")
+
+    assert "Draft traditional letter text." in content
+    assert "Draft application paragraph text." in content
+
+
 def test_run_cl_stage4_creates_readable_docx():
     from scripts.phase4_cover_letter import run_cl_stage4
     cl_text = MOCK_CL_RESPONSE

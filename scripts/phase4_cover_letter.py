@@ -480,7 +480,10 @@ def run_cl_stage1(client, jd_text, resume_text, background_text, output_path):
         client, jd_clean, bullets_clean, background_clean, []
     )
 
-    section1, section2 = revise_cover_letter(client, section1, section2)
+    try:
+        section1, section2 = revise_cover_letter(client, section1, section2)
+    except ValueError as e:
+        print(f"  WARNING: Writing-rules revision failed ({e}); using unrevised drafts.")
 
     section1 = fix_dashes(section1)
     section2 = fix_dashes(section2)
@@ -620,7 +623,10 @@ def main():
         )
 
         print("  [Revision] Applying writing rules...")
-        section1, section2 = revise_cover_letter(client, section1, section2)
+        try:
+            section1, section2 = revise_cover_letter(client, section1, section2)
+        except ValueError as e:
+            print(f"  WARNING: Writing-rules revision failed ({e}); using unrevised drafts.")
 
         # Enforce en dashes
         section1 = fix_dashes(section1)
