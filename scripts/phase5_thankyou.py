@@ -28,6 +28,7 @@ from docx.shared import Pt, Inches
 # Add project root to path for utils import
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.utils.pii_filter import strip_pii
+from scripts.utils import writing_rules
 from scripts.config import JOBS_PACKAGES_DIR, CANDIDATE_PROFILE_PATH, MODEL_SONNET as MODEL
 
 load_dotenv()
@@ -324,6 +325,37 @@ def _build_letter_prompt(interviewer, index, debrief, jd_text, candidate_profile
 
 
 # ==============================================
+# REVISION PASS
+# ==============================================
+
+def revise_thankyou_letter(client, letter_text):
+    """Revise a drafted thank you letter body against writing_rules.md."""
+    rules_text = writing_rules.load()
+    prompt = f"""Revise the thank you letter body below by applying the writing rules.
+
+WRITING RULES:
+{rules_text}
+
+Preserve every fact, name, and reference to specific interview content exactly
+as drafted. Only change wording for concision, directness, and plain language
+per the rules above. Do not add a salutation or closing -- return only the
+revised body.
+
+LETTER BODY:
+{letter_text}
+
+Return only the revised letter body, with no commentary and no markers."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=800,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.content[0].text
+
+
+# ==============================================
 # OUTPUT FILENAME HELPERS
 # ==============================================
 
@@ -463,6 +495,7 @@ def generate_letters(client, role, stage, panel_label, inputs, run_date):
             messages=[{"role": "user", "content": prompt}],
         )
         letter_body = response.content[0].text
+        letter_body = revise_thankyou_letter(client, letter_body)
 
         salutation = _build_salutation(interviewer.get("name"))
         closing = _build_closing(candidate_name)

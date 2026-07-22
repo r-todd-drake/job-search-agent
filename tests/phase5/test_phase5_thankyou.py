@@ -543,6 +543,40 @@ def test_full_letter_ndash_in_closing(tmp_path, monkeypatch):
 
 
 # ==============================================
+# revise_thankyou_letter
+# ==============================================
+
+def test_revise_thankyou_letter_calls_api_and_returns_text():
+    client = _mock_client("Revised letter body via writing rules.")
+    result = pt.revise_thankyou_letter(client, "Original drafted body.")
+    assert result == "Revised letter body via writing rules."
+    client.messages.create.assert_called_once()
+
+
+def test_generate_letters_uses_revised_body_not_draft(tmp_path, monkeypatch):
+    role = "TestRole"
+    _setup_job_package(tmp_path, role)
+    monkeypatch.setattr(pt, "JOBS_PACKAGES_DIR", str(tmp_path / "job_packages"))
+    monkeypatch.setenv("CANDIDATE_NAME", "Test Candidate")
+
+    debrief = _make_debrief([{"name": "John Smith", "title": "Engineer", "notes": "Notes."}])
+    inputs = _make_inputs(debrief)
+
+    client = MagicMock()
+    client.messages.create.side_effect = [
+        MagicMock(content=[MagicMock(text="Draft letter body.")]),
+        MagicMock(content=[MagicMock(text="Revised letter body.")]),
+    ]
+
+    generated, _ = pt.generate_letters(client, role, "hiring_manager", None, inputs, "2026-04-15")
+
+    content = open(generated[0][1], encoding="utf-8").read()
+    assert "Revised letter body." in content
+    assert "Draft letter body." not in content
+    assert client.messages.create.call_count == 2
+
+
+# ==============================================
 # Summary block output
 # ==============================================
 

@@ -538,7 +538,7 @@ def has_debrief_for_stage(debriefs: list, stage: str, panel_label=None) -> bool
 | `data/job_packages/[role]/stage4_final.txt` (preferred) or `data/job_packages/[role]/stage2_approved.txt` (fallback, optional) | |
 | `data/experience_library/candidate_profile.md` | |
 
-**Notes:** Generates one `.txt` and one `.docx` per interviewer listed in the debrief. Tone is calibrated by interviewer title (executive / technical / recruiter / default). Interviewer notes from the debrief are the primary personalization anchor. Overwrite protection prompts per file. Output filenames include `panel_label` when provided.
+**Notes:** Generates one `.txt` and one `.docx` per interviewer listed in the debrief. Tone is calibrated by interviewer title (executive / technical / recruiter / default). Interviewer notes from the debrief are the primary personalization anchor. Each letter draft is followed by a second API call (`revise_thankyou_letter`) that revises it against `context/writing_rules.md` before the salutation/closing are added and the file is written. Overwrite protection prompts per file. Output filenames include `panel_label` when provided.
 
 ---
 
