@@ -328,6 +328,11 @@ def _build_letter_prompt(interviewer, index, debrief, jd_text, candidate_profile
 # REVISION PASS
 # ==============================================
 
+def _fix_dashes(text):
+    """Replace em dashes with en dashes throughout."""
+    return text.replace('—', '–')
+
+
 def revise_thankyou_letter(client, letter_text):
     """Revise a drafted thank you letter body against writing_rules.md."""
     rules_text = writing_rules.load()
@@ -496,6 +501,7 @@ def generate_letters(client, role, stage, panel_label, inputs, run_date):
         )
         letter_body = response.content[0].text
         letter_body = revise_thankyou_letter(client, letter_body)
+        letter_body = _fix_dashes(letter_body)
 
         salutation = _build_salutation(interviewer.get("name"))
         closing = _build_closing(candidate_name)
