@@ -60,6 +60,7 @@ For full structure see README.md.
 | `utils/pii_filter.py`          | `strip_pii()` — replaces PII values loaded from .env before any API call             | all scripts making API calls       |
 | `utils/candidate_config.py`    | `load()`, `get_hardcoded_rules()`, `build_known_facts()` — loads context/candidate/candidate_config.yaml | check_resume, check_cover_letter, phase4_resume_generator, phase2_semantic_analyzer, phase3_build_candidate_profile |
 | `utils/domain_config.py`       | `load()`, `get_label()` — loads context/domain/domain_config.yaml; replaces hardcoded domain terms in system prompts | check_resume, check_cover_letter, phase2_semantic_analyzer, phase5_interview_prep, phase6_networking |
+| `utils/writing_rules.py`       | `load()` — loads context/writing_rules.md (prose style rules); returns raw text for injection into revision-pass system prompts | phase4_cover_letter, phase5_thankyou |
 | `interview_library_parser.py`  | `init_library()`, load/save for interview_library.json (stories, gap_responses, questions) | phase5_workshop_capture       |
 | `phase5_debrief_utils.py`      | `load_debriefs(role)` — loads all filed debrief JSON for a role                     | phase5_thankyou                   |
 

@@ -99,6 +99,20 @@ def get_label() -> str
 
 ---
 
+### scripts/utils/writing_rules.py
+
+**Import:** `from scripts.utils import writing_rules`
+
+```python
+def load() -> str
+```
+
+| Function | Returns | Behavior / side effects / errors |
+|----------|---------|----------------------------------|
+| `load()` | `str` | Loads `context/writing_rules.md`; result cached after first call; raises `FileNotFoundError` if absent |
+
+---
+
 ### scripts/interview_library_parser.py
 
 **Import:** `from scripts.interview_library_parser import init_library, write_library, load_tags, get_stories, get_gap_responses, get_questions`
