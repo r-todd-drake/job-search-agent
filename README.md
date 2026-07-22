@@ -37,6 +37,9 @@ designed around that failure mode.
   content it references is actually present in the assembled payload, not just that the
   instruction wording exists; added after a live defect where a confirmed-skills guardrail
   shipped against content a hardcoded truncation had already removed
+- **Style-authenticity revision pass** – cover letters and thank-you letters get a second
+  API pass against a shared prose rules file (concision, active voice, no cliché phrasing)
+  before a human ever sees them, reducing detectable AI-generated phrasing
 - **Modular shared libraries** – parsing, PII filtering, candidate config, and domain
   config are importable modules with injectable dependencies for testability
 - **PII firewall** – `pii_filter.py` strips personal identifiers from every API call;

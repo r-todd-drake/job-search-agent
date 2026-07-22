@@ -1,5 +1,5 @@
 # AI Job Search Agent — Project Context
-Last updated: 03 Jun 2026
+Last updated: 22 Jul 2026
 
 ## About This File
 Lean index file for quick orientation. Load supporting context files as needed.
@@ -75,6 +75,18 @@ Already importable (no changes needed): `pii_filter.py`, `library_parser.py`, `p
 - Status vocabulary: `Activated` (stage 2 confirm), `Closed` (stage 4 confirm)
 - Phase 4 scripts updated to remove outdated terminology from system prompts
 - 53 phase6 mock tests; 564 total mock tests passing as of 03 Jun 2026
+
+### Writing rules revision pass (22 Jul 2026)
+Shared prose-writing rules (Orwell's six rules from "Politics and the English Language") now
+revise every generated cover letter and thank-you letter before it reaches the human or the
+output file, reducing detectable AI-generated phrasing. `phase5_interview_prep.py` intentionally
+out of scope for this pass.
+- `context/writing_rules.md` — tracked rules file (concision, active voice, no cliché figures of speech, no unnecessary jargon)
+- `scripts/utils/writing_rules.py` — `load()` loader, mirrors `domain_config.py`'s cache-and-raise pattern
+- `scripts/phase4_cover_letter.py` — `revise_cover_letter()` makes one combined revision call over both drafted sections (traditional letter + application paragraph), using `## SECTION 1` / `## SECTION 2` markers to split the response; falls back to the unrevised drafts with a printed warning if the response is unparseable rather than crashing the run
+- `scripts/phase5_thankyou.py` — `revise_thankyou_letter()` makes one revision call per interviewer's letter (no markers needed, one letter per call); new `_fix_dashes()` normalizes any em dash the revision pass might introduce
+- 19 new/extended mock tests across `tests/utils/`, `tests/phase4/`, and `tests/phase5/`; two PII-leak tests hardened to check every API call in a run via `call_args_list`, not just the last, after the per-run call count changed
+- 611 mock tests passing as of 22 Jul 2026
 
 ### find_duplicate_bullets utility (04 May 2026)
 `scripts/utils/find_duplicate_bullets.py` — standalone utility for experience library quality maintenance:
