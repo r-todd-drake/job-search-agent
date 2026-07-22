@@ -463,9 +463,9 @@ def run_cl_stage1(client, jd_text, resume_text, background_text, output_path):
     """
     Generate cl_stage1_draft.txt content from inputs and write to output_path.
 
-    Strips PII from resume_text and jd_text before any API call.
-    Makes two API calls: traditional letter + application paragraph.
-    Writes assembled draft to output_path.
+    Strips PII from inputs. Makes four API calls: hiring manager extraction,
+    traditional letter, application paragraph, and combined revision pass
+    applying context/writing_rules.md. Writes assembled draft to output_path.
     """
     jd_clean = strip_pii(jd_text)
     bullets_clean = strip_pii(resume_text)
